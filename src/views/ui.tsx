@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useStore } from '../state'
 import { sign } from '../domain/project'
@@ -42,9 +42,17 @@ export function Btn({ tone = 'blue', className, ...props }: React.ComponentProps
 
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: React.ReactNode }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div role="tablist" className="flex flex-wrap gap-1 border-b border-lab-line">
+    <div role="tablist" className="flex flex-wrap gap-1 border-b border-lab-line" onKeyDown={(e) => {
+      // Arrow keys move between tabs (WAI-ARIA tabs pattern); Home and End jump to the ends.
+      const i = tabs.findIndex((t) => t.id === value)
+      const j = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1
+      if (j < 0) return
+      e.preventDefault(); onChange(tabs[j].id)
+      const el = e.currentTarget
+      requestAnimationFrame(() => el.querySelectorAll<HTMLButtonElement>('[role=tab]')[j]?.focus())
+    }}>
       {tabs.map((t) => (
-        <button key={t.id} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)}
+        <button key={t.id} role="tab" aria-selected={value === t.id} tabIndex={value === t.id ? 0 : -1} onClick={() => onChange(t.id)}
           className={cn('px-3 py-1.5 font-mono text-xs border-b-2 -mb-px transition', value === t.id ? 'border-lab-fda text-lab-fda' : 'border-transparent text-lab-text-muted hover:text-lab-text')}>{t.label}</button>
       ))}
     </div>
@@ -71,10 +79,28 @@ export function Table({ head, rows, empty = 'Nothing to show.', className }: { h
   )
 }
 
+// A dialog: focus moves into it, Tab stays inside, Escape closes, and focus returns to
+// whatever opened it.
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
+    const first = box.current?.querySelector<HTMLElement>('input, select, textarea') ?? box.current?.querySelector<HTMLElement>('button')
+    first?.focus()
+    return () => opener?.focus?.()
+  }, [])
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { e.stopPropagation(); onClose(); return }
+    if (e.key !== 'Tab' || !box.current) return
+    const f = [...box.current.querySelectorAll<HTMLElement>('button:not([disabled]), input, select, textarea, a[href]')]
+    if (!f.length) return
+    const i = f.indexOf(document.activeElement as HTMLElement)
+    if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus() }
+    else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus() }
+  }
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <div className={cn('w-full rounded-lg border border-lab-line bg-lab-panel p-4 space-y-3 max-h-[90vh] overflow-y-auto', wide ? 'max-w-3xl' : 'max-w-lg')} onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={title} onClick={onClose} onKeyDown={onKey}>
+      <div ref={box} className={cn('w-full rounded-lg border border-lab-line bg-lab-panel p-4 space-y-3 max-h-[90vh] overflow-y-auto', wide ? 'max-w-3xl' : 'max-w-lg')} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between"><h2 className="font-mono text-sm text-lab-text">{title}</h2><button aria-label="Close" className="text-lab-text-muted hover:text-lab-text px-2" onClick={onClose}>✕</button></div>
         {children}
       </div>

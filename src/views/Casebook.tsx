@@ -141,6 +141,7 @@ function EditModal({ fk, f, onClose }: { fk: string; f: Field; onClose: () => vo
   const first = !p.items[key] || p.items[key].versions.length === 0
   return (
     <Modal title={`Edit: ${f.label}`} onClose={onClose}>
+      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (act((pp) => editValue(pp, key, v.trim(), reason === 'Other' ? other : reason))) onClose() }}>
       {f.codelist ? <Select aria-label={f.label} value={v} onChange={(e) => setV(e.target.value)} options={[{ value: '', label: '(blank)' }, ...CODELISTS[f.codelist]]} />
         : <input aria-label={f.label} className={inputCls} type={f.type === 'date' ? 'text' : 'text'} inputMode={f.type === 'number' ? 'decimal' : undefined} placeholder={f.type === 'date' ? 'YYYY-MM-DD' : ''} value={v} onChange={(e) => setV(e.target.value)} />}
       {!first && <>
@@ -148,7 +149,9 @@ function EditModal({ fk, f, onClose }: { fk: string; f: Field; onClose: () => vo
         <Select aria-label="Reason for change" value={reason} onChange={(e) => setReason(e.target.value)} options={[...REASONS, 'Other'].map((r) => ({ value: r, label: r }))} />
         {reason === 'Other' && <input aria-label="Other reason" className={inputCls} value={other} onChange={(e) => setOther(e.target.value)} placeholder="Describe the reason" />}
       </>}
-      <div className="flex gap-2 justify-end"><Btn tone="grey" onClick={onClose}>Cancel</Btn><Btn tone="solid" onClick={() => { if (act((pp) => editValue(pp, key, v.trim(), reason === 'Other' ? other : reason))) onClose() }}>Save</Btn></div>
+      <div className="flex gap-2 justify-end"><Btn type="button" tone="grey" onClick={onClose}>Cancel</Btn><Btn type="submit" tone="solid">Save</Btn></div>
+      </form>
+      <p className="text-[10px] text-lab-text-muted">Enter saves · Escape cancels</p>
     </Modal>
   )
 }
@@ -160,9 +163,9 @@ export function RaiseModal({ itemKey, label, onClose, preset = '' }: { itemKey: 
   return (
     <Modal title={`Raise a manual query: ${label}`} onClose={onClose}>
       <p className="text-xs text-lab-text-muted font-mono">{itemKey.replaceAll('|', ' · ')} · current value: {value(p, itemKey) || 'blank'}</p>
-      <TextArea aria-label="Query text" value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Weight at Week 12 is 187.4 kg; at screening it was 85.0 kg. Please verify the value and unit against the source." />
+      <TextArea aria-label="Query text" value={text} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && text.trim() && act((pp) => { raiseManual(pp, itemKey, text) })) onClose() }} onChange={(e) => setText(e.target.value)} placeholder="e.g. Weight at Week 12 is 187.4 kg; at screening it was 85.0 kg. Please verify the value and unit against the source." />
       <QualityMeter score={sc.score} rules={sc.rules} />
-      <div className="flex gap-2 justify-end"><Btn tone="grey" onClick={onClose}>Cancel</Btn><Btn tone="solid" disabled={!text.trim()} onClick={() => { if (act((pp) => { raiseManual(pp, itemKey, text) })) onClose() }}>Raise query</Btn></div>
+      <div className="flex gap-2 justify-end items-center"><span className="text-[10px] text-lab-text-muted mr-auto">Ctrl+Enter raises · Escape cancels</span><Btn tone="grey" onClick={onClose}>Cancel</Btn><Btn tone="solid" disabled={!text.trim()} onClick={() => { if (act((pp) => { raiseManual(pp, itemKey, text) })) onClose() }}>Raise query</Btn></div>
     </Modal>
   )
 }

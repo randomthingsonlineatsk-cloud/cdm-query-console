@@ -102,7 +102,26 @@ system; never enter real patient data.
   and TLF Programming Lab).
 - **Several projects** in one browser, with a switcher on the Project tab.
 
-All four phases are complete.
+## Added after Phase 4
+
+- **Mission M13, Audit the trail:** review a 20-entry audit-trail extract from a fictional
+  site eSource system and name the ALCOA+ attribute each planted entry breaks. Every entry
+  of the console's own audit trail is labelled with the attributes it demonstrates.
+- **Levels:** guided (tips, a progress check, 50% more time), standard, and expert (no tips,
+  25% less time, mistakes cost double). The pass mark is 70% at every level.
+- **A prepared project for every mission**, with the mission sizes from the spec: a
+  12-check UAT release with 2 faulty checks, 10 poor queries to rewrite, 30 AE verbatims to
+  code with auto-coding off.
+- **Forms:** a CDASH DV (protocol deviation) eCRF form behind the deviation log; drug
+  accountability (tablets dispensed and returned, derived compliance, a check on 80–120%);
+  unscheduled visits with a reason and their own listing.
+- **Interim lock:** clean and freeze data up to a cut-off and take a signed snapshot while
+  the database stays open.
+- **Keyboard use:** dialogs take focus, keep Tab inside, close on Escape and return focus;
+  tabs follow the arrow-key pattern; focus is always visible. `e2e/keyboard.cjs` walks the
+  main flows with the keyboard only.
+
+All four phases and the additions are complete.
 
 ## Run it
 

@@ -197,3 +197,6 @@ body vite-error-overlay {
   #certificate, #certificate * { visibility: visible; }
   #certificate { position: absolute; inset: 0 0 auto 0; margin: 2cm; color: #000; background: #fff; border-color: #2f7d55; }
 }
+
+/* Keyboard focus is always visible. */
+:focus-visible { outline: 2px solid hsl(var(--lab-fda)); outline-offset: 2px; }
