@@ -31,6 +31,7 @@ export const MISSIONS: MissionDef[] = [
   { id: 'M9', phase: 3, title: 'Spot the suspicious sites', brief: 'Starting the mission moves the clock to 31 August 2026. Review every flag in centralised monitoring. Decide which are real problems and act on them (a for-cause visit, retraining or escalation), and record why the others need no action. Then let the for-cause visit happen.', pass: '70% or more' },
   { id: 'M10', phase: 3, title: 'Keep within the QTLs', brief: 'Starting the mission moves the clock to 5 October 2026. Check the quality tolerance limits, find the one that is breached, record its root cause and corrective action with a signature, and log and classify the deviations behind it.', pass: '70% or more' },
   { id: 'M11', phase: 4, title: 'Lock on time', brief: 'Runs in a new project prepared to just after last subject last visit, with most of the cleaning done. In 30 study days, finish what is left (open queries, uncoded terms, SDV at two subjects, unclassified deviations, a privacy problem, the investigator signatures and the audit trail review), soft-lock, and hard-lock with the lead data manager’s and the sponsor’s signatures.', pass: '70% or more' },
+  { id: 'M13', phase: 4, title: 'Audit the trail', brief: 'Before relying on site 106’s electronic source system, audit an extract of its audit trail. For each of the twenty entries, name the ALCOA+ attribute it breaks, or mark it as fine. Twelve entries break one attribute each.', pass: '70% or more' },
   { id: 'M12', phase: 4, title: 'Unlock correctly', brief: 'After hard lock, the close-out visit finds an adverse event that was never entered. Follow the unlock procedure: a justified request limited to the affected subject, two approvals, the correction through a query, re-coding, re-SDV and a new investigator signature, then re-lock.', pass: '70% or more' },
 ]
 
@@ -265,9 +266,15 @@ export function scoreM12(p: Project, run: MissionRun) {
 }
 
 // Certificate: ten of the twelve missions passed at 70% or more, with a verification code.
+export function scoreM13(p: Project, run: MissionRun) {
+  const r = scoreExtract(run.answers ?? {})
+  finish(p, run, r.score, [`${r.found} of ${r.violations} violations named correctly`, `${r.falseFlags} sound entries flagged as violations`, `${r.unanswered} entries not reviewed`])
+}
+
 export function certificate(p: Project, name: string) {
   const passed = MISSIONS.map((m) => latestRun(p, m.id)).filter((r): r is MissionRun => !!r?.passed)
   const code = hashStr(`${name.trim().toLowerCase()}|${passed.map((r) => `${r.id}:${r.score}`).join(',')}|${p.id}`).slice(-10).toUpperCase()
   return { eligible: passed.length >= 10, passed, code: `CDM-${code.slice(0, 5)}-${code.slice(5)}` }
 }
 import { hash as hashStr } from './util'
+import { scoreExtract } from './alcoa'
