@@ -12,7 +12,7 @@ Everything is fictional: the study HLV-204-201, Vasclarin (VSC-9), Halvern Thera
 Marrowbridge Clinical, the six sites and all 60 subjects. Training only; not a validated
 system; never enter real patient data.
 
-## What is in Phase 1
+## What Phase 1 covers
 
 - **Start-up.** A data management plan with eight planted errors to find and correct; CRF
   completion guidelines; training records; a risk assessment with quality tolerance limits
@@ -80,8 +80,29 @@ system; never enter real patient data.
   progress, coding backlog and deviations.
 - **Missions M9 and M10.** Spot the suspicious sites; Keep within the QTLs.
 
-Phase 4 adds database lock, unlock and archive, links to the companion apps, and the
-certificate.
+## What Phase 4 adds
+
+- **Database lock.** A checklist with live evidence for each item: all data entered, all
+  queries closed, SDV complete, coding approved, SAE and vendor reconciliations signed,
+  deviations classified, investigator casebook signatures current, audit trail review
+  recorded, privacy check passed. Soft lock (data change only in answer to an open query),
+  then hard lock with the lead data manager's and the sponsor's signatures.
+- **Unlock procedure.** A justified request naming the subjects, two approvals, the change
+  made through the usual query, then re-lock with the checklist met again. Only the named
+  subjects can change while unlocked.
+- **Archive.** A ZIP of open-format files: one CDASH-style CSV per form, the audit trail and
+  every item version, edit checks, form metadata, coding, queries, deviations, signatures
+  and the lock record, with a retention date (25 years) and a checksum. A CDASH-style CSV
+  export is also available at any time from the Project tab.
+- **Missions M11 and M12** (Lock on time; Unlock correctly), each in a prepared project of
+  its own, and a **certificate** for ten of twelve missions passed at 70% or more, with a
+  verification code.
+- **Links** to the companion apps (Clinical Trial Simulator, eCTD Dossier Builder, the PV
+  apps, and the planned EDC Study Build Lab, Medical Coding Trainer, SDTM Mapping Trainer
+  and TLF Programming Lab).
+- **Several projects** in one browser, with a switcher on the Project tab.
+
+All four phases are complete.
 
 ## Run it
 

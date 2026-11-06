@@ -17,15 +17,16 @@ import ProjectView from './views/ProjectView'
 import Coding from './views/Coding'
 import Recon from './views/Recon'
 import Oversight from './views/Oversight'
+import Lock from './views/Lock'
 
-export type View = 'overview' | 'startup' | 'casebook' | 'checks' | 'listings' | 'queries' | 'coding' | 'recon' | 'oversight' | 'missions' | 'audit' | 'project'
+export type View = 'overview' | 'startup' | 'casebook' | 'checks' | 'listings' | 'queries' | 'coding' | 'recon' | 'oversight' | 'lock' | 'missions' | 'audit' | 'project'
 interface Nav { view: View; arg?: string; go: (v: View, arg?: string) => void }
 const NavCtx = createContext<Nav>({ view: 'overview', go: () => {} })
 export const useNav = () => useContext(NavCtx)
 
 const VIEWS: { id: View; label: string }[] = [
   { id: 'overview', label: 'Study' }, { id: 'startup', label: 'Start-up' }, { id: 'casebook', label: 'Casebook' },
-  { id: 'checks', label: 'Edit checks' }, { id: 'listings', label: 'Listings' }, { id: 'queries', label: 'Queries' }, { id: 'coding', label: 'Coding' }, { id: 'recon', label: 'Reconciliation' }, { id: 'oversight', label: 'Oversight' },
+  { id: 'checks', label: 'Edit checks' }, { id: 'listings', label: 'Listings' }, { id: 'queries', label: 'Queries' }, { id: 'coding', label: 'Coding' }, { id: 'recon', label: 'Reconciliation' }, { id: 'oversight', label: 'Oversight' }, { id: 'lock', label: 'Lock' },
   { id: 'missions', label: 'Missions' }, { id: 'audit', label: 'Audit trail' }, { id: 'project', label: 'Project' },
 ]
 
@@ -36,7 +37,7 @@ function Shell() {
   const u = me(p)
   const open = p.queries.filter((q) => q.status === 'open').length
   const answered = p.queries.filter((q) => q.status === 'answered').length
-  const V = { overview: Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, missions: Missions, audit: AuditView, project: ProjectView }[nav.view]
+  const V = { overview: Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, lock: Lock, missions: Missions, audit: AuditView, project: ProjectView }[nav.view]
   return (
     <NavCtx.Provider value={{ ...nav, go }}>
       <div className="min-h-screen bg-lab-bg text-lab-text flex flex-col">
@@ -55,7 +56,7 @@ function Shell() {
             <label className="flex items-center gap-2 text-xs text-lab-text-muted">
               <span className="font-mono">Acting as</span>
               <Select aria-label="Acting as" className="w-64 py-1 text-xs" value={p.currentUserId} onChange={(e) => act((pp) => { pp.currentUserId = e.target.value; audit(pp, me(pp), 'session.switch', 'Acting user', undefined, `${me(pp).name} (${me(pp).role})`, 'Practice role switch') })}
-                options={p.users.map((x) => ({ value: x.id, label: `${x.name} · ${ROLE_LABEL[x.role]}` }))} />
+                options={p.users.filter((x) => !x.id.startsWith('scenario')).map((x) => ({ value: x.id, label: `${x.name} · ${ROLE_LABEL[x.role]}` }))} />
             </label>
           </div>
           <nav className="max-w-7xl mx-auto px-4 flex flex-wrap gap-1" aria-label="Main">

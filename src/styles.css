@@ -191,3 +191,9 @@ body vite-error-overlay {
   0% { opacity: 0; transform: scale(0.97); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+@media print {
+  body * { visibility: hidden; }
+  #certificate, #certificate * { visibility: visible; }
+  #certificate { position: absolute; inset: 0 0 auto 0; margin: 2cm; color: #000; background: #fff; border-color: #2f7d55; }
+}

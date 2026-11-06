@@ -11,7 +11,9 @@ import { exactLlt } from './dictmed'
 import { exactDrug } from './dictdrug'
 import { discrepancies, statusOf, inScope } from './safety'
 import { transferLog, shouldAccept, extDiscrepancies } from './external'
-import { signals, expectedFinding, qtlStatus } from './oversight'
+import { signals, expectedFinding, qtlStatus, sdvState } from './oversight'
+import { CLOSE_OUT_REPORT, piCurrent } from './lock'
+import { CLOSE_OUT } from './seed'
 import { scoreQuery, isActive } from './queries'
 import { addDays } from './util'
 import { formKeyOf } from './types'
@@ -28,8 +30,8 @@ export const MISSIONS: MissionDef[] = [
   { id: 'M8', phase: 2, title: 'Upgrade the dictionary', brief: 'Version 1.1 of the Study Medical Dictionary retires some terms and moves others. Review the impact, apply the upgrade with a signature, recode only what must be recoded, review the hierarchy changes and document the impact.', pass: '70% or more' },
   { id: 'M9', phase: 3, title: 'Spot the suspicious sites', brief: 'Starting the mission moves the clock to 31 August 2026. Review every flag in centralised monitoring. Decide which are real problems and act on them (a for-cause visit, retraining or escalation), and record why the others need no action. Then let the for-cause visit happen.', pass: '70% or more' },
   { id: 'M10', phase: 3, title: 'Keep within the QTLs', brief: 'Starting the mission moves the clock to 5 October 2026. Check the quality tolerance limits, find the one that is breached, record its root cause and corrective action with a signature, and log and classify the deviations behind it.', pass: '70% or more' },
-  { id: 'M11', phase: 4, title: 'Get to lock on time', brief: 'Complete the lock checklist and hard-lock the database by the planned date.', pass: 'Phase 4' },
-  { id: 'M12', phase: 4, title: 'Unlock and correct', brief: 'Follow the unlock procedure for a late finding and re-lock.', pass: 'Phase 4' },
+  { id: 'M11', phase: 4, title: 'Lock on time', brief: 'Runs in a new project prepared to just after last subject last visit, with most of the cleaning done. In 30 study days, finish what is left (open queries, uncoded terms, SDV at two subjects, unclassified deviations, a privacy problem, the investigator signatures and the audit trail review), soft-lock, and hard-lock with the lead data manager’s and the sponsor’s signatures.', pass: '70% or more' },
+  { id: 'M12', phase: 4, title: 'Unlock correctly', brief: 'After hard lock, the close-out visit finds an adverse event that was never entered. Follow the unlock procedure: a justified request limited to the affected subject, two approvals, the correction through a query, re-coding, re-SDV and a new investigator signature, then re-lock.', pass: '70% or more' },
 ]
 
 export const latestRun = (p: Project, id: string): MissionRun | undefined => [...p.missions].reverse().find((m) => m.id === id)
@@ -55,6 +57,8 @@ export function startMission(p: Project, id: string): MissionRun {
   }
   if (id === 'M9') { jump('2026-08-31'); run.answers = { start: p.clock, flags: JSON.stringify(signals(p).filter((x) => x.flagged).map((x) => x.id)) } }
   if (id === 'M10') { jump('2026-10-05'); run.answers = { start: p.clock, startUtc: nowUtc(p) } }
+  if (id === 'M11') { run.answers = { start: p.clock, deadline: addDays(p.clock, 30), startUtc: nowUtc(p) } }
+  if (id === 'M12') { if (p.lock.status !== 'hard') throw new Error('M12 needs a hard-locked study.'); run.answers = { start: p.clock, startUtc: nowUtc(p), report: CLOSE_OUT_REPORT } }
   if (id === 'M3') {
     if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up.')
     const target = '2026-06-29'
@@ -232,3 +236,38 @@ export function scoreM10(p: Project, run: MissionRun) {
 import { safetyDb } from './safety'
 import { daysBetween as dBetween } from './util'
 const safetyDbLate = (p: Project) => safetyDb(p).filter((c) => dBetween(c.aware, c.received) > 1).map((c) => c.subj)
+
+export function scoreM11(p: Project, run: MissionRun) {
+  const hard = p.lock.events.find((e) => e.action === 'hard')
+  const onTime = !!hard && hard.utc.slice(0, 10) <= (run.answers?.deadline ?? '')
+  const priv = Object.values(p.items).find((it) => it.key.endsWith('|AECOM') && it.versions.some((v) => /98201/.test(v.value)))
+  const privOk = !!priv && priv.versions.at(-1)!.role === 'site' && !/98201/.test(priv.versions.at(-1)!.value)
+  const review = p.lock.auditReview && !p.lock.auditReview.userId.startsWith('scenario')
+  const pi = Object.values(p.lock.piSign).some((x) => x.userId === 'emarsh')
+  const score = (onTime ? 60 : hard ? 30 : 0) + (privOk ? 15 : 0) + (review ? 10 : 0) + (pi ? 15 : 0)
+  finish(p, run, score, [hard ? `Hard-locked on ${hard.utc.slice(0, 10)}${onTime ? ', within 30 study days' : ', after the deadline'}` : 'Not hard-locked', privOk ? 'Personal data removed by the site in answer to a query' : 'Personal data in the comment not removed through a query', review ? 'Audit trail review recorded' : 'No audit trail review by you', pi ? 'Investigator signed the casebooks' : 'No investigator signature'])
+}
+
+export function scoreM12(p: Project, run: MissionRun) {
+  const since = run.answers?.startUtc ?? ''
+  const r = p.lock.unlocks.find((x) => x.utc >= since)
+  const scope = r ? (r.subjects.length === 1 && r.subjects[0] === CLOSE_OUT.subj ? 20 : r.subjects.includes(CLOSE_OUT.subj) ? 10 : 0) : 0
+  const just = r && new RegExp(`${CLOSE_OUT.subj}|nose`, 'i').test(r.justification) ? 10 : 0
+  const appr = r && r.approvals.some((a) => a.role === 'dmlead') && r.approvals.some((a) => a.role === 'sponsor') ? 10 : 0
+  const fk = `${CLOSE_OUT.subj}|LOG|AE|${CLOSE_OUT.inst}`
+  const entered = p.forms[fk] ? 20 : 0
+  const cod = p.coding[`${fk}|AETERM`]?.status === 'approved'
+  const sdv = ['AETERM', 'AESTDAT', 'AESER'].every((f) => sdvState(p, `${fk}|${f}`) === 'verified')
+  const pi = piCurrent(p, CLOSE_OUT.subj) && p.lock.piSign[CLOSE_OUT.subj].utc >= since
+  const follow = ((cod ? 1 : 0) + (sdv ? 1 : 0) + (pi ? 1 : 0)) / 3 * 20
+  const relock = r?.status === 'relocked' ? 20 : 0
+  finish(p, run, scope + just + appr + entered + follow + relock, [r ? `Unlock request ${r.id} for ${r.subjects.join(', ')}` : 'No unlock request', just ? 'Justification names the finding' : 'Justification does not name the subject or the finding', appr ? 'Approved by the lead data manager and the sponsor' : 'Not approved by both', entered ? 'The AE was entered by the site' : 'The AE is not in the EDC', `New AE coded and approved: ${cod ? 'yes' : 'no'}; SDV: ${sdv ? 'yes' : 'no'}; investigator re-signed: ${pi ? 'yes' : 'no'}`, relock ? 'Re-locked' : 'Not re-locked'])
+}
+
+// Certificate: ten of the twelve missions passed at 70% or more, with a verification code.
+export function certificate(p: Project, name: string) {
+  const passed = MISSIONS.map((m) => latestRun(p, m.id)).filter((r): r is MissionRun => !!r?.passed)
+  const code = hashStr(`${name.trim().toLowerCase()}|${passed.map((r) => `${r.id}:${r.score}`).join(',')}|${p.id}`).slice(-10).toUpperCase()
+  return { eligible: passed.length >= 10, passed, code: `CDM-${code.slice(0, 5)}-${code.slice(5)}` }
+}
+import { hash as hashStr } from './util'

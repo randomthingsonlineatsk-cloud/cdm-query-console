@@ -3,6 +3,7 @@ import { useNav } from '../App'
 import { STUDY, SITES, VISITS, PROFILE_TEXT, FORMS } from '../domain/study'
 import { isActive } from '../domain/queries'
 import { outdatedSeed } from '../domain/project'
+import { AppLinks } from './Links'
 import { Panel, Pill, Stat, Table, Btn } from './ui'
 
 export default function Overview() {
@@ -57,6 +58,9 @@ export default function Overview() {
           p.queries.filter((q) => isActive(q) && q.key.startsWith(s.id)).length,
         ])} />
         <p className="text-[11px] text-lab-text-muted">All names, sites and data are fictional. <Pill>Training</Pill></p>
+      </Panel>
+      <Panel title="Companion apps" sub="Other apps in the same portfolio. Links open in a new tab; each app keeps its own data.">
+        <AppLinks ids={['trial', 'edc', 'coding', 'sdtm', 'tlf', 'pvi', 'pvd', 'ectd']} />
       </Panel>
     </div>
   )

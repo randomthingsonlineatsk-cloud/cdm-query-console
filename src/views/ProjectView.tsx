@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../state'
-import { createProject, audit, me } from '../domain/project'
-import { exportFile, importFile, deleteProject } from '../domain/store'
+import { createProject, audit, me, migrate } from '../domain/project'
+import { exportFile, importFile, deleteProject, listProjects, saveProject } from '../domain/store'
+import { formCsvs, zip } from '../domain/lock'
+import type { Project } from '../domain/types'
 import { ROLE_LABEL } from '../domain/types'
 import { STUDY } from '../domain/study'
 import { Panel, Btn, Table, inputCls, Pill } from './ui'
@@ -11,6 +13,14 @@ export default function ProjectView() {
   const file = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
+  const [saved, setSaved] = useState<Project[]>([])
+  const refresh = () => listProjects().then((a) => setSaved(a.sort((x, y) => y.updatedUtc.localeCompare(x.updatedUtc)))).catch(() => {})
+  useEffect(() => { refresh() }, [p.id])
+  const csvZip = () => {
+    const blob = new Blob([zip(formCsvs(p)) as Uint8Array<ArrayBuffer>], { type: 'application/zip' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${STUDY.protocol}-cdash-csv-${p.clock}.zip`; a.click(); URL.revokeObjectURL(a.href)
+    act((pp) => audit(pp, me(pp), 'project.export.csv', pp.id, undefined, a.download, 'CDASH-style CSV export per form'))
+  }
   const download = () => {
     const blob = new Blob([exportFile(p)], { type: 'application/json' })
     const a = document.createElement('a')
@@ -40,14 +50,18 @@ export default function ProjectView() {
           <Btn tone="solid" onClick={download}>Export project file</Btn>
           <Btn onClick={() => file.current?.click()}>Import project file</Btn>
           <input ref={file} type="file" accept=".json,application/json" className="hidden" aria-label="Project file" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = '' }} />
-          {!confirmReset ? <Btn tone="red" onClick={() => setConfirmReset(true)}>Start a new project</Btn>
-            : <><Btn tone="red" onClick={() => { const old = p.id; replace(createProject(p.userId, p.classId)); deleteProject(old).catch(() => {}); setConfirmReset(false); setMsg('New project started. Export first if you want to keep the old one.') }}>Yes, discard this project</Btn><Btn tone="grey" onClick={() => setConfirmReset(false)}>Keep it</Btn></>}
+          {!confirmReset ? <Btn tone="grey" onClick={() => setConfirmReset(true)}>Start a new project</Btn>
+            : <><Btn tone="red" onClick={() => { saveProject(p).finally(() => { replace(createProject(p.userId, p.classId)); setConfirmReset(false); setMsg('New project started. The previous one is listed under Saved projects.') }) }}>Yes, start a new project</Btn><Btn tone="grey" onClick={() => setConfirmReset(false)}>Cancel</Btn></>}
+          <Btn tone="grey" onClick={csvZip}>Export CDASH-style CSV (.zip)</Btn>
         </div>
         {msg && <p className="text-xs text-lab-cdsco">{msg}</p>}
         <p className="text-[11px] text-lab-text-muted">Exported files carry a checksum and the hash-chained audit trail; an edited file is flagged on import.</p>
       </Panel>
+      <Panel title="Saved projects" sub="Projects stored in this browser. Missions M11 and M12 run in projects of their own.">
+        <Table head={['Name', 'Study date', 'Last saved', '']} rows={saved.map((x) => [x.id === p.id ? <b>{x.name} (open)</b> : x.name, x.clock, x.updatedUtc.replace('T', ' ').slice(0, 16), x.id === p.id ? '' : <div className="flex gap-1"><Btn tone="blue" className="py-0.5" onClick={() => saveProject(p).finally(() => replace(migrate(x)))}>Open</Btn><Btn tone="red" className="py-0.5" onClick={() => deleteProject(x.id).then(refresh)}>Delete</Btn></div>])} empty="Nothing saved yet." />
+      </Panel>
       <Panel title="Users and practice PINs" sub="Accounts are personal in real systems and a PIN is never shared. These are practice accounts so you can play every role.">
-        <Table head={['User ID', 'Name', 'Role', 'PIN', 'Trained']} rows={p.users.map((u) => [<span className="font-mono">{u.id}</span>, u.name, ROLE_LABEL[u.role], <span className="font-mono">{u.pin}</span>, u.trained ? <Pill tone="green">Yes</Pill> : <Pill tone="amber">No</Pill>])} />
+        <Table head={['User ID', 'Name', 'Role', 'PIN', 'Trained']} rows={p.users.filter((u) => !u.id.startsWith('scenario')).map((u) => [<span className="font-mono">{u.id}</span>, u.name, ROLE_LABEL[u.role], <span className="font-mono">{u.pin}</span>, u.trained ? <Pill tone="green">Yes</Pill> : <Pill tone="amber">No</Pill>])} />
       </Panel>
       <Panel title="About">
         <p className="text-sm text-lab-text-muted">A practice console for clinical data management on the run side of a study. It models real CDM practice: CDISC CDASH forms, a data validation specification with UAT, automatic and manual queries with ageing, a hash-chained audit trail and two-part electronic signatures. It is not a validated system and must not hold real patient data. Real regulations and standards are named for learning; no commercial system is reproduced.</p>

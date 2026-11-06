@@ -22,6 +22,7 @@ export const DEFAULT_USERS: User[] = [
   { id: 'emarsh', name: 'Dr Elena Marsh', role: 'pi', pin: '5555', trained: true },
   { id: 'tibarra', name: 'Tomás Ibarra', role: 'coder', pin: '6666', trained: true },
   { id: 'rmenon', name: 'Dr Ravi Menon', role: 'safety', pin: '7777', trained: true },
+  { id: 'hokafor', name: 'Dr Hana Okafor', role: 'sponsor', pin: '8888', trained: true },
 ]
 export const SYSTEM: User = { id: 'system', name: 'System', role: 'system', pin: '', trained: true }
 export const simSiteUser = (site: string): User => ({ id: `site${site}`, name: `Site ${site} coordinator (simulated)`, role: 'site', siteId: site, pin: '', trained: true })
@@ -41,6 +42,7 @@ export function createProject(userId = 'local-user', classId = 'none'): Project 
     sae: { links: {}, decisions: {}, safetyFixes: {}, createdCases: [] },
     ext: { transfers: {}, decisions: {}, rules: [], vendorFixes: {} },
     sdv: {}, sdvPlan: { mode: 'targeted' }, deviations: [], monitoring: { decisions: {}, forCause: {} }, qtlLog: [],
+    lock: { status: 'open', events: [], piSign: {}, hardSigs: [], unlocks: [] },
   }
   audit(p, SYSTEM, 'project.create', p.id, undefined, p.name, 'New project from the study template', simUtc(p.clock, 9 * 60))
   return p
@@ -53,6 +55,7 @@ export function migrate(p: Project): Project {
   p.sae ??= { links: {}, decisions: {}, safetyFixes: {}, createdCases: [] }
   p.ext ??= { transfers: {}, decisions: {}, rules: [], vendorFixes: {} }
   p.sdv ??= {}; p.sdvPlan ??= { mode: 'targeted' }; p.deviations ??= []; p.monitoring ??= { decisions: {}, forCause: {} }; p.qtlLog ??= []
+  p.lock ??= { status: 'open', events: [], piSign: {}, hardSigs: [], unlocks: [] }
   for (const u of DEFAULT_USERS) if (!p.users.some((x) => x.id === u.id)) p.users.push({ ...u })
   for (const c of SHIPPED_CHECKS) if (!p.checks.some((x) => x.id === c.id)) p.checks.push({ ...c, tests: c.tests.map((t) => ({ ...t })) })
   return p
@@ -82,7 +85,17 @@ export function verifyAudit(p: Project): number {
 
 export const value = (p: Project, key: ItemKey) => { const it = p.items[key]; return it ? it.versions[it.versions.length - 1].value : '' }
 
+// Lock rules. Soft lock: data frozen except where a query is open on the form. Hard lock:
+// read-only. Unlocked: only the subjects named in the approved unlock request.
+export function lockGuard(p: Project, subj: string, fk?: string) {
+  const st = p.lock?.status ?? 'open'
+  if (st === 'open') return
+  if (st === 'hard') throw new Error('The database is hard-locked. Changes need the unlock procedure.')
+  if (st === 'unlocked') { const r = p.lock.unlocks.find((x) => x.status === 'approved'); if (r?.subjects.includes(subj)) return; throw new Error(`The database is unlocked only for ${r?.subjects.join(', ') ?? 'no subject'}.`) }
+  if (!p.queries.some((q) => isActive(q) && q.key.startsWith(fk ? fk + '|' : subj + '|'))) throw new Error('The database is soft-locked: data can change only in answer to an open query.')
+}
 export function writeValue(p: Project, key: ItemKey, v: string, u: User, reason: string, utc = nowUtc(p)): boolean {
+  if (p.items[key] && p.items[key].versions.at(-1)!.value !== v) lockGuard(p, key.slice(0, 7), formKeyOf(key))
   const it: Item = p.items[key] ?? (p.items[key] = { key, versions: [] })
   const old = it.versions.length ? it.versions[it.versions.length - 1].value : undefined
   if (old === v) return false
@@ -94,6 +107,7 @@ export function writeValue(p: Project, key: ItemKey, v: string, u: User, reason:
 export function enterForm(p: Project, subj: string, visit: string, form: string, inst: number, values: Record<string, string>, u: User, utc: string, visitDate?: string) {
   const fk = `${subj}|${visit}|${form}|${inst}`
   const isNew = !p.forms[fk]
+  if (isNew) lockGuard(p, subj)
   if (isNew) {
     p.forms[fk] = { key: fk, status: 'entered', enteredUtc: utc, enteredBy: u.id, visitDate }
     audit(p, u, 'form.create', fk, undefined, FORMS[form].name, 'Form opened for data entry', utc)
@@ -107,6 +121,7 @@ export function enterForm(p: Project, subj: string, visit: string, form: string,
 
 export function deleteForm(p: Project, fk: string, u: User, reason: string, utc = nowUtc(p)) {
   const fs = p.forms[fk]; if (!fs || fs.deleted) return
+  lockGuard(p, fk.slice(0, 7), fk)
   fs.deleted = true; fs.deletedReason = reason
   audit(p, u, 'form.delete', fk, 'active', 'deleted', reason, utc)
   for (const q of p.queries) if (isActive(q) && formKeyOf(q.key) === fk) closeQ(p, q, SYSTEM, 'autoclose', 'Form deleted; query closed by the system.', utc)
@@ -135,6 +150,8 @@ const CAN_RAISE: Role[] = ['dm', 'dmlead', 'cra', 'coder']
 const CAN_CLOSE: Role[] = ['dm', 'dmlead']
 
 export function raiseManual(p: Project, key: ItemKey, text: string, u = me(p)): Query {
+  if (p.lock?.status === 'hard') throw new Error('The database is hard-locked. A new finding goes through the unlock procedure.')
+  if (p.lock?.status === 'unlocked') lockGuard(p, key.slice(0, 7))
   if (!CAN_RAISE.includes(u.role)) throw new Error('Only data management, monitoring or coding staff raise queries.')
   if (!text.trim()) throw new Error('Write the query text.')
   if (p.queries.some((q) => isActive(q) && q.key === key && q.source === 'manual')) throw new Error('This data point already has an open manual query.')
@@ -249,6 +266,12 @@ function siteRespond(p: Project, q: Query, date: string) {
     respond(p, q.id, 'This is a duplicate entry of the same event. The duplicate record has been deleted.', u, utc)
     deleteForm(p, fk, u, `Duplicate entry deleted in response to ${q.id}`, utc); return
   }
+  if (issue?.find && 'listing' in issue.find && issue.find.listing === 'close-out') {
+    const h = seedStudy().hidden.find((e) => e.subj === k.subj && e.inst === issue.inst)
+    if (h && !p.forms[`${k.subj}|LOG|AE|${h.inst}`]) enterForm(p, k.subj, 'LOG', 'AE', h.inst, h.values, u, utc)
+    respond(p, q.id, 'Confirmed: the nosebleed is in the source notes and was not entered. The AE record has now been entered.', u, utc)
+    runChecks(p, [k.subj], utc); return
+  }
   if (issue?.find && 'listing' in issue.find && issue.find.listing === 'sae-missing') {
     const h = seedStudy().hidden.find((e) => e.subj === k.subj && e.inst === issue.inst)
     if (h && !p.forms[`${k.subj}|LOG|AE|${h.inst}`]) enterForm(p, k.subj, 'LOG', 'AE', h.inst, h.values, u, utc)
@@ -295,6 +318,7 @@ export function advance(p: Project, days: number) {
       if (e.entryDate > p.clock) break
       const fk = `${e.subj}|${e.visit}|${e.form}|${e.inst}`
       if (p.enteredSeed[fk]) continue
+      if (p.lock?.status && p.lock.status !== 'open') continue
       p.enteredSeed[fk] = true
       enterForm(p, e.subj, e.visit, e.form, e.inst, e.values, simSiteUser(e.site), simUtc(e.entryDate, 9 * 60 + (e.inst * 7 + e.subj.charCodeAt(5) * 3) % 420), e.form === 'SV' ? e.visitDate : e.visit === 'LOG' ? undefined : e.visitDate)
       touched.add(e.subj)

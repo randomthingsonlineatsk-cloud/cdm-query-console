@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
 import { pairs, discrepancies, statusOf, decide, link, setCutoff, signoff, reconReady, inScope, safetyDb, resolvedIds, FIELD_LABEL, CRIT_LABEL, type Discrepancy, type Field } from '../domain/safety'
-import { DTAS, VENDOR_IDS, transferLog, conformance, decideTransfer, extDiscrepancies, decideExt, addRule, standardise, latestLoaded, type VendorId, type ExtClass, type Transfer } from '../domain/external'
+import { DTAS, VENDOR_IDS, transferLog, conformance, decideTransfer, extDiscrepancies, decideExt, addRule, standardise, latestLoaded, signExt, type VendorId, type ExtClass, type Transfer } from '../domain/external'
 import { me } from '../domain/project'
 import type { SaeClass } from '../domain/types'
 import { Panel, Pill, Btn, Table, Tabs, Select, SignBox, SigLine, Stat, inputCls, ic, fmtUtc } from './ui'
+import { AppLinks } from './Links'
 
 type T = 'sae' | 'transfers' | 'vendor' | 'dta'
 export default function Recon() {
@@ -78,7 +79,8 @@ function Sae() {
             {!p.sae.signoffSafety && <SignBox meaning={`SAE reconciliation complete at cut-off ${p.sae.cutoff ?? p.clock}`} what="SAE reconciliation (drug safety)" roles={['safety']} label="Sign for drug safety" onSigned={(s) => act((pp) => signoff(pp, s))} />}
           </div>
         ) : <p className="text-xs text-lab-amber">Not ready: open or waiting discrepancies remain.</p>}
-        <p className="text-[11px] text-lab-text-muted">The safety side of these cases is practised in the PV Intake Console and PV Detective (links come in Phase 4).</p>
+        <p className="text-[11px] text-lab-text-muted">The safety side of these cases:</p>
+        <AppLinks ids={['pvi', 'pvd']} />
       </Panel>
     </div>
   )
@@ -183,6 +185,10 @@ function Vendor() {
           {ds.map((d) => <ExtRow key={d.id} d={d} dm={dm} />)}
           {t && !ds.length && <p className="text-sm text-lab-cdsco">The EDC and the vendor file agree.</p>}
         </div>
+      </Panel>
+      <Panel title="Vendor reconciliation sign-off" sub="When every vendor has a loaded transfer and every discrepancy is classed, data management signs.">
+        <p className="text-xs">Signed: <SigLine s={p.ext.signoff} /></p>
+        {!p.ext.signoff && dm && <SignBox meaning="Vendor reconciliations complete" what="Vendor reconciliation (central lab, central ECG, IRT)" roles={['dm', 'dmlead']} label="Sign off" onSigned={(s) => act((pp) => signExt(pp, s))} />}
       </Panel>
       {v === 'CL' && (
         <Panel title="Unit conversion rules" sub="Results not in the DTA’s units are converted to standard units for analysis by a documented rule; the vendor is also asked to correct its feed. Glucose: 1 mmol/L = 18.0 mg/dL.">
