@@ -59,6 +59,13 @@ export default function Overview() {
         ])} />
         <p className="text-[11px] text-lab-text-muted">All names, sites and data are fictional. <Pill>Training</Pill></p>
       </Panel>
+      <Panel title="Coding dictionaries" sub="MedDRA and WHODrug are licensed, so the console ships its own fictional dictionaries with the same structures. Browse them on Coding → Medical dictionary and Coding → Drug dictionary.">
+        <div className="flex flex-wrap gap-2"><Btn onClick={() => go('coding')}>Open coding and the dictionaries</Btn></div>
+        <ul className="list-disc pl-5 text-xs text-lab-text-muted">
+          <li>Study Medical Dictionary: five levels like MedDRA (system class, group, cluster, preferred term, lowest-level term), about 440 terms, versions 1.0 and 1.1.</li>
+          <li>Study Drug Dictionary: 157 records numbered like WHODrug’s B3 format, with a four-level ATC-shaped classification using letters the real ATC does not.</li>
+        </ul>
+      </Panel>
       <Panel title="Companion apps" sub="Other apps in the same portfolio. Links open in a new tab; each app keeps its own data.">
         <AppLinks ids={['trial', 'edc', 'coding', 'sdtm', 'tlf', 'pvi', 'pvd', 'ectd']} />
       </Panel>

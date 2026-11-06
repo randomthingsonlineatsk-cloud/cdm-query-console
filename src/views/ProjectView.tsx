@@ -4,6 +4,8 @@ import { createProject, audit, me, migrate } from '../domain/project'
 import { exportFile, importFile, deleteProject, listProjects, saveProject } from '../domain/store'
 import { formCsvs, zip } from '../domain/lock'
 import type { Project } from '../domain/types'
+import { exportBuild, checkBuild, importBuild, resetBuild, type BuildReport } from '../domain/build'
+import { SignBox } from './ui'
 import { ROLE_LABEL } from '../domain/types'
 import { STUDY } from '../domain/study'
 import { Panel, Btn, Table, inputCls, Pill } from './ui'
@@ -14,6 +16,9 @@ export default function ProjectView() {
   const [msg, setMsg] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
   const [saved, setSaved] = useState<Project[]>([])
+  const buildFile = useRef<HTMLInputElement>(null)
+  const [report, setReport] = useState<BuildReport | null>(null)
+  const dlBuild = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(exportBuild(p), null, 2)], { type: 'application/json' })); a.download = `${STUDY.protocol}-study-build.json`; a.click(); URL.revokeObjectURL(a.href) }
   const refresh = () => listProjects().then((a) => setSaved(a.sort((x, y) => y.updatedUtc.localeCompare(x.updatedUtc)))).catch(() => {})
   useEffect(() => { refresh() }, [p.id, savedAt])
   const csvZip = () => {
@@ -56,6 +61,22 @@ export default function ProjectView() {
         </div>
         {msg && <p className="text-xs text-lab-cdsco">{msg}</p>}
         <p className="text-[11px] text-lab-text-muted">Exported files carry a checksum and the hash-chained audit trail; an edited file is flagged on import.</p>
+      </Panel>
+      <Panel title="Study build" sub="The visit schedule, eCRF forms, codelists, edit checks and CRF completion guidelines, as one file. This is the hand-over format for the EDC Study Build Lab (planned): it exports a build, this console imports it. Any build tool can produce the same file; the format is documented in the repository (docs/study-build-format.md).">
+        <p className="text-xs">In force: {p.build ? <b>imported build {p.build.study.buildVersion} from {p.build.study.source}</b> : 'the build shipped with the console'}.</p>
+        <div className="flex flex-wrap gap-2">
+          <Btn onClick={dlBuild}>Export the study build</Btn>
+          <Btn tone="grey" onClick={() => buildFile.current?.click()}>Check a build file…</Btn>
+          {p.build && <Btn tone="red" onClick={() => act((pp) => resetBuild(pp))}>Return to the shipped build</Btn>}
+          <input ref={buildFile} type="file" accept=".json,application/json" className="hidden" aria-label="Study build file" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setReport(checkBuild(await f.text())); e.target.value = '' }} />
+        </div>
+        {report && <div className="rounded border border-lab-line p-2 space-y-1 text-xs">
+          {report.errors.length > 0 && <><p className="text-lab-red">Cannot import:</p><ul className="list-disc pl-5 text-lab-red">{report.errors.map((x) => <li key={x}>{x}</li>)}</ul></>}
+          {report.changes.length > 0 && <><p>Changes from the build in force:</p><ul className="list-disc pl-5 text-lab-text-muted">{report.changes.slice(0, 40).map((x) => <li key={x}>{x}</li>)}</ul></>}
+          {report.warnings.length > 0 && <><p className="text-lab-amber">Warnings:</p><ul className="list-disc pl-5 text-lab-amber">{report.warnings.map((x) => <li key={x}>{x}</li>)}</ul></>}
+          {report.build && !report.changes.length && <p className="text-lab-cdsco">No changes: the file matches the build in force.</p>}
+          {report.build && <SignBox meaning="Study build amendment approved for production" what={`Study build ${report.build.study.buildVersion}`} roles={['dmlead']} label="Approve and import" onSigned={(s) => { if (act((pp) => importBuild(pp, report.build!, s))) { setReport(null); setMsg('Build imported. The UAT summary needs signing again for the changed checks.') } }} />}
+        </div>}
       </Panel>
       <Panel title="Saved projects" sub="Projects stored in this browser. Each mission runs in a prepared project of its own.">
         <Table head={['Name', 'Study date', 'Last saved', '']} rows={saved.map((x) => [x.id === p.id ? <b>{x.name} (open)</b> : x.name, x.clock, x.updatedUtc.replace('T', ' ').slice(0, 16), x.id === p.id ? '' : <div className="flex gap-1"><Btn tone="blue" className="py-0.5" onClick={() => saveProject(p).finally(() => replace(migrate(x)))}>Open</Btn><Btn tone="red" className="py-0.5" onClick={() => deleteProject(x.id).then(refresh)}>Delete</Btn></div>])} empty="Nothing saved yet." />
