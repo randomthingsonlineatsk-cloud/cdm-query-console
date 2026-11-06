@@ -102,6 +102,7 @@ export interface Project {
   lock: LockState
   missionLevel?: Level
   noAutoAe?: boolean // mission M5: adverse events are not auto-coded
+  build?: import('./build').StudyBuild // an imported study build, if any
 }
 
 export type LockStatus = 'open' | 'soft' | 'hard' | 'unlocked'

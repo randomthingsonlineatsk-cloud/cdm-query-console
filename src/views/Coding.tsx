@@ -26,7 +26,7 @@ export default function Coding() {
         <p className="text-xs text-lab-text-muted">Conventions (from ICH’s MedDRA Term Selection: Points to Consider, applied to this dictionary): code the most specific lowest-level term; prefer a diagnosis to its signs and symptoms; record death as an outcome, not an event; never code two events as one, query them to be split; query a verbatim that is ambiguous. Codes are verbatim-driven: never change the site’s words to make a match.</p>
         <AppLinks ids={['coding']} />
       </Panel>
-      <Tabs value={t} onChange={setT} tabs={[{ id: 'work', label: 'Worklist' }, { id: 'dict', label: 'Medical dictionary' }, { id: 'drug', label: 'Drug dictionary' }, { id: 'syn', label: `Synonym list (${Object.keys(p.synonyms).length})` }, { id: 'upgrade', label: 'Version upgrade' }]} />
+      <Tabs value={t} onChange={setT} tabs={[{ id: 'work', label: 'Worklist' }, { id: 'dict', label: 'Medical dictionary (MedDRA-style)' }, { id: 'drug', label: 'Drug dictionary (WHODrug-style)' }, { id: 'syn', label: `Synonym list (${Object.keys(p.synonyms).length})` }, { id: 'upgrade', label: 'Version upgrade' }]} />
       {t === 'work' && <Worklist />}
       {t === 'dict' && <MedBrowser />}
       {t === 'drug' && <DrugBrowser />}

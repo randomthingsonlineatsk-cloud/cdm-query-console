@@ -148,7 +148,7 @@ export const BUILTINS: Record<string, (...a: Val[]) => Val> = {
   },
   __in: (x, ...xs) => xs.some((y) => compare('=', x, y)),
 }
-const KNOWN_FN = new Set(Object.keys(BUILTINS).filter((k) => !k.startsWith('__')))
+const KNOWN_FN = new Set(Object.keys(BUILTINS)) // includes __in, which the parser makes from "x in (…)"
 
 export function evaluate(n: Node, ctx: Ctx): Val {
   switch (n.k) {

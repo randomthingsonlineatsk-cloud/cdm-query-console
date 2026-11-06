@@ -99,3 +99,29 @@ describe('form gaps and interim lock', () => {
     void closeQ
   })
 })
+
+import { exportBuild, checkBuild, importBuild, applyStudy } from '../src/domain/build'
+import { FORMS as F, VISITS as V } from '../src/domain/study'
+describe('study build files', () => {
+  test('export, amend, check, import, and back to the shipped build', () => {
+    const p = createProject()
+    const b = exportBuild(p)
+    expect(checkBuild(JSON.stringify(b)).errors).toEqual([])
+    b.study.buildVersion = '1.1'; b.study.source = 'EDC Study Build Lab'
+    b.visits.find((v) => v.id === 'W4')!.hi = 34
+    b.forms.VS.fields.push({ id: 'VSPOS', label: 'Position', type: 'text' })
+    b.checks.find((c) => c.id === 'VS-07')!.expr = 'SYSBP < 70 or SYSBP > 230'
+    const r = checkBuild(JSON.stringify(b))
+    expect(r.errors).toEqual([])
+    expect(r.changes.join(' ')).toMatch(/W4 window.*New field VS.VSPOS.*VS-07 changed/s)
+    const bad = structuredClone(b); bad.forms.VS.fields = bad.forms.VS.fields.filter((f) => f.id !== 'SYSBP')
+    expect(checkBuild(JSON.stringify(bad)).errors[0]).toMatch(/SYSBP is missing/)
+    p.currentUserId = 'jweber'
+    importBuild(p, r.build!, { meaning: 'x', userId: 'jweber', role: 'dmlead', utc: '', what: '' })
+    expect(V.find((v) => v.id === 'W4')!.hi).toBe(34)
+    expect(F.VS.fields.some((f) => f.id === 'VSPOS')).toBe(true)
+    applyStudy(createProject())
+    expect(V.find((v) => v.id === 'W4')!.hi).toBe(32)
+    expect(F.VS.fields.some((f) => f.id === 'VSPOS')).toBe(false)
+  })
+})
