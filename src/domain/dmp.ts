@@ -125,6 +125,7 @@ export const CCG_FORM: Record<string, string[]> = {
   MH: ['Record conditions that started before consent. Anything that starts or worsens after consent is an adverse event.'],
   VS: ['Seated blood pressure after 5 minutes of rest, mean of three readings. Height at screening only. BMI is derived by the system: do not enter it.'],
   LB: ['Local results at screening, Week 4 and Week 12. Enter the sample date, not the report date.'],
+  LBC: ['Record the accession number from the central laboratory requisition and the collection date and time (24-hour clock). The results come from the central laboratory transfer, not from the site.'],
   EG: ['QTcF as printed by the machine; the investigator’s interpretation is required.'],
   EX: ['Record the kit number from the label (K followed by four digits). Record tablets returned from the previous kit; none at Day 1. No new kit at Week 12.'],
   EOS: ['Complete at the last visit or on discontinuation. Screen failures: select Screen failure.'],

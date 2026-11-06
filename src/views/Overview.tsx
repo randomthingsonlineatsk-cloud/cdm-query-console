@@ -2,6 +2,7 @@ import { useStore } from '../state'
 import { useNav } from '../App'
 import { STUDY, SITES, VISITS, PROFILE_TEXT, FORMS } from '../domain/study'
 import { isActive } from '../domain/queries'
+import { outdatedSeed } from '../domain/project'
 import { Panel, Pill, Stat, Table, Btn } from './ui'
 
 export default function Overview() {
@@ -21,6 +22,7 @@ export default function Overview() {
   ]
   return (
     <div className="space-y-4">
+      {outdatedSeed(p) && <div role="status" className="rounded border border-lab-amber/60 bg-lab-amber-soft px-3 py-2 text-sm text-lab-amber">This project was started with an earlier version of the study data. Coding and reconciliation work best on a new project: export this one if you want to keep it, then start a new project on the Project tab.</div>}
       <Panel title={STUDY.title} sub={`Protocol ${STUDY.protocol} · Sponsor ${STUDY.sponsor} · CRO ${STUDY.cro}`}>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <Stat label="Subjects with data" value={subjects.size} />

@@ -5,7 +5,7 @@ import { DMP, DMP_VERSION, CCG_GENERAL, CCG_FORM, RISKS, QTLS } from '../domain/
 import { FORMS } from '../domain/study'
 import { audit, me, goLive } from '../domain/project'
 import { ROLE_LABEL } from '../domain/types'
-import { Panel, Pill, Btn, Tabs, SignBox, SigLine, Table, Select, inputCls } from './ui'
+import { Panel, Pill, Btn, Tabs, SignBox, SigLine, Table, Select, inputCls, ic } from './ui'
 
 type T = 'dmp' | 'ccg' | 'risk' | 'golive'
 export default function Startup() {
@@ -114,7 +114,7 @@ function RiskView() {
         })} />
       </Panel>
       <Panel title="Quality tolerance limits" sub="Study-level limits that, if crossed, trigger an investigation. Pick a value in the allowed range.">
-        <Table head={['Parameter', 'Allowed range', 'Limit']} rows={QTLS.map((q) => [q.text, `${q.lo} to ${q.hi}`, <input aria-label={q.id} disabled={locked} type="number" min={q.lo} max={q.hi} className={`${inputCls} w-24 py-0.5`} value={p.startup.qtl[q.id] ?? ''} placeholder={String(q.suggest)}
+        <Table head={['Parameter', 'Allowed range', 'Limit']} rows={QTLS.map((q) => [q.text, `${q.lo} to ${q.hi}`, <input aria-label={q.id} disabled={locked} type="number" min={q.lo} max={q.hi} className={ic('w-24 py-0.5')} value={p.startup.qtl[q.id] ?? ''} placeholder={String(q.suggest)}
           onChange={(e) => act((pp) => { const n = Number(e.target.value); if (e.target.value === '') delete pp.startup.qtl[q.id]; else if (n < q.lo || n > q.hi) throw new Error(`The limit must be between ${q.lo} and ${q.hi}.`); else pp.startup.qtl[q.id] = n })} />])} />
       </Panel>
       {!locked && (done

@@ -3,12 +3,15 @@
 
 import type { AuditEntry, Item, ItemKey, Project, Query, Role, Signature, User } from './types'
 import { formKeyOf, parseKey } from './types'
-import { freshChecks } from './checks'
+import { freshChecks, SHIPPED_CHECKS } from './checks'
 import { runChecksOnSubject, formsOfSubject } from './engine'
-import { seedStudy, RESPONSE_DAYS, type Entry, type Issue } from './seed'
+import { seedStudy, RESPONSE_DAYS, SEED_VERSION, type Entry, type Issue } from './seed'
 import { FORMS, SITES, VISITS } from './study'
 import { addDays, hash, simUtc, nowMinutes } from './util'
 import { scoreQuery, isActive } from './queries'
+import { syncCoding } from './coding'
+import { processSafety } from './safety'
+import { processVendors } from './external'
 
 export const DEFAULT_USERS: User[] = [
   { id: 'arao', name: 'Asha Rao', role: 'dm', pin: '1111', trained: true },
@@ -17,6 +20,7 @@ export const DEFAULT_USERS: User[] = [
   { id: 'pkulk', name: 'Priya Kulkarni', role: 'site', pin: '4444', trained: false },
   { id: 'emarsh', name: 'Dr Elena Marsh', role: 'pi', pin: '5555', trained: true },
   { id: 'tibarra', name: 'Tomás Ibarra', role: 'coder', pin: '6666', trained: true },
+  { id: 'rmenon', name: 'Dr Ravi Menon', role: 'safety', pin: '7777', trained: true },
 ]
 export const SYSTEM: User = { id: 'system', name: 'System', role: 'system', pin: '', trained: true }
 export const simSiteUser = (site: string): User => ({ id: `site${site}`, name: `Site ${site} coordinator (simulated)`, role: 'site', siteId: site, pin: '', trained: true })
@@ -32,10 +36,25 @@ export function createProject(userId = 'local-user', classId = 'none'): Project 
     items: {}, forms: {}, queries: [], nextQuery: 1, coderTasks: [], enteredSeed: {},
     startup: { dmpFlags: {}, uat: [], risk: {}, qtl: {} },
     audit: [], signatures: [], missions: [],
+    seedVersion: SEED_VERSION, coding: {}, synonyms: {}, smdVersion: '1.0',
+    sae: { links: {}, decisions: {}, safetyFixes: {}, createdCases: [] },
+    ext: { transfers: {}, decisions: {}, rules: [], vendorFixes: {} },
   }
   audit(p, SYSTEM, 'project.create', p.id, undefined, p.name, 'New project from the study template', simUtc(p.clock, 9 * 60))
   return p
 }
+
+// Bring a project saved by an earlier version up to the current data model.
+export function migrate(p: Project): Project {
+  p.coderTasks ??= []; p.enteredSeed ??= {}; p.missions ??= []; p.signatures ??= []
+  p.coding ??= {}; p.synonyms ??= {}; p.smdVersion ??= '1.0'
+  p.sae ??= { links: {}, decisions: {}, safetyFixes: {}, createdCases: [] }
+  p.ext ??= { transfers: {}, decisions: {}, rules: [], vendorFixes: {} }
+  for (const u of DEFAULT_USERS) if (!p.users.some((x) => x.id === u.id)) p.users.push({ ...u })
+  for (const c of SHIPPED_CHECKS) if (!p.checks.some((x) => x.id === c.id)) p.checks.push({ ...c, tests: c.tests.map((t) => ({ ...t })) })
+  return p
+}
+export const outdatedSeed = (p: Project) => (p.seedVersion ?? 1) < SEED_VERSION
 
 export const userById = (p: Project, id: string): User => p.users.find((u) => u.id === id) ?? (id === 'system' ? SYSTEM : id.startsWith('site') ? simSiteUser(id.slice(4)) : SYSTEM)
 export const me = (p: Project) => userById(p, p.currentUserId)
@@ -95,7 +114,9 @@ export function deleteForm(p: Project, fk: string, u: User, reason: string, utc 
 const respondDays = (q: Query) => {
   const prof = SITES.find((s) => s.id === q.key.slice(0, 3))!.profile
   const [lo, hi] = RESPONSE_DAYS[prof]
-  return lo + (parseInt(hash(q.id + q.requeries).slice(-6), 16) % (hi - lo + 1))
+  const d = lo + (parseInt(hash(q.id + q.requeries).slice(-6), 16) % (hi - lo + 1))
+  // Safety-related queries are chased by the CRA, so even slow sites answer within a week.
+  return q.text.startsWith('SAE reconciliation') ? Math.min(d, 7) : d
 }
 
 function newQuery(p: Project, key: ItemKey, source: Query['source'], text: string, u: User, utc: string, checkId?: string): Query {
@@ -188,6 +209,7 @@ export function runChecks(p: Project, subjects: string[], utc = nowUtc(p)) {
     }
     for (const t of p.coderTasks) if (t.status === 'pending' && t.key.startsWith(subj + '|') && !live.has(`${t.checkId}@${t.key}`)) t.status = 'done'
   }
+  syncCoding(p, subjects, utc)
 }
 export const allSubjects = () => seedStudy().subjects.map((s) => s.id)
 
@@ -222,6 +244,12 @@ function siteRespond(p: Project, q: Query, date: string) {
   if (issue?.find && 'listing' in issue.find && issue.find.listing === 'ae-dup') {
     respond(p, q.id, 'This is a duplicate entry of the same event. The duplicate record has been deleted.', u, utc)
     deleteForm(p, fk, u, `Duplicate entry deleted in response to ${q.id}`, utc); return
+  }
+  if (issue?.find && 'listing' in issue.find && issue.find.listing === 'sae-missing') {
+    const h = seedStudy().hidden.find((e) => e.subj === k.subj && e.inst === issue.inst)
+    if (h && !p.forms[`${k.subj}|LOG|AE|${h.inst}`]) enterForm(p, k.subj, 'LOG', 'AE', h.inst, h.values, u, utc)
+    respond(p, q.id, 'The SAE was reported to drug safety on the SAE form but not entered in the EDC. The AE record has now been entered.', u, utc)
+    runChecks(p, [k.subj], utc); return
   }
   if (issue?.find && 'listing' in issue.find && issue.find.listing === 'cm-ae') {
     const inst = Math.max(0, ...Object.keys(p.forms).filter((x) => x.startsWith(`${k.subj}|LOG|AE|`)).map((x) => Number(x.split('|')[3]))) + 1
@@ -269,6 +297,7 @@ export function advance(p: Project, days: number) {
     }
     if (touched.size) runChecks(p, [...touched], simUtc(p.clock, 18 * 60))
     for (const q of p.queries) if (q.status === 'open' && q.dueDate && q.dueDate <= p.clock) siteRespond(p, q, p.clock)
+    processSafety(p); processVendors(p)
   }
   audit(p, SYSTEM, 'clock.advance', 'study clock', undefined, p.clock, `Advanced ${days} day${days === 1 ? '' : 's'}`, simUtc(p.clock, 23 * 60))
 }

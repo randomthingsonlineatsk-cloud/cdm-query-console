@@ -35,12 +35,12 @@ export const PROFILE_TEXT: Record<SiteProfile, string> = {
 // Visits: target study day and window (days). Day 1 = randomisation.
 export interface Visit { id: string; name: string; day: number; lo: number; hi: number; forms: string[] }
 export const VISITS: Visit[] = [
-  { id: 'SCR', name: 'Screening', day: -14, lo: -28, hi: -1, forms: ['SV', 'IC', 'DM', 'IE', 'MH', 'VS', 'LB', 'EG'] },
+  { id: 'SCR', name: 'Screening', day: -14, lo: -28, hi: -1, forms: ['SV', 'IC', 'DM', 'IE', 'MH', 'VS', 'LB', 'LBC', 'EG'] },
   { id: 'D1', name: 'Day 1 (randomisation)', day: 1, lo: 1, hi: 1, forms: ['SV', 'VS', 'EX'] },
   { id: 'W2', name: 'Week 2', day: 15, lo: 12, hi: 18, forms: ['SV', 'VS', 'EX'] },
-  { id: 'W4', name: 'Week 4', day: 29, lo: 26, hi: 32, forms: ['SV', 'VS', 'LB', 'EX'] },
+  { id: 'W4', name: 'Week 4', day: 29, lo: 26, hi: 32, forms: ['SV', 'VS', 'LB', 'LBC', 'EX'] },
   { id: 'W8', name: 'Week 8', day: 57, lo: 54, hi: 60, forms: ['SV', 'VS', 'EX'] },
-  { id: 'W12', name: 'Week 12 (end of treatment)', day: 85, lo: 82, hi: 88, forms: ['SV', 'VS', 'LB', 'EG', 'EX'] },
+  { id: 'W12', name: 'Week 12 (end of treatment)', day: 85, lo: 82, hi: 88, forms: ['SV', 'VS', 'LB', 'LBC', 'EG', 'EX'] },
   { id: 'FU', name: 'Week 14 follow-up', day: 99, lo: 96, hi: 102, forms: ['SV', 'VS', 'EOS'] },
 ]
 export const LOG_FORMS = ['AE', 'CM'] // subject-level, repeating
@@ -116,6 +116,12 @@ export const FORMS: Record<string, FormDef> = {
     { id: 'CREAT', label: 'Creatinine', type: 'number', unit: 'µmol/L', required: true },
     { id: 'ALT', label: 'Alanine aminotransferase', type: 'number', unit: 'U/L', required: true },
   ] },
+  LBC: { id: 'LBC', name: 'Central lab sample', domain: 'LB', fields: [
+    { id: 'LBPERF', label: 'Was the central laboratory sample collected?', type: 'yn', codelist: 'NY', required: true },
+    { id: 'LBREFID', label: 'Accession number (from the requisition)', type: 'text', showIf: { field: 'LBPERF', equals: 'Y' } },
+    { id: 'LBDAT', label: 'Collection date', type: 'date', showIf: { field: 'LBPERF', equals: 'Y' } },
+    { id: 'LBTIM', label: 'Collection time (24-hour HH:MM)', type: 'text', showIf: { field: 'LBPERF', equals: 'Y' } },
+  ] },
   EG: { id: 'EG', name: '12-lead ECG', domain: 'EG', fields: [
     { id: 'EGDAT', label: 'Date of ECG', type: 'date', required: true },
     { id: 'QTCF', label: 'QTcF', type: 'number', unit: 'ms', required: true },
@@ -165,6 +171,6 @@ export const fieldOf = (form: string, field: string) => FORMS[form].fields.find(
 // SDTM target shown in the annotated CRF view (links to the SDTM Mapping Trainer).
 export const sdtmTarget = (form: string, field: string): string => {
   const f = FORMS[form]
-  const map: Record<string, string> = { VISDAT: 'SV.SVSTDTC', DSSTDAT: 'DS.DSSTDTC (DSDECOD = INFORMED CONSENT OBTAINED)', BRTHYR: 'DM.BRTHDTC', SYSBP: 'VS.VSORRES (VSTESTCD = SYSBP)', DIABP: 'VS.VSORRES (VSTESTCD = DIABP)', PULSE: 'VS.VSORRES (VSTESTCD = PULSE)', WEIGHT: 'VS.VSORRES (VSTESTCD = WEIGHT)', HEIGHT: 'VS.VSORRES (VSTESTCD = HEIGHT)', BMI: 'VS.VSORRES (VSTESTCD = BMI)', GLUC: 'LB.LBORRES (LBTESTCD = GLUC)', GLUCU: 'LB.LBORRESU', K: 'LB.LBORRES (LBTESTCD = K)', CREAT: 'LB.LBORRES (LBTESTCD = CREAT)', ALT: 'LB.LBORRES (LBTESTCD = ALT)', QTCF: 'EG.EGORRES (EGTESTCD = QTCFAG)', EOSDAT: 'DS.DSSTDTC', AESTDAT: 'AE.AESTDTC', AEENDAT: 'AE.AEENDTC', CMSTDAT: 'CM.CMSTDTC', CMENDAT: 'CM.CMENDTC', CMDSTXT: 'CM.CMDOSE', MHSTDAT: 'MH.MHSTDTC', VSDAT: 'VS.VSDTC', LBDAT: 'LB.LBDTC', EGDAT: 'EG.EGDTC', IETESTCD: 'IE.IETESTCD' }
+  const map: Record<string, string> = { LBREFID: 'LB.LBREFID', LBTIM: 'LB.LBDTC (time part)', LBPERF: 'LB.LBSTAT (NOT DONE when No)', VISDAT: 'SV.SVSTDTC', DSSTDAT: 'DS.DSSTDTC (DSDECOD = INFORMED CONSENT OBTAINED)', BRTHYR: 'DM.BRTHDTC', SYSBP: 'VS.VSORRES (VSTESTCD = SYSBP)', DIABP: 'VS.VSORRES (VSTESTCD = DIABP)', PULSE: 'VS.VSORRES (VSTESTCD = PULSE)', WEIGHT: 'VS.VSORRES (VSTESTCD = WEIGHT)', HEIGHT: 'VS.VSORRES (VSTESTCD = HEIGHT)', BMI: 'VS.VSORRES (VSTESTCD = BMI)', GLUC: 'LB.LBORRES (LBTESTCD = GLUC)', GLUCU: 'LB.LBORRESU', K: 'LB.LBORRES (LBTESTCD = K)', CREAT: 'LB.LBORRES (LBTESTCD = CREAT)', ALT: 'LB.LBORRES (LBTESTCD = ALT)', QTCF: 'EG.EGORRES (EGTESTCD = QTCFAG)', EOSDAT: 'DS.DSSTDTC', AESTDAT: 'AE.AESTDTC', AEENDAT: 'AE.AEENDTC', CMSTDAT: 'CM.CMSTDTC', CMENDAT: 'CM.CMENDTC', CMDSTXT: 'CM.CMDOSE', MHSTDAT: 'MH.MHSTDTC', VSDAT: 'VS.VSDTC', LBDAT: 'LB.LBDTC', EGDAT: 'EG.EGDTC', IETESTCD: 'IE.IETESTCD' }
   return map[field] ?? `${f.domain}.${field}`
 }

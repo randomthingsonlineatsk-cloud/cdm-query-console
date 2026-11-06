@@ -3,7 +3,7 @@
 
 import type { Project } from './types'
 import { hash } from './util'
-import { verifyAudit } from './project'
+import { verifyAudit, migrate } from './project'
 
 const DB = 'cdm-query-console', STORE = 'projects', VERSION = 1
 
@@ -48,6 +48,5 @@ export function importFile(text: string): { project: Project; warnings: string[]
   if (hash(JSON.stringify(p)) !== f.checksum) warnings.push('The file checksum does not match: the file was changed after export.')
   const br = verifyAudit(p)
   if (br >= 0) warnings.push(`The audit trail chain breaks at entry ${br + 1}: entries were edited outside the app.`)
-  p.coderTasks ??= []; p.enteredSeed ??= {}; p.missions ??= []; p.signatures ??= []
-  return { project: p, warnings }
+  return { project: migrate(p), warnings }
 }

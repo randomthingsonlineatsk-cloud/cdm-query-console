@@ -41,9 +41,28 @@ system; never enter real patient data.
 - **Project files.** Saved in IndexedDB; export and import as a file with a checksum.
   Records carry user and class IDs for the later classroom mode.
 
-Later phases add coding review with fictional dictionaries, SAE and external-data
-reconciliation, SDV and protocol deviations, centralised monitoring, database lock, unlock
-and archive, links to the companion apps, and the certificate.
+## What Phase 2 adds
+
+- **Medical coding.** A fictional five-level Study Medical Dictionary (about 440 terms, the
+  same structure as MedDRA, no MedDRA content) and a fictional drug dictionary (157
+  records in a WHODrug B3-style layout, with a four-level ATC-shaped classification using
+  letters the real ATC does not use). Auto-coding by exact match, a study synonym list,
+  manual coding with class chosen by indication, coding queries to the site, and approval
+  with an electronic signature. A version 1.1 release retires, moves and demotes terms;
+  the upgrade shows the impact, flags terms to recode and hierarchy changes to review.
+- **SAE reconciliation.** Twelve SAEs in the EDC against a fictional safety database, field
+  by field: matching, manual links for a mistyped key, classes (EDC error, safety database
+  error, acceptable difference, not reported, missing from the EDC), queries and notes that
+  get answered as time passes, a data cut-off and two sign-offs.
+- **Vendor data.** Data transfer agreements for a central laboratory, a central ECG reader
+  and an IRT; monthly cumulative transfers checked against the DTA (file name, delimiter,
+  columns, blinding, record count, required fields, dates); load or reject; reconciliation
+  on keys; unit conversion rules for standardised results.
+- **Missions M5 to M8.** Code the backlog, Reconcile SAEs before the cut-off, Reconcile the
+  central lab transfer, Upgrade the dictionary.
+
+Later phases add SDV and protocol deviations, centralised monitoring, database lock,
+unlock and archive, links to the companion apps, and the certificate.
 
 ## Run it
 
