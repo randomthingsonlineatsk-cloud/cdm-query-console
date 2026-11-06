@@ -35,7 +35,7 @@ export function syncCoding(p: Project, subjects: string[], utc = nowUtc(p)) {
         Object.assign(r, { verbatim: verb, status: 'uncoded', code: undefined, atc: undefined, method: undefined, approvedBy: undefined, approvedUtc: undefined, queryId: undefined })
       }
       if (r.status === 'query' && r.queryId && !p.queries.some((q) => q.id === r!.queryId && isActive(q))) { r.status = 'uncoded'; hist(r, 'system', 'query closed', r.queryId, utc); r.queryId = undefined }
-      if (r.status === 'uncoded') autoCode(p, r, fd.values.CMINDC ?? '', utc)
+      if (r.status === 'uncoded' && !(p.noAutoAe && fd.form === 'AE')) autoCode(p, r, fd.values.CMINDC ?? '', utc)
     }
   }
 }

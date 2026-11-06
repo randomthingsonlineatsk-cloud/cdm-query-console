@@ -5,7 +5,7 @@ import { SHIPPED_CHECKS, CHECK_BUGS, freshChecks } from '../src/domain/checks'
 import { runTest } from '../src/domain/engine'
 import { generateStudy } from '../src/domain/seed'
 import { createProject, advance, writeValue, verifyAudit, raiseManual, respond, closeQuery, requery, cancelQuery, value, SYSTEM, enterForm, runChecks, editValue } from '../src/domain/project'
-import { preparedStartup, startMission, scoreM1, scoreM2, scoreM4, scoreM3, M4_SCENARIOS } from '../src/domain/missions'
+import { prepareMission, preparedStartup, startMission, scoreM1, scoreM2, scoreM4, scoreM3, M4_SCENARIOS } from '../src/domain/missions'
 import { DMP } from '../src/domain/dmp'
 import { scoreQuery, metrics } from '../src/domain/queries'
 import { exportFile, importFile, saveProject, loadProject } from '../src/domain/store'
@@ -152,13 +152,16 @@ describe('missions', () => {
     scoreM1(p, startMission(p, 'M1'))
     expect(p.missions.at(-1)!.passed).toBe(false)
   })
-  test('M2 rewards finding the bugs', () => {
-    const p = createProject()
-    scoreM2(p, startMission(p, 'M2'))
-    expect(p.missions.at(-1)!.score).toBe(0)
-    preparedStartup(p)
-    scoreM2(p, startMission(p, 'M2'))
-    expect(p.missions.at(-1)!.score).toBe(100)
+  test('M2 (12 checks, 2 faulty) rewards finding the bugs', () => {
+    const p = prepareMission(createProject(), 'M2', createProject, { lock: () => {}, locked: () => {} })
+    const run = p.missions.at(-1)!
+    expect(JSON.parse(run.answers!.scope)).toHaveLength(12)
+    expect(p.checks.find((c) => c.id === 'AE-11')!.expr).toBe(CHECK_BUGS['AE-11'].correct)
+    p.currentUserId = 'arao'
+    for (const c of p.checks.filter((x) => JSON.parse(run.answers!.scope).includes(x.id))) { if (CHECK_BUGS[c.id]) c.expr = CHECK_BUGS[c.id].correct; for (const t of c.tests) p.startup.uat.push({ checkId: c.id, test: t.name, expected: t.fire, actual: runTest(c, t), utc: '2099-01-01T00:00:00Z', userId: 'arao' }) }
+    p.startup.uatSigned = { meaning: 'x', userId: 'arao', role: 'dm', utc: '', what: '' }
+    scoreM2(p, run)
+    expect(run.score).toBe(100)
   })
   test('M3: closing blindly fails; working the queue properly passes', () => {
     const blind = createProject(); preparedStartup(blind)

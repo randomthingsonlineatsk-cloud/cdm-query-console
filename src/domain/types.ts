@@ -101,6 +101,7 @@ export interface Project {
   // Phase 4
   lock: LockState
   missionLevel?: Level
+  noAutoAe?: boolean // mission M5: adverse events are not auto-coded
 }
 
 export type LockStatus = 'open' | 'soft' | 'hard' | 'unlocked'

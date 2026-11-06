@@ -21,10 +21,10 @@ import { formKeyOf, type Level } from './types'
 export interface MissionDef { id: string; phase: number; title: string; brief: string; pass: string }
 export const MISSIONS: MissionDef[] = [
   { id: 'M1', phase: 1, title: 'Fix the DMP', brief: `The draft data management plan has ${DMP_ERRORS.length} statements that break regulation or good practice. Flag each one and choose the right correction. Flagging a correct statement costs half a point.`, pass: '70% or more' },
-  { id: 'M2', phase: 1, title: 'Test the checks', brief: 'Run every UAT test case in the data validation specification. Three checks were programmed wrongly: find them, correct the logic, re-test until every case passes, and sign the UAT summary.', pass: '70% or more' },
+  { id: 'M2', phase: 1, title: 'Test the checks', brief: 'A release of twelve edit checks is ready for UAT; the rest of the specification is already validated. Run the twelve checks’ test cases, find the two programmed wrongly, correct the logic, re-test until every case passes, and sign the UAT summary.', pass: '70% or more' },
   { id: 'M3', phase: 1, title: 'Clean a messy site', brief: 'Site 103 has a new study coordinator. In six simulated weeks, get every data issue at the site resolved: close good answers, re-query poor ones, and raise manual queries for what the checks cannot see. False queries and closing a query on wrong data cost points.', pass: '70% or more' },
-  { id: 'M4', phase: 1, title: 'Write a good query', brief: 'Six data problems from manual review. Write the query you would send to the site for each. Queries are scored on the rules data managers use: name the data point, state what you saw, ask, do not lead, stay neutral, be brief.', pass: 'Average 70% or more' },
-  { id: 'M5', phase: 2, title: 'Code the backlog', brief: 'Starting the mission moves the clock to 3 August 2026 if it is earlier. Code every term the auto-coder could not: pick the most accurate lowest-level term, choose the drug class that fits the indication, query terms that cannot be coded safely, then have the coding reviewer approve.', pass: '70% or more' },
+  { id: 'M4', phase: 1, title: 'Write a good query', brief: 'Ten queries written by a hurried colleague: leading, vague, shouting or blaming. Rewrite each one so it is neutral, specific and answerable. Queries are scored on the rules data managers use: name the data point, state what you saw, ask, do not lead, stay neutral, be brief.', pass: 'Average 70% or more' },
+  { id: 'M5', phase: 2, title: 'Code the AEs', brief: 'The auto-coder is switched off for adverse events, and 30 AE verbatims wait for coding on 3 August 2026. Code each to the most accurate lowest-level term, prefer a diagnosis to its symptoms, query combined or ambiguous terms instead of coding them, then have the coding reviewer approve.', pass: '70% or more' },
   { id: 'M6', phase: 2, title: 'Reconcile SAEs before the cut-off', brief: 'Starting the mission moves the clock to 14 September 2026 and sets the data cut-off. Compare all twelve SAEs in the EDC with the safety database, class every discrepancy, get each one resolved, and have data management and drug safety sign off within three weeks. Safety queries are chased by the CRA, so sites answer them within a week.', pass: '70% or more' },
   { id: 'M7', phase: 2, title: 'Reconcile the central lab transfer', brief: 'Starting the mission moves the clock to 10 August 2026. Check every central-lab transfer against its data transfer agreement, load or reject it, reconcile the latest load against the EDC, and fix the unit problem at one site with a documented conversion rule.', pass: '70% or more' },
   { id: 'M8', phase: 2, title: 'Upgrade the dictionary', brief: 'Version 1.1 of the Study Medical Dictionary retires some terms and moves others. Review the impact, apply the upgrade with a signature, recode only what must be recoded, review the hierarchy changes and document the impact.', pass: '70% or more' },
@@ -47,7 +47,15 @@ function finish(p: Project, run: MissionRun, score: number, detail: string[]) {
 export function startMission(p: Project, id: string): MissionRun {
   const run: MissionRun = { id, startedUtc: new Date().toISOString(), userId: p.currentUserId, answers: {}, level: p.missionLevel ?? 'standard' }
   const jump = (target: string) => { if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up (mission M3).'); if (p.clock < target) advance(p, Math.round((Date.parse(target) - Date.parse(p.clock)) / 86400000)) }
-  if (id === 'M5') { jump('2026-08-03'); run.answers = { start: p.clock } }
+  if (id === 'M2') {
+    run.answers = { startUtc: nowUtc(p), scope: JSON.stringify(M2_SCOPE) }
+  }
+  if (id === 'M5') {
+    p.noAutoAe = true
+    jump('2026-08-03')
+    const ae = Object.values(p.coding).filter((r) => r.key.split('|')[2] === 'AE' && r.status === 'uncoded').sort((a, b) => Number(!needsCoder(a)) - Number(!needsCoder(b)) || a.key.localeCompare(b.key))
+    run.answers = { start: p.clock, scope: JSON.stringify(ae.slice(0, 30).map((r) => r.key)) }
+  }
   if (id === 'M7') { jump('2026-08-10'); run.answers = { start: p.clock } }
   if (id === 'M6') {
     jump('2026-09-14')
@@ -80,14 +88,18 @@ export function scoreM1(p: Project, run: MissionRun) {
   finish(p, run, sc, [`${s.right} of ${DMP_ERRORS.length} errors corrected`, `${s.wrongFix} flagged with the wrong correction`, `${s.falseFlag} correct statements flagged`, `${s.missed} errors not found`])
 }
 
+export const M2_SCOPE = ['SV-04', 'VS-07', 'VS-08', 'VS-09', 'VS-10', 'LB-07', 'LB-08', 'LB-09', 'AE-10', 'AE-13', 'EX-07', 'CM-10']
 export function scoreM2(p: Project, run: MissionRun) {
-  const total = p.checks.reduce((n, c) => n + c.tests.length, 0)
-  const executed = new Set(p.startup.uat.map((u) => `${u.checkId}#${u.test}`)).size
-  const fixed = Object.keys(CHECK_BUGS).filter((id) => { const c = p.checks.find((x) => x.id === id)!; return c.tests.every((t) => runTest(c, t) === t.fire) })
-  const allPass = p.checks.every((c) => c.tests.every((t) => runTest(c, t) === t.fire))
+  const scope: string[] = run.answers?.scope ? JSON.parse(run.answers.scope) : p.checks.map((c) => c.id)
+  const checks = p.checks.filter((c) => scope.includes(c.id))
+  const total = checks.reduce((n, c) => n + c.tests.length, 0)
+  const executed = new Set(p.startup.uat.filter((u) => scope.includes(u.checkId) && u.utc >= (run.answers?.startUtc ?? '')).map((u) => `${u.checkId}#${u.test}`)).size
+  const bugs = Object.keys(CHECK_BUGS).filter((id) => scope.includes(id))
+  const fixed = bugs.filter((id) => { const c = p.checks.find((x) => x.id === id)!; return c.tests.every((t) => runTest(c, t) === t.fire) })
+  const allPass = checks.every((c) => c.tests.every((t) => runTest(c, t) === t.fire))
   const signed = !!p.startup.uatSigned
-  const score = 30 * Math.min(1, executed / total) + 20 * fixed.length + (signed && allPass ? 10 : 0)
-  finish(p, run, score, [`${executed} of ${total} test cases executed`, `${fixed.length} of 3 faulty checks corrected (${fixed.join(', ') || 'none'})`, allPass ? 'Every test case now passes' : 'Some test cases still fail', signed ? 'UAT summary signed' : 'UAT summary not signed'])
+  const score = 30 * Math.min(1, executed / total) + (60 / bugs.length) * fixed.length + (signed && allPass ? 10 : 0)
+  finish(p, run, score, [`${executed} of ${total} test cases executed in the ${checks.length} checks under test`, `${fixed.length} of ${bugs.length} faulty checks corrected (${fixed.join(', ') || 'none'})`, allPass ? 'Every test case now passes' : 'Some test cases still fail', signed ? 'UAT summary signed' : 'UAT summary not signed'])
 }
 
 export function siteIssueStatus(p: Project, site: string) {
@@ -123,17 +135,21 @@ export function scoreM3(p: Project, run: MissionRun) {
 }
 
 export const M4_SCENARIOS = [
-  { id: 'a', data: 'Subject 103-005, Week 4, Local laboratory: Potassium = 45 mmol/L. Screening value 4.4 mmol/L.', mention: ['potassium', 'K '] },
-  { id: 'b', data: 'Subject 102-003, Adverse events #2: "Dizziness", start 2026-04-11, Ongoing = No, End date blank.', mention: ['end date', 'dizziness'] },
-  { id: 'c', data: 'Subject 105-007, Concomitant medications #3: "Ibuprofen 400 mg" for "knee pain", start 2026-05-02. No adverse event of knee pain is recorded.', mention: ['knee pain', 'ibuprofen'] },
-  { id: 'd', data: 'Subject 101-006, Week 8, Vital signs: SBP 132, 132, 132, 132 mmHg at Day 1, Week 2, Week 4 and Week 8 (DBP also identical at 86).', mention: ['blood pressure', 'sbp', 'systolic'] },
-  { id: 'e', data: 'Subject 106-002, Week 2, Visit: visit date 2026-06-09, which is study day 22 (window days 12 to 18).', mention: ['visit date', 'window'] },
-  { id: 'f', data: 'Subject 104-006, Adverse events #1: "Pneumonia", Serious = No, Requires hospitalisation = Yes.', mention: ['serious', 'hospital'] },
+  { id: 'a', data: 'Subject 103-005, Week 4, Local laboratory: Potassium = 45 mmol/L (screening 4.4 mmol/L).', poor: 'Potassium is wrong, please change to 4.5.', mention: ['potassium'] },
+  { id: 'b', data: 'Subject 102-003, AE #2 "Dizziness": Ongoing = No, end date blank.', poor: 'END DATE MISSING!!', mention: ['end date', 'dizziness'] },
+  { id: 'c', data: 'Subject 105-007, CM #3 "Ibuprofen 400 mg" for "knee pain", started 2026-05-02. No AE of knee pain.', poor: 'You forgot to report an AE again. Please add knee pain as an AE.', mention: ['knee pain', 'ibuprofen'] },
+  { id: 'd', data: 'Subject 101-006: SBP 132/86 mmHg at Day 1, Week 2, Week 4 and Week 8.', poor: 'BP values copied?', mention: ['blood pressure', 'systolic', 'sbp'] },
+  { id: 'e', data: 'Subject 106-002, Week 2 visit on 2026-06-09: study day 22, window days 12 to 18.', poor: 'Visit is out of window, should be within days 12-18, please correct the date.', mention: ['visit date', 'window'] },
+  { id: 'f', data: 'Subject 104-006, AE #1 "Pneumonia": Serious = No, Requires hospitalisation = Yes.', poor: 'Serious must be Yes.', mention: ['serious', 'hospital'] },
+  { id: 'g', data: 'Subject 103-009, Week 2, Study drug: kit number "2094".', poor: 'Kit no. format err', mention: ['kit'] },
+  { id: 'h', data: 'Subject 101-003, Informed consent: version v1.0 recorded; v2.0 was current when the site opened.', poor: 'Wrong ICF version entered. Change to v2.0.', mention: ['consent', 'version'] },
+  { id: 'i', data: 'Subject 105-006, Week 4, Local laboratory: fasting glucose 111 with unit mmol/L.', poor: 'Glucose obviously in mg/dL, update the unit.', mention: ['glucose', 'unit'] },
+  { id: 'j', data: 'Subject 102-007, Demographics: year of birth 1931, giving age 95 at consent (inclusion IN01: 18 to 75).', poor: 'Pt too old, ineligible. Explain.', mention: ['year of birth', 'birth'] },
 ]
 export function scoreM4(p: Project, run: MissionRun) {
-  const per = M4_SCENARIOS.map((s) => scoreQuery(run.answers?.[s.id] ?? '', s.mention).score)
+  const per = M4_SCENARIOS.map((s) => { const t = (run.answers?.[s.id] ?? '').trim(); return t && t !== s.poor ? scoreQuery(t, s.mention).score : 0 })
   const avg = per.reduce((a, b) => a + b, 0) / per.length
-  finish(p, run, avg, per.map((s, i) => `Scenario ${String.fromCharCode(65 + i)}: ${s}%`))
+  finish(p, run, avg, per.map((s, i) => `Query ${String.fromCharCode(65 + i)}: ${s}%`))
 }
 
 // For learners who want to go straight to the live study: complete start-up as a prepared
@@ -161,9 +177,10 @@ import { SMD_10 as SMD10 } from './dictmed'
 
 export function scoreM5(p: Project, run: MissionRun) {
   const all = Object.values(p.coding)
-  const scope = all.filter((r) => needsCoder(r) && expectedCode(r.key.split('|')[2], r.verbatim, indicationOf(p, r.key), p.smdVersion))
+  const keys: string[] | undefined = run.answers?.scope ? JSON.parse(run.answers.scope) : undefined
+  const scope = keys ? keys.map((k) => p.coding[k]).filter(Boolean) : all.filter((r) => needsCoder(r) && expectedCode(r.key.split('|')[2], r.verbatim, indicationOf(p, r.key), p.smdVersion))
   const right = scope.filter((r) => isCorrect(p, r, indicationOf(p, r.key)))
-  const coded = all.filter((r) => r.status === 'coded' || r.status === 'approved')
+  const coded = (keys ? scope : all).filter((r) => r.status === 'coded' || r.status === 'approved')
   const approved = coded.filter((r) => r.status === 'approved').length
   const wrong = scope.filter((r) => (r.status === 'coded' || r.status === 'approved') && !isCorrect(p, r, indicationOf(p, r.key)))
   const score = 80 * (scope.length ? right.length / scope.length : 1) + 20 * (coded.length ? approved / coded.length : 0)
@@ -275,9 +292,9 @@ export function scoreM13(p: Project, run: MissionRun) {
   finish(p, run, r.score - (k(run) - 1) * 5 * r.falseFlags, [`${r.found} of ${r.violations} violations named correctly`, `${r.falseFlags} sound entries flagged as violations`, `${r.unanswered} entries not reviewed`])
 }
 
-export function certificate(p: Project, name: string) {
-  const passed = MISSIONS.map((m) => latestRun(p, m.id)).filter((r): r is MissionRun => !!r?.passed)
-  const code = hashStr(`${name.trim().toLowerCase()}|${passed.map((r) => `${r.id}:${r.score}`).join(',')}|${p.id}`).slice(-10).toUpperCase()
+export function certificate(runs: MissionRun[], userId: string, name: string) {
+  const passed = MISSIONS.map((m) => runs.filter((r) => r.id === m.id && r.passed).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]).filter((r): r is MissionRun => !!r)
+  const code = hashStr(`${name.trim().toLowerCase()}|${passed.map((r) => `${r.id}:${r.score}`).join(',')}|${userId}`).slice(-10).toUpperCase()
   return { eligible: passed.length >= 10, passed, code: `CDM-${code.slice(0, 5)}-${code.slice(5)}` }
 }
 import { hash as hashStr } from './util'
@@ -293,3 +310,39 @@ export function progress(p: Project, run: MissionRun): { score: number; detail: 
   return { score: r.score ?? 0, detail: (r.detail ?? []).filter((d) => !d.startsWith('Level:')) }
 }
 Object.assign(SCORERS, { M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6: scoreM6, M7: scoreM7, M8: scoreM8, M9: scoreM9, M10: scoreM10, M11: scoreM11, M12: scoreM12 })
+
+// Every mission starts from its own prepared project (a snapshot of the study at the right
+// moment); the learner's other projects are left untouched.
+export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none' }
+export function prepareMission(base: Project, id: string, create: (userId: string, classId: string) => Project, prep: { lock: (p: Project) => void; locked: (p: Project) => void }): Project {
+  const np = create(base.userId, base.classId)
+  np.name = `${id} ${MISSIONS.find((m) => m.id === id)!.title}`
+  np.missionLevel = base.missionLevel
+  const kind = MISSION_PROJECT[id]
+  if (id === 'M2') {
+    // Everything outside the release is already validated: its UAT results are on file and its logic is correct.
+    for (const c of np.checks) {
+      if (M2_SCOPE.includes(c.id)) continue
+      if (CHECK_BUGS[c.id]) c.expr = CHECK_BUGS[c.id].correct
+      for (const t of c.tests) np.startup.uat.push({ checkId: c.id, test: t.name, expected: t.fire, actual: runTest(c, t), utc: `${np.clock}T08:00:00Z`, userId: 'system' })
+    }
+    audit(np, SYSTEM, 'scenario.prepare', 'UAT release 1.1', undefined, '12 checks under test', 'Checks outside the release were validated in release 1.0')
+  }
+  if (id === 'M8') { np.currentUserId = 'tibarra' }
+  if (kind === 'live') preparedStartup(np)
+  if (id === 'M8') {
+    advance(np, 150)
+    // A coded study to upgrade: the scenario codes what the auto-coder left.
+    np.users.push({ id: 'scenario-coder', name: 'Training scenario (Medical coder)', role: 'coder', pin: '', trained: true })
+    np.currentUserId = 'scenario-coder'
+    for (const r of Object.values(np.coding)) if (r.status === 'uncoded') { const e = expectedCode(r.key.split('|')[2], r.verbatim, indicationOf(np, r.key)); if (e?.kind === 'pt') { const llt = [...SMD10.terms.values()].find((t) => t.level === 'LLT' && t.current && t.name.toLowerCase() === r.verbatim.toLowerCase()) ?? [...SMD10.terms.values()].find((t) => t.level === 'LLT' && t.current && ptOf10(t.code) === e.pt); if (llt) codeTermFn(np, r.key, llt.code, undefined, false) } }
+    np.currentUserId = 'arao'
+  }
+  if (kind === 'lock') prep.lock(np)
+  if (kind === 'locked') prep.locked(np)
+  startMission(np, id)
+  return np
+}
+import { codeTerm as codeTermFn } from './coding'
+import { ptOf } from './dictmed'
+const ptOf10 = (code: string) => ptOf(SMD10, code)?.name

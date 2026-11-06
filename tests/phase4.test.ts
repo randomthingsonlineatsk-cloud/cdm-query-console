@@ -86,9 +86,9 @@ describe('lock', () => {
   })
   test('certificate needs ten passes and gives a stable code', () => {
     const p = createProject()
-    expect(certificate(p, 'A').eligible).toBe(false)
+    expect(certificate(p.missions, p.userId, 'A').eligible).toBe(false)
     for (const id of ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10']) p.missions.push({ id, startedUtc: '', userId: 'x', score: 80, passed: true })
-    const a = certificate(p, 'Khan'), b = certificate(p, 'khan ')
+    const a = certificate(p.missions, p.userId, 'Khan'), b = certificate(p.missions, p.userId, 'khan ')
     expect(a.eligible).toBe(true); expect(a.code).toBe(b.code); expect(a.code).toMatch(/^CDM-[0-9A-F]{5}-[0-9A-F]{5}$/)
   })
 })
