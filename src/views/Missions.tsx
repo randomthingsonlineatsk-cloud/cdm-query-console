@@ -1,19 +1,24 @@
 import { useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, certificate, preparedStartup, siteIssueStatus } from '../domain/missions'
+import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, certificate, preparedStartup, siteIssueStatus } from '../domain/missions'
 import { scoreQuery } from '../domain/queries'
 import { Panel, Pill, Btn, TextArea, Table, Stat } from './ui'
 import { QualityMeter } from './Queries'
 
 export default function Missions() {
-  const { p } = useStore()
+  const { p, act } = useStore()
   const [open, setOpen] = useState<string | null>(null)
   const passed = MISSIONS.filter((m) => latestRun(p, m.id)?.passed).length
   return (
     <div className="space-y-4">
       <Panel title="Missions" sub="Thirteen scored missions across four phases. Passing ten at 70% or more earns the course certificate.">
         <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Available now" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-lab-text-muted">Level for new runs</span>
+          {(['guided', 'standard', 'expert'] as const).map((l) => <Btn key={l} tone={(p.missionLevel ?? 'standard') === l ? 'solid' : 'grey'} onClick={() => act((pp) => { pp.missionLevel = l })}>{l}</Btn>)}
+          <span className="text-[11px] text-lab-text-muted">{LEVEL_TEXT[p.missionLevel ?? 'standard']} The pass mark is 70% at every level; the certificate shows each mission’s level.</span>
+        </div>
       </Panel>
       <div className="grid md:grid-cols-2 gap-3">
         {MISSIONS.map((m) => {
@@ -57,7 +62,7 @@ function M1() {
     <Panel title="M1 · Fix the DMP" sub="Review the plan on the Start-up tab, then score your review here. You can score more than once; the latest score counts.">
       <div className="flex gap-2"><Btn onClick={() => go('startup')}>Open the DMP</Btn><Btn tone="solid" onClick={() => act((pp) => scoreM1(pp, startMission(pp, 'M1')))}>Score my review</Btn></div>
       <p className="text-xs text-lab-text-muted">{Object.keys(p.startup.dmpFlags).length} statements flagged so far.</p>
-      <Result id="M1" />
+      <Progress id="M1" /><Result id="M1" />
     </Panel>
   )
 }
@@ -68,7 +73,7 @@ function M2() {
   return (
     <Panel title="M2 · Test the checks" sub="Run the test cases on the Edit checks tab. Read each failing case, decide whether the check or the test is wrong (here, it is the check), fix the logic, re-run, and sign the UAT summary.">
       <div className="flex gap-2"><Btn onClick={() => go('checks')}>Open the edit checks</Btn><Btn tone="solid" onClick={() => act((pp) => scoreM2(pp, startMission(pp, 'M2')))}>Score my UAT</Btn></div>
-      <Result id="M2" />
+      <Progress id="M2" /><Result id="M2" />
     </Panel>
   )
 }
@@ -94,13 +99,13 @@ function M3() {
             <Stat label="Started" value={activeRun.answers?.start ?? ''} />
             <Stat label="Deadline" value={activeRun.answers?.deadline ?? ''} tone={p.clock > (activeRun.answers?.deadline ?? '') ? 'red' : 'grey'} />
             <Stat label="Study date" value={p.clock} tone="blue" />
-            <Stat label="Site 103 issues resolved" value={`${st.filter((x) => x.resolved).length}/${st.length}`} tone="green" />
+            {p.missionLevel === 'guided' && <Stat label="Site 103 issues resolved" value={`${st.filter((x) => x.resolved).length}/${st.length}`} tone="green" />}
           </div>
           <p className="text-xs text-lab-text-muted">Work the queue for site 103: Queries (filter Site 103), the listings, and the casebook. Advance the clock to let the site answer. The issues behind the count stay hidden until you finish.</p>
           <div className="flex gap-2"><Btn onClick={() => go('queries')}>Queries</Btn><Btn tone="grey" onClick={() => go('listings')}>Listings</Btn><Btn tone="solid" onClick={() => act((pp) => scoreM3(pp, activeRun))}>Finish and score</Btn></div>
         </>
       )}
-      <Result id="M3" />
+      <Progress id="M3" /><Result id="M3" />
       {run?.score !== undefined && (
         <Table head={['Issue', 'Subject', 'Form · field', 'What it was', 'Resolved']} rows={siteIssueStatus(p, '103').filter((x) => x.entered).map((x) => [x.issue.id, x.issue.subj, `${x.issue.form} ${x.issue.visit} · ${x.issue.field}`, x.issue.note, x.resolved ? <Pill tone="green">Yes</Pill> : x.closedWrong ? <Pill tone="red">Closed on wrong data</Pill> : <Pill tone="amber">No</Pill>])} />
       )}
@@ -120,7 +125,7 @@ function M4() {
           <div key={s.id} className="space-y-1.5 border-t border-lab-line pt-3">
             <p className="text-sm"><span className="font-mono text-lab-fda">Scenario {String.fromCharCode(65 + i)}.</span> {s.data}</p>
             <TextArea aria-label={`Query for scenario ${String.fromCharCode(65 + i)}`} value={answers[s.id] ?? ''} onChange={(e) => setAnswers({ ...answers, [s.id]: e.target.value })} />
-            <QualityMeter score={sc.score} rules={sc.rules} />
+            {p.missionLevel !== 'expert' && <QualityMeter score={sc.score} rules={sc.rules} />}
           </div>
         )
       })}
@@ -148,13 +153,13 @@ function Phase2Mission({ id }: { id: string }) {
   return (
     <Panel title={`${m.id} · ${m.title}`} sub={m.brief}>
       {!p.live && <div className="rounded border border-lab-amber/60 p-3 space-y-2"><p className="text-sm">The study must be live first.</p><Btn tone="amber" onClick={() => act((pp) => preparedStartup(pp))}>Use the prepared start-up</Btn></div>}
-      <ul className="list-disc pl-5 text-xs text-lab-text-muted">{cfg.tips.map((t) => <li key={t}>{t}</li>)}</ul>
+      {p.missionLevel !== 'expert' && <ul className="list-disc pl-5 text-xs text-lab-text-muted">{cfg.tips.map((t) => <li key={t}>{t}</li>)}</ul>}
       {p.live && !active && <Btn tone="solid" onClick={() => act((pp) => { startMission(pp, id) })}>{run ? 'Start again' : 'Start the mission'}</Btn>}
       {active && <>
         <p className="text-xs">Started on study date {active.answers?.start}{active.answers?.deadline ? ` · sign-off deadline ${active.answers.deadline}` : ''} · now {p.clock}</p>
         <div className="flex gap-2"><Btn onClick={() => go(cfg.view)}>{cfg.label}</Btn><Btn tone="solid" onClick={() => act((pp) => cfg.score(pp, active))}>Finish and score</Btn></div>
       </>}
-      <Result id={id} />
+      <Progress id={id} /><Result id={id} />
     </Panel>
   )
 }
@@ -192,10 +197,10 @@ function LockMission({ id }: { id: 'M11' | 'M12' }) {
       {active && <>
         {id === 'M12' && <p className="text-sm text-lab-red">{CLOSE_OUT_REPORT}</p>}
         <p className="text-xs">Started on study date {active.answers?.start}{active.answers?.deadline ? ` · lock deadline ${active.answers.deadline}` : ''} · now {p.clock}</p>
-        <ul className="list-disc pl-5 text-xs text-lab-text-muted">{(id === 'M11' ? ['The Lock tab lists what is still missing, with evidence.', 'Open queries need site answers: advance the clock, then close them.', 'The privacy problem is fixed by the site, through a query.', 'Sign casebooks as Dr Elena Marsh (PI, 5555); approve lock as Jonas Weber (2222) and Dr Hana Okafor (sponsor, 8888).'] : ['Request the unlock on the Lock tab for the one subject affected.', 'Raise the query on the subject’s AE log so the site enters the event (the query key is the AE term of a new record).', 'Then code and approve, SDV, re-sign the casebook, review the audit trail, and re-lock.']).map((t) => <li key={t}>{t}</li>)}</ul>
+        {p.missionLevel !== 'expert' && <ul className="list-disc pl-5 text-xs text-lab-text-muted">{(id === 'M11' ? ['The Lock tab lists what is still missing, with evidence.', 'Open queries need site answers: advance the clock, then close them.', 'The privacy problem is fixed by the site, through a query.', 'Sign casebooks as Dr Elena Marsh (PI, 5555); approve lock as Jonas Weber (2222) and Dr Hana Okafor (sponsor, 8888).'] : ['Request the unlock on the Lock tab for the one subject affected.', 'Raise the query on the subject’s AE log so the site enters the event (the query key is the AE term of a new record).', 'Then code and approve, SDV, re-sign the casebook, review the audit trail, and re-lock.']).map((t) => <li key={t}>{t}</li>)}</ul>}
         <div className="flex gap-2"><Btn onClick={() => go('lock')}>Open the Lock tab</Btn><Btn tone="solid" onClick={() => act((pp) => (id === 'M11' ? scoreM11 : scoreM12)(pp, active))}>Finish and score</Btn></div>
       </>}
-      <Result id={id} />
+      <Progress id={id} /><Result id={id} />
     </Panel>
   )
 }
@@ -214,7 +219,7 @@ function Certificate() {
             <p className="font-mono text-xs uppercase text-lab-text-muted">Certificate of completion · training</p>
             <p className="text-xl">{name.trim()}</p>
             <p className="text-sm">has completed the CDM Query &amp; Edit-Check Console course on the fictional study {STUDY_PROTOCOL}, passing {c.passed.length} of {MISSIONS.length} scored missions:</p>
-            <p className="text-xs text-lab-text-muted">{c.passed.map((r) => `${r.id} ${MISSIONS.find((m) => m.id === r.id)!.title} (${r.score}%)`).join(' · ')}</p>
+            <p className="text-xs text-lab-text-muted">{c.passed.map((r) => `${r.id} ${MISSIONS.find((m) => m.id === r.id)!.title} (${r.score}%, ${r.level ?? 'standard'})`).join(' · ')}</p>
             <p className="font-mono text-sm">Verification code {c.code}</p>
             <p className="text-[11px] text-lab-text-muted">Issued {new Date().toISOString().slice(0, 10)}. A practice certificate from a training simulator; not an accredited qualification. Built by Khan Gulrez Shagufa Fazal Ahmed.</p>
           </div>}
@@ -245,5 +250,19 @@ function M13() {
       {done && <Table head={['Seq', 'Answer', 'Why']} rows={EXTRACT.map((r) => [r.seq, r.answer === 'none' ? 'No issue' : r.answer, r.why])} />}
       {done && <Btn tone="grey" onClick={() => setA({})}>Clear my answers to try again</Btn>}
     </Panel>
+  )
+}
+
+function Progress({ id }: { id: string }) {
+  const { p } = useStore()
+  const [res, setRes] = useState<{ score: number; detail: string[] } | null>(null)
+  if ((p.missionLevel ?? 'standard') !== 'guided') return null
+  const run = latestRun(p, id)
+  const active = run && run.score === undefined ? run : { id, startedUtc: 'progress', userId: p.currentUserId, level: 'guided' as const, answers: {} }
+  return (
+    <div className="rounded border border-lab-cdsco/40 p-2 space-y-1">
+      <Btn tone="green" onClick={() => setRes(progress(p, active))}>Check my progress (guided)</Btn>
+      {res && <><p className="text-xs">If you finished now: <b>{res.score}%</b></p><ul className="list-disc pl-5 text-[11px] text-lab-text-muted">{res.detail.map((d) => <li key={d}>{d}</li>)}</ul></>}
+    </div>
   )
 }
