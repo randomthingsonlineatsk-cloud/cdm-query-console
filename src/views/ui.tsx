@@ -119,7 +119,7 @@ export function SignBox({ meaning, what, roles, onSigned, label = 'Sign' }: { me
       <p className="text-xs text-lab-text"><span className="font-mono text-lab-ema">Electronic signature</span> · Meaning: <b>{meaning}</b> · Needs: {roles.map((r) => ROLE_LABEL[r]).join(' or ')}</p>
       <div className="flex flex-wrap gap-2">
         <input aria-label="User ID" className={cn(inputCls, 'w-36 font-mono')} value={uid} onChange={(e) => setUid(e.target.value)} placeholder="User ID" />
-        <input aria-label="PIN" className={cn(inputCls, 'w-28 font-mono')} type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" />
+        <input aria-label="PIN" className={cn(inputCls, 'w-28 font-mono')} autoComplete="off" spellCheck={false} style={{ WebkitTextSecurity: 'disc' } as React.CSSProperties} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" />
         <Btn tone="purple" onClick={() => act((pp) => { const r = sign(pp, uid.trim(), pin, meaning, what, roles); if (typeof r === 'string') { setErr(r); return } setErr(''); setPin(''); onSigned(r) })}>{label}</Btn>
       </div>
       {err && <p className="text-xs text-lab-red">{err}</p>}

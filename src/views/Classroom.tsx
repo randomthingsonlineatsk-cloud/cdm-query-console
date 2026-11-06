@@ -67,7 +67,7 @@ function JoinOrCreate({ session, onIn, run }: { session: Session; onIn: (s: Sess
           <input aria-label="Instructor email (optional)" className={ic('')} value={c.instructorEmail} onChange={(e) => setC({ ...c, instructorEmail: e.target.value })} placeholder="Your email (optional)" />
           <Btn tone="solid" onClick={() => run(async () => { const r = await api<{ instructorKey: string; class: { name: string; code: string } }>(session, 'POST', '/classes', c); setKey(r.instructorKey); download(`${r.class.name}-instructor-key.txt`, `Class: ${r.class.name}\nJoin code for students: ${r.class.code}\nInstructor key (keep it private): ${r.instructorKey}\nServer: ${session.api}\n`); onIn({ api: session.api, token: r.instructorKey, role: 'instructor', className: r.class.name, name: c.instructorName }) })}>Create class</Btn>
         </> : <p className="text-xs text-lab-cdsco">Class created; the key file was downloaded.</p>}
-        <details className="text-xs"><summary className="cursor-pointer">Already have an instructor key?</summary>
+        <details className="text-xs"><summary className="cursor-pointer">Already have a class key file?</summary>
           <KeyLogin session={session} onIn={onIn} run={run} />
         </details>
       </Panel>
@@ -76,7 +76,7 @@ function JoinOrCreate({ session, onIn, run }: { session: Session; onIn: (s: Sess
 }
 function KeyLogin({ session, onIn, run }: { session: Session; onIn: (s: Session) => void; run: (f: () => Promise<void>) => void }) {
   const [k, setK] = useState('')
-  return <div className="flex gap-2 mt-2"><input aria-label="Instructor key" type="password" className={ic('flex-1 font-mono')} value={k} onChange={(e) => setK(e.target.value)} placeholder="Instructor or student key" /><Btn onClick={() => run(async () => { const me = await api<Me>({ ...session, token: k.trim() }, 'GET', '/me'); onIn({ api: session.api, token: k.trim(), role: me.role, className: me.class.name }) })}>Sign in</Btn></div>
+  return <div className="flex gap-2 mt-2"><input aria-label="Class key" autoComplete="off" spellCheck={false} className={ic('flex-1 font-mono')} value={k} onChange={(e) => setK(e.target.value)} placeholder="Paste the class key from your key file" /><Btn onClick={() => run(async () => { const me = await api<Me>({ ...session, token: k.trim() }, 'GET', '/me'); onIn({ api: session.api, token: k.trim(), role: me.role, className: me.class.name }) })}>Open the class</Btn></div>
 }
 const download = (name: string, text: string) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); a.download = name; a.click(); URL.revokeObjectURL(a.href) }
 
