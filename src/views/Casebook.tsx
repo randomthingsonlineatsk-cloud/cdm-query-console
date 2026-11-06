@@ -126,6 +126,7 @@ function FormPanel({ fk, annot, setAnnot }: { fk: string; annot: boolean; setAnn
       {edit && <EditModal fk={fk} f={edit} onClose={() => setEdit(null)} />}
       {raise && <RaiseModal itemKey={`${fk}|${raise.id}`} label={raise.label} onClose={() => setRaise(null)} />}
       {hist && <HistoryModal itemKey={`${fk}|${hist.id}`} label={hist.label} onClose={() => setHist(null)} />}
+      {annot && <p className="text-[11px] text-lab-ema">Annotated CRF: CDASH variables and their SDTM targets. Mapping practice belongs to the SDTM Mapping Trainer (planned).</p>}
       <p className="text-[11px] text-lab-text-muted">As {ROLE_LABEL[u.role]}: {u.role === 'site' ? 'you can edit values (with a reason for change) and answer queries.' : ['dm', 'dmlead', 'cra', 'coder'].includes(u.role) ? 'you can raise manual queries; data management never edits site data directly.' : 'read only.'}</p>
     </Panel>
   )

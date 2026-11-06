@@ -249,3 +249,11 @@ export function standardise(p: Project, r: Record<string, string>) {
   return { value: c(r.LBORRES), unit: rule.to, lo: c(r.LBORNRLO), hi: c(r.LBORNRHI), converted: true }
 }
 export const daysSince = (a: string, b: string) => daysBetween(a, b)
+
+export function signExt(p: Project, s: import('./types').Signature) {
+  const open = VENDOR_IDS.reduce((n, v) => n + extDiscrepancies(p, v).filter((d) => !p.ext.decisions[d.id]).length, 0)
+  if (!VENDOR_IDS.every((v) => latestLoaded(p, v))) throw new Error('Load a transfer from every vendor first.')
+  if (open) throw new Error(`${open} vendor discrepancies are not classed yet.`)
+  p.ext.signoff = s
+  audit(p, me(p), 'ext.signoff', 'Vendor reconciliation', undefined, 'signed', `Signed by ${s.userId}`, s.utc)
+}

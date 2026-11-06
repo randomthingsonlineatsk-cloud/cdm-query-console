@@ -67,6 +67,9 @@ Lungs and airways
   Breathing difficulty
     Shortness of breath
       Breathlessness | Shortness of breath; Dyspnoea; Breathless on exertion
+  Nose conditions
+    Nose bleeding
+      Nosebleed | Epistaxis; Nose bleed; Bleeding from nose
 Digestive system
   Stomach and gut symptoms
     Nausea and vomiting

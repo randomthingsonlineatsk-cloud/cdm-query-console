@@ -1,10 +1,10 @@
 // Data model. Every record that a person creates carries userId, and the project carries
 // classId, so the shared classroom mode can be added later without a migration.
 
-export type Role = 'dm' | 'dmlead' | 'cra' | 'site' | 'pi' | 'coder' | 'safety' | 'system'
+export type Role = 'dm' | 'dmlead' | 'cra' | 'site' | 'pi' | 'coder' | 'safety' | 'sponsor' | 'system'
 export const ROLE_LABEL: Record<Role, string> = {
   dm: 'Clinical data manager', dmlead: 'Lead data manager', cra: 'Clinical research associate',
-  site: 'Site study coordinator', pi: 'Principal investigator', coder: 'Medical coder', safety: 'Drug safety physician', system: 'System',
+  site: 'Site study coordinator', pi: 'Principal investigator', coder: 'Medical coder', safety: 'Drug safety physician', sponsor: 'Sponsor clinical lead', system: 'System',
 }
 
 export interface User { id: string; name: string; role: Role; siteId?: string; pin: string; trained: boolean }
@@ -97,6 +97,22 @@ export interface Project {
   deviations: Deviation[]
   monitoring: { decisions: Record<string, MonitoringDecision>; forCause: Record<string, string> }
   qtlLog: QtlRecord[]
+  // Phase 4
+  lock: LockState
+}
+
+export type LockStatus = 'open' | 'soft' | 'hard' | 'unlocked'
+export interface UnlockRequest { id: string; justification: string; subjects: string[]; requestedBy: string; utc: string; approvals: Signature[]; status: 'requested' | 'approved' | 'relocked'; relockedUtc?: string }
+export interface LockState {
+  status: LockStatus
+  events: { utc: string; userId: string; action: string; detail: string }[]
+  piSign: Record<string, { userId: string; utc: string; auditSeq: number }>
+  auditReview?: { userId: string; utc: string; findings: string; upToSeq: number }
+  privacy?: { userId: string; utc: string; note: string }
+  softSig?: Signature
+  hardSigs: Signature[]
+  unlocks: UnlockRequest[]
+  archive?: { utc: string; retention: string; checksum: string; files: number }
 }
 
 export type DvCategory = 'Eligibility' | 'Informed consent' | 'Visit window' | 'Prohibited medication' | 'Investigational product' | 'Safety reporting' | 'Procedure not done' | 'Other'

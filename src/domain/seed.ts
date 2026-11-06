@@ -238,6 +238,7 @@ export function generateStudy(seed = 204201): SeedStudy {
   const hidden: Entry[] = []
   issueN = phase2(rng(seed + 11), subjects, entries, issues, hidden, issueN)
   issueN = phase3(subjects, entries, issues, hidden, issueN)
+  issueN = phase4(subjects, entries, issues, hidden, issueN)
   const kept = entries.filter((e) => !dropped.has(e))
   kept.sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.subj.localeCompare(b.subj))
   return { subjects, entries: kept, issues, hidden }
@@ -247,7 +248,7 @@ let cache: SeedStudy | null = null
 export const seedStudy = () => (cache ??= generateStudy())
 export const STUDY_START = STUDY.start
 
-export const SEED_VERSION = 3
+export const SEED_VERSION = 4
 export const accession = (subj: string, visit: string) => 'NG' + String(parseInt(hashSeed(subj + visit).slice(-8), 16) % 1_000_000).padStart(6, '0')
 
 // Phase 2 additions: verbatim terms for coding, the central lab sample form, the SAEs for
@@ -380,5 +381,21 @@ function phase3(subjects: SeedSubject[], entries: Entry[], issues: Issue[], hidd
     hidden.push({ subj: x.subj, site: '104', visit: 'LOG', form: 'AE', inst: 60, visitDate: st, entryDate: st, values: { ...t }, truth: { ...t } })
     issues.push({ id: `PI-${String(++n).padStart(3, '0')}`, subj: x.subj, site: '104', visit: 'LOG', form: 'AE', inst: 60, field: 'AETERM', kind: 'error', find: { listing: 'under-report' }, note: 'An adverse event in the source notes that the site did not enter; found at the for-cause visit.' })
   }
+  return n
+}
+
+// Phase 4 additions: a privacy problem for the lock checklist (a name and phone number typed
+// into a free-text comment) and an adverse event found at the close-out visit, after lock.
+export const CLOSE_OUT = { subj: '105-007', inst: 70, term: 'Nosebleed', day: 61 }
+function phase4(subjects: SeedSubject[], entries: Entry[], issues: Issue[], hidden: Entry[], n: number): number {
+  const ae = entries.find((e) => e.subj === '105-004' && e.form === 'AE' && e.inst < 50) ?? entries.find((e) => e.site === '105' && e.form === 'AE')!
+  ae.values.AECOM = 'Wife Sunita Pawar phoned the site on 98201 44231 to report the rash'
+  ae.truth.AECOM = 'Spouse reported the event to the site by phone'
+  issues.push({ id: `PI-${String(++n).padStart(3, '0')}`, subj: ae.subj, site: ae.site, visit: 'LOG', form: 'AE', inst: ae.inst, field: 'AECOM', kind: 'error', find: { listing: 'privacy' }, note: 'A relative’s name and phone number in a free-text comment: the site removes them.' })
+  const s = subjects.find((x) => x.id === CLOSE_OUT.subj)!
+  const st = addDays(s.d1!, CLOSE_OUT.day)
+  const t = { AETERM: CLOSE_OUT.term, AESTDAT: st, AEONGO: 'N', AEENDAT: addDays(st, 1), AESEV: 'MILD', AESER: 'N', AESDTH: '', AESLIFE: '', AESHOSP: '', AESDISAB: '', AESCONG: '', AESMIE: '', AEREL: 'UNLIKELY RELATED', AEACN: 'DOSE NOT CHANGED', AEOUT: 'RECOVERED/RESOLVED', AECOM: '' }
+  hidden.push({ subj: s.id, site: '105', visit: 'LOG', form: 'AE', inst: CLOSE_OUT.inst, visitDate: st, entryDate: st, values: { ...t }, truth: { ...t } })
+  issues.push({ id: `PI-${String(++n).padStart(3, '0')}`, subj: s.id, site: '105', visit: 'LOG', form: 'AE', inst: CLOSE_OUT.inst, field: 'AETERM', kind: 'error', find: { listing: 'close-out' }, note: 'An AE in the source notes found at the close-out visit, after lock.' })
   return n
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, preparedStartup, siteIssueStatus } from '../domain/missions'
+import { MISSIONS, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, certificate, preparedStartup, siteIssueStatus } from '../domain/missions'
 import { scoreQuery } from '../domain/queries'
 import { Panel, Pill, Btn, TextArea, Table, Stat } from './ui'
 import { QualityMeter } from './Queries'
@@ -13,15 +13,15 @@ export default function Missions() {
   return (
     <div className="space-y-4">
       <Panel title="Missions" sub="Twelve scored missions across four phases. Passing ten at 70% or more earns the course certificate (Phase 4).">
-        <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Available now" value={MISSIONS.filter((m) => m.phase <= 3).length} tone="blue" /><Stat label="For certificate" value="10 of 12" /></div>
+        <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Available now" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value="10 of 12" /></div>
       </Panel>
       <div className="grid md:grid-cols-2 gap-3">
         {MISSIONS.map((m) => {
           const r = latestRun(p, m.id)
           return (
-            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={m.phase > 3 ? `Coming in Phase ${m.phase}` : `Phase ${m.phase} · Pass: ${m.pass}`} right={r?.score !== undefined ? <Pill tone={r.passed ? 'green' : 'red'}>{r.score}%</Pill> : r ? <Pill tone="blue">In progress</Pill> : m.phase > 3 ? <Pill>Locked</Pill> : null}>
+            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={m.phase > 4 ? `Coming in Phase ${m.phase}` : `Phase ${m.phase} · Pass: ${m.pass}`} right={r?.score !== undefined ? <Pill tone={r.passed ? 'green' : 'red'}>{r.score}%</Pill> : r ? <Pill tone="blue">In progress</Pill> : m.phase > 4 ? <Pill>Locked</Pill> : null}>
               <p className="text-sm text-lab-text-muted">{m.brief}</p>
-              {m.phase <= 3 && <Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r ? 'Continue' : 'Start'}</Btn>}
+              {<Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r ? 'Continue' : 'Start'}</Btn>}
             </Panel>
           )
         })}
@@ -31,6 +31,8 @@ export default function Missions() {
       {open === 'M3' && <M3 />}
       {open === 'M4' && <M4 />}
       {['M5', 'M6', 'M7', 'M8', 'M9', 'M10'].includes(open ?? '') && <Phase2Mission id={open!} />}
+      {(open === 'M11' || open === 'M12') && <LockMission id={open} />}
+      <Certificate />
     </div>
   )
 }
@@ -155,3 +157,70 @@ function Phase2Mission({ id }: { id: string }) {
     </Panel>
   )
 }
+
+import { createProject } from '../domain/project'
+import { prepareForLock, prepareLocked, CLOSE_OUT_REPORT } from '../domain/lock'
+import { saveProject } from '../domain/store'
+
+function LockMission({ id }: { id: 'M11' | 'M12' }) {
+  const { p, act, replace, setError } = useStore()
+  const { go } = useNav()
+  const [busy, setBusy] = useState(false)
+  const run = latestRun(p, id)
+  const active = run && run.score === undefined ? run : undefined
+  const m = MISSIONS.find((x) => x.id === id)!
+  const fresh = () => {
+    setBusy(true)
+    setTimeout(() => {
+      try {
+        const np = createProject(p.userId, p.classId)
+        np.name = id === 'M11' ? 'M11 Lock on time' : 'M12 Unlock correctly'
+        if (id === 'M11') prepareForLock(np); else prepareLocked(np)
+        startMission(np, id)
+        saveProject(p).finally(() => replace(np))
+      } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+    }, 30)
+  }
+  return (
+    <Panel title={`${m.id} · ${m.title}`} sub={m.brief}>
+      {!active && <div className="space-y-2">
+        <p className="text-xs text-lab-text-muted">This mission runs in a new project, prepared by the training scenario (its work is labelled as such in the audit trail). Your current project stays saved under Project → Saved projects.</p>
+        {id === 'M12' && p.lock.status === 'hard' && <Btn tone="blue" onClick={() => act((pp) => { startMission(pp, 'M12') })}>Start in this hard-locked project</Btn>}
+        <Btn tone="solid" disabled={busy} onClick={fresh}>{busy ? 'Preparing the study (a few seconds)…' : 'Start in a new project'}</Btn>
+      </div>}
+      {active && <>
+        {id === 'M12' && <p className="text-sm text-lab-red">{CLOSE_OUT_REPORT}</p>}
+        <p className="text-xs">Started on study date {active.answers?.start}{active.answers?.deadline ? ` · lock deadline ${active.answers.deadline}` : ''} · now {p.clock}</p>
+        <ul className="list-disc pl-5 text-xs text-lab-text-muted">{(id === 'M11' ? ['The Lock tab lists what is still missing, with evidence.', 'Open queries need site answers: advance the clock, then close them.', 'The privacy problem is fixed by the site, through a query.', 'Sign casebooks as Dr Elena Marsh (PI, 5555); approve lock as Jonas Weber (2222) and Dr Hana Okafor (sponsor, 8888).'] : ['Request the unlock on the Lock tab for the one subject affected.', 'Raise the query on the subject’s AE log so the site enters the event (the query key is the AE term of a new record).', 'Then code and approve, SDV, re-sign the casebook, review the audit trail, and re-lock.']).map((t) => <li key={t}>{t}</li>)}</ul>
+        <div className="flex gap-2"><Btn onClick={() => go('lock')}>Open the Lock tab</Btn><Btn tone="solid" onClick={() => act((pp) => (id === 'M11' ? scoreM11 : scoreM12)(pp, active))}>Finish and score</Btn></div>
+      </>}
+      <Result id={id} />
+    </Panel>
+  )
+}
+
+function Certificate() {
+  const { p } = useStore()
+  const [name, setName] = useState('')
+  const c = certificate(p, name || 'Learner')
+  return (
+    <Panel title="Certificate" sub="Pass ten of the twelve missions at 70% or more. The certificate shows a verification code made from your name, your scores and this project.">
+      <p className="text-sm">{c.passed.length} of 12 missions passed.</p>
+      {c.eligible ? (
+        <div className="space-y-2">
+          <input aria-label="Name on the certificate" className="w-full max-w-sm rounded-md border border-lab-line bg-lab-panel-strong px-2 py-1.5 text-sm" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name as it should appear" />
+          {name.trim() && <div id="certificate" className="rounded-lg border-2 border-lab-cdsco/70 p-6 text-center space-y-2 bg-lab-panel-strong/50">
+            <p className="font-mono text-xs uppercase text-lab-text-muted">Certificate of completion · training</p>
+            <p className="text-xl">{name.trim()}</p>
+            <p className="text-sm">has completed the CDM Query &amp; Edit-Check Console course on the fictional study {STUDY_PROTOCOL}, passing {c.passed.length} of 12 scored missions:</p>
+            <p className="text-xs text-lab-text-muted">{c.passed.map((r) => `${r.id} ${MISSIONS.find((m) => m.id === r.id)!.title} (${r.score}%)`).join(' · ')}</p>
+            <p className="font-mono text-sm">Verification code {c.code}</p>
+            <p className="text-[11px] text-lab-text-muted">Issued {new Date().toISOString().slice(0, 10)}. A practice certificate from a training simulator; not an accredited qualification. Built by Khan Gulrez Shagufa Fazal Ahmed.</p>
+          </div>}
+          {name.trim() && <Btn tone="grey" onClick={() => window.print()}>Print or save as PDF</Btn>}
+        </div>
+      ) : <p className="text-xs text-lab-text-muted">{10 - c.passed.length} more to go.</p>}
+    </Panel>
+  )
+}
+const STUDY_PROTOCOL = 'HLV-204-201'
