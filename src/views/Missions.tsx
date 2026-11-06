@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, certificate, preparedStartup, siteIssueStatus } from '../domain/missions'
+import { MISSIONS, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, certificate, preparedStartup, siteIssueStatus } from '../domain/missions'
 import { scoreQuery } from '../domain/queries'
 import { Panel, Pill, Btn, TextArea, Table, Stat } from './ui'
 import { QualityMeter } from './Queries'
@@ -12,8 +12,8 @@ export default function Missions() {
   const passed = MISSIONS.filter((m) => latestRun(p, m.id)?.passed).length
   return (
     <div className="space-y-4">
-      <Panel title="Missions" sub="Twelve scored missions across four phases. Passing ten at 70% or more earns the course certificate (Phase 4).">
-        <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Available now" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value="10 of 12" /></div>
+      <Panel title="Missions" sub="Thirteen scored missions across four phases. Passing ten at 70% or more earns the course certificate.">
+        <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Available now" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
       </Panel>
       <div className="grid md:grid-cols-2 gap-3">
         {MISSIONS.map((m) => {
@@ -32,6 +32,7 @@ export default function Missions() {
       {open === 'M4' && <M4 />}
       {['M5', 'M6', 'M7', 'M8', 'M9', 'M10'].includes(open ?? '') && <Phase2Mission id={open!} />}
       {(open === 'M11' || open === 'M12') && <LockMission id={open} />}
+      {open === 'M13' && <M13 />}
       <Certificate />
     </div>
   )
@@ -205,14 +206,14 @@ function Certificate() {
   const c = certificate(p, name || 'Learner')
   return (
     <Panel title="Certificate" sub="Pass ten of the twelve missions at 70% or more. The certificate shows a verification code made from your name, your scores and this project.">
-      <p className="text-sm">{c.passed.length} of 12 missions passed.</p>
+      <p className="text-sm">{c.passed.length} of {MISSIONS.length} missions passed.</p>
       {c.eligible ? (
         <div className="space-y-2">
           <input aria-label="Name on the certificate" className="w-full max-w-sm rounded-md border border-lab-line bg-lab-panel-strong px-2 py-1.5 text-sm" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name as it should appear" />
           {name.trim() && <div id="certificate" className="rounded-lg border-2 border-lab-cdsco/70 p-6 text-center space-y-2 bg-lab-panel-strong/50">
             <p className="font-mono text-xs uppercase text-lab-text-muted">Certificate of completion · training</p>
             <p className="text-xl">{name.trim()}</p>
-            <p className="text-sm">has completed the CDM Query &amp; Edit-Check Console course on the fictional study {STUDY_PROTOCOL}, passing {c.passed.length} of 12 scored missions:</p>
+            <p className="text-sm">has completed the CDM Query &amp; Edit-Check Console course on the fictional study {STUDY_PROTOCOL}, passing {c.passed.length} of {MISSIONS.length} scored missions:</p>
             <p className="text-xs text-lab-text-muted">{c.passed.map((r) => `${r.id} ${MISSIONS.find((m) => m.id === r.id)!.title} (${r.score}%)`).join(' · ')}</p>
             <p className="font-mono text-sm">Verification code {c.code}</p>
             <p className="text-[11px] text-lab-text-muted">Issued {new Date().toISOString().slice(0, 10)}. A practice certificate from a training simulator; not an accredited qualification. Built by Khan Gulrez Shagufa Fazal Ahmed.</p>
@@ -224,3 +225,25 @@ function Certificate() {
   )
 }
 const STUDY_PROTOCOL = 'HLV-204-201'
+
+import { EXTRACT, ESOURCE_USERS, ATTRS, ATTR_TEXT } from '../domain/alcoa'
+function M13() {
+  const { p, act } = useStore()
+  const run = latestRun(p, 'M13')
+  const [a, setA] = useState<Record<string, string>>(run?.score === undefined ? run?.answers ?? {} : {})
+  const done = run?.score !== undefined
+  return (
+    <Panel title="M13 · Audit the trail" sub="Extract from the audit trail of site 106’s electronic source notes system (fictional), exported for the sponsor’s vendor qualification. Times are local to the site (UTC+05:30).">
+      <details className="rounded border border-lab-line p-2 text-xs"><summary className="cursor-pointer">ALCOA+ attributes</summary><ul className="mt-1 space-y-0.5">{ATTRS.map((x) => <li key={x}><b>{x}:</b> {ATTR_TEXT[x]}</li>)}</ul></details>
+      <Table head={['User ID', 'Who', 'Account active']} rows={ESOURCE_USERS.map((u) => [<span className="font-mono">{u.id}</span>, u.name, u.active])} />
+      <Table head={['Seq', 'When', 'User', 'Action', 'Record', 'Old', 'New', 'Reason', 'Your finding']} rows={EXTRACT.map((r) => [r.seq, <span className="font-mono text-[10px]">{r.when}</span>, <span className="font-mono">{r.user}</span>, r.action, r.record, r.old, r.nw, r.reason,
+        <select aria-label={`Finding for entry ${r.seq}`} className="rounded border border-lab-line bg-lab-panel-strong px-1 py-0.5 text-xs" value={a[r.seq] ?? ''} disabled={done} onChange={(e) => setA({ ...a, [r.seq]: e.target.value })}>
+          <option value="">Choose…</option><option value="none">No issue</option>{ATTRS.map((x) => <option key={x} value={x}>Breaks: {x}</option>)}
+        </select>])} />
+      {!done && <Btn tone="solid" onClick={() => act((pp) => { const r = startMission(pp, 'M13'); r.answers = { ...a }; scoreM13(pp, r) })}>Submit and score</Btn>}
+      <Result id="M13" />
+      {done && <Table head={['Seq', 'Answer', 'Why']} rows={EXTRACT.map((r) => [r.seq, r.answer === 'none' ? 'No issue' : r.answer, r.why])} />}
+      {done && <Btn tone="grey" onClick={() => setA({})}>Clear my answers to try again</Btn>}
+    </Panel>
+  )
+}

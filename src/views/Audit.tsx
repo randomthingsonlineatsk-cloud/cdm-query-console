@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { verifyAudit, userById } from '../domain/project'
+import { tagsFor, ATTR_TEXT } from '../domain/alcoa'
 import { Panel, Pill, Btn, Table, Select, inputCls, ic, fmtUtc } from './ui'
 
 const ALCOA = [
@@ -33,7 +34,8 @@ export default function AuditView() {
           <Select aria-label="User" className="w-48" value={who} onChange={(e) => setWho(e.target.value)} options={[{ value: 'all', label: 'All users' }, ...users.map((u) => ({ value: u, label: `${u} · ${userById(p, u).name}` }))]} />
         </div>
         <div className="max-h-[60vh] overflow-y-auto">
-          <Table head={['#', 'When (UTC)', 'Who', 'Role', 'Action', 'What', 'Old', 'New', 'Why', 'Hash']} rows={list.slice(0, 400).map((a) => [a.seq, fmtUtc(a.utc), a.userId, a.role, <span className="font-mono">{a.action}</span>, <span className="font-mono text-[10px]">{a.entity}</span>, a.old ?? '', a.new ?? '', a.reason ?? '', <span className="font-mono text-[10px] text-lab-text-muted">{a.hash.slice(0, 8)}</span>])} />
+          <Table head={['#', 'When (UTC)', 'Who', 'Role', 'Action', 'What', 'Old', 'New', 'Why', 'ALCOA+ shown', 'Hash']} rows={list.slice(0, 400).map((a) => [a.seq, fmtUtc(a.utc), a.userId, a.role, <span className="font-mono">{a.action}</span>, <span className="font-mono text-[10px]">{a.entity}</span>, a.old ?? '', a.new ?? '', a.reason ?? '', <span className="flex flex-wrap gap-0.5">{tagsFor(a).map((t) => <span key={t} title={ATTR_TEXT[t]} className="rounded bg-lab-fda-soft px-1 font-mono text-[9px] text-lab-fda">{t.slice(0, 4)}</span>)}</span>, <span className="font-mono text-[10px] text-lab-text-muted">{a.hash.slice(0, 8)}</span>])} />
+          <p className="text-[11px] text-lab-text-muted">ALCOA+ shown: the attributes each entry demonstrates (hover a tag for its meaning). Attr = attributable, Cont = contemporaneous, Orig = original, Accu = accurate, Comp = complete, Cons = consistent, Legi = legible, Endu = enduring, Avai = available.</p>
           {list.length > 400 && <p className="text-[11px] text-lab-text-muted mt-1">Showing the latest 400 of {list.length}. Search or filter to narrow.</p>}
         </div>
       </Panel>
