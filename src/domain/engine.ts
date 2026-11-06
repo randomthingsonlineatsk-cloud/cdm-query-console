@@ -32,7 +32,7 @@ function subjectFns(forms: FormData[], visit: string, today: string): Record<str
   const aes = () => forms.filter((x) => x.form === 'AE')
   const win = VISITS.find((v) => v.id === visit)
   return {
-    consent: () => get('SCR', 'IC', 'DSSTDAT'),
+    consent: () => forms.find((x) => x.form === 'IC' && x.inst === 1)?.values.DSSTDAT ?? '',
     rand: () => visdat('D1'),
     visdat: (v) => visdat(String(v)),
     val: (v, f, field) => get(String(v), String(f), String(field)),

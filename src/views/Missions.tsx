@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, certificate, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
+import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, certificate, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
 import { listProjects } from '../domain/store'
 import type { MissionRun } from '../domain/types'
 import { scoreQuery } from '../domain/queries'
@@ -24,7 +24,7 @@ export default function Missions() {
   const passed = MISSIONS.filter((m) => bestOf(runs, m.id)?.passed).length
   return (
     <div className="space-y-4">
-      <Panel title="Missions" sub="Thirteen scored missions across four phases. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more earns the course certificate.">
+      <Panel title="Missions" sub="Seventeen scored missions on two studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
         <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Missions" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-lab-text-muted">Level for new runs</span>
@@ -38,7 +38,7 @@ export default function Missions() {
           const best = bestOf(runs, m.id)
           const r = latestRun(p, m.id)
           return (
-            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
+            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · ${m.phase === 5 ? 'vaccine trial ALV-3-301' : 'HLV-204-201'} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
               <p className="text-sm text-lab-text-muted">{m.brief}</p>
               <Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r && r.score === undefined ? 'Continue' : 'Open'}</Btn>
             </Panel>
@@ -58,7 +58,7 @@ function MissionPanel({ id }: { id: string }) {
   const m = MISSIONS.find((x) => x.id === id)!
   const run = latestRun(p, id)
   const active = run && run.score === undefined ? run : undefined
-  if (MISSION_PROJECT[id] === 'none') return id === 'M4' ? <M4 /> : <M13 />
+  if (MISSION_PROJECT[id] === 'none') return id === 'M4' ? <M4 /> : id === 'M17' ? <M17 /> : <M13 />
   if (!active) {
     const start = () => {
       setBusy(true)
@@ -79,6 +79,7 @@ function MissionPanel({ id }: { id: string }) {
   if (id === 'M2') return <M2 run={active} />
   if (id === 'M3') return <M3 />
   if (id === 'M11' || id === 'M12') return <LockMission id={id} />
+  if (VAX_P[id]) return <VaxMission id={id} />
   return <Phase2Mission id={id} />
 }
 
@@ -223,7 +224,7 @@ function Certificate({ runs }: { runs: MissionRun[] }) {
   const [name, setName] = useState('')
   const c = certificate(runs, p.userId, name || 'Learner')
   return (
-    <Panel title="Certificate" sub="Pass ten of the thirteen missions at 70% or more, in any of your projects in this browser. The certificate shows a verification code made from your name, your scores and your user ID.">
+    <Panel title="Certificate" sub="Pass ten of the seventeen missions at 70% or more, on either study, in any of your projects in this browser. The certificate shows a verification code made from your name, your scores and your user ID.">
       <p className="text-sm">{c.passed.length} of {MISSIONS.length} missions passed.</p>
       {c.eligible ? (
         <div className="space-y-2">
@@ -231,7 +232,7 @@ function Certificate({ runs }: { runs: MissionRun[] }) {
           {name.trim() && <div id="certificate" className="rounded-lg border-2 border-lab-cdsco/70 p-6 text-center space-y-2 bg-lab-panel-strong/50">
             <p className="font-mono text-xs uppercase text-lab-text-muted">Certificate of completion · training</p>
             <p className="text-xl">{name.trim()}</p>
-            <p className="text-sm">has completed the CDM Query &amp; Edit-Check Console course on the fictional study {STUDY_PROTOCOL}, passing {c.passed.length} of {MISSIONS.length} scored missions:</p>
+            <p className="text-sm">has completed the CDM Query &amp; Edit-Check Console course on the fictional {c.passed.some((r) => Number(r.id.slice(1)) >= 14) ? 'studies HLV-204-201 and ALV-3-301' : `study ${STUDY_PROTOCOL}`}, passing {c.passed.length} of {MISSIONS.length} scored missions:</p>
             <p className="text-xs text-lab-text-muted">{c.passed.map((r) => `${r.id} ${MISSIONS.find((m) => m.id === r.id)!.title} (${r.score}%, ${r.level ?? 'standard'})`).join(' · ')}</p>
             <p className="font-mono text-sm">Verification code {c.code}</p>
             <p className="text-[11px] text-lab-text-muted">Issued {new Date().toISOString().slice(0, 10)}. A practice certificate from a training simulator; not an accredited qualification. Built by Khan Gulrez Shagufa Fazal Ahmed.</p>
@@ -277,5 +278,52 @@ function Progress({ id }: { id: string }) {
       <Btn tone="green" onClick={() => setRes(progress(p, active))}>Check my progress (guided)</Btn>
       {res && <><p className="text-xs">If you finished now: <b>{res.score}%</b></p><ul className="list-disc pl-5 text-[11px] text-lab-text-muted">{res.detail.map((d) => <li key={d}>{d}</li>)}</ul></>}
     </div>
+  )
+}
+
+// ---------- vaccine-study missions ----------
+const VAX_P: Record<string, { tab: string; label: string; score: typeof scoreM14; tips: string[] }> = {
+  M14: { tab: 'compliance', label: 'Open diary compliance', score: scoreM14, tips: ['Each morning, open E-diary → Compliance and look for days marked “!”: still open until 12:00.', 'Alert the site for every open day; an alert after noon is too late, the day is then missed for good.', 'A participant whose entries keep arriving days late may have a device that is not syncing: an alert gets the site to restart it.', 'Advance the clock one day at a time.'] },
+  M15: { tab: 'dcf', label: 'Open the correction requests', score: scoreM15, tips: ['Send to the vendor only when the change is backed by a contemporaneous source: a phone note or email from the participant made when the error happened or was found.', 'A memory weeks later, a monitor’s opinion, or a wish to make data look consistent is not a source: return those with the reason.', 'Check the value: the correction must say exactly what the participant reported.'] },
+  M16: { tab: 'recon', label: 'Open diary reconciliation', score: scoreM16, tips: ['A reaction still present on the last diary day needs a continuing-reaction form on the eCRF.', 'Medicine for fever or pain in the diary should appear in concomitant medications.', 'A diary fever entered again as an unsolicited AE is double-counted: the site removes the AE.', 'A device mismatch is for the vendor; a missing eCRF record is for the site.'] },
+}
+function VaxMission({ id }: { id: string }) {
+  const { p, act } = useStore()
+  const { go } = useNav()
+  const run = latestRun(p, id)
+  const active = run && run.score === undefined ? run : undefined
+  const m = MISSIONS.find((x) => x.id === id)!
+  const cfg = VAX_P[id]
+  return (
+    <Panel title={`${m.id} · ${m.title}`} sub={m.brief}>
+      {p.missionLevel !== 'expert' && <ul className="list-disc pl-5 text-xs text-lab-text-muted">{cfg.tips.map((t) => <li key={t}>{t}</li>)}</ul>}
+      {active && <>
+        <p className="text-xs">Started on study date {active.answers?.start}{active.answers?.deadline ? ` · period ends ${active.answers.deadline}` : ''} · now {p.clock}</p>
+        <div className="flex gap-2"><Btn onClick={() => go('diary', cfg.tab)}>{cfg.label}</Btn><Btn tone="solid" onClick={() => act((pp) => cfg.score(pp, active))}>Finish and score</Btn></div>
+      </>}
+      <Progress id={id} /><Result id={id} />
+    </Panel>
+  )
+}
+
+import { TRAIL, TRAIL_TEXT, DEVICE_LOG } from '../domain/vax/missions'
+function M17() {
+  const { p, act } = useStore()
+  const run = latestRun(p, 'M17')
+  const [a, setA] = useState<Record<string, string>>(run?.score === undefined ? run?.answers ?? {} : {})
+  const done = run?.score !== undefined
+  return (
+    <Panel title="M17 · Review the diary trail" sub="Extract from the e-diary audit trail for site 203 (Deccan Clinical Research Institute), exported by the diary vendor for a sponsor audit. Times are local to the site (UTC+05:30). Each diary day is open from the evening of that day until 12:00 the next day; day 1 is the day of vaccination.">
+      <details className="rounded border border-lab-line p-2 text-xs"><summary className="cursor-pointer">What a reviewer looks for</summary><ul className="mt-1 space-y-0.5">{Object.values(TRAIL_TEXT).map((x) => <li key={x}>{x}</li>)}</ul></details>
+      <Table head={['Participant', 'Device assigned (accountability log)']} rows={DEVICE_LOG.map((d) => [<span className="font-mono">{d.participant}</span>, <span className="font-mono">{d.device}</span>])} />
+      <Table head={['Seq', 'When', 'User', 'Device', 'Record', 'Old', 'New', 'Reason', 'Your finding']} rows={TRAIL.map((r) => [r.seq, <span className="font-mono text-[10px]">{r.when}</span>, <span className="font-mono">{r.user}</span>, <span className="font-mono">{r.device}</span>, r.record, r.old, r.nw, r.reason,
+        <select aria-label={`Finding for entry ${r.seq}`} className="rounded border border-lab-line bg-lab-panel-strong px-1 py-0.5 text-xs max-w-56" value={a[r.seq] ?? ''} disabled={done} onChange={(e) => setA({ ...a, [r.seq]: e.target.value })}>
+          <option value="">Choose…</option><option value="none">No issue</option>{Object.entries(TRAIL_TEXT).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
+        </select>])} />
+      {!done && <Btn tone="solid" onClick={() => act((pp) => { const r = startMission(pp, 'M17'); r.answers = { ...a }; scoreM17(pp, r) })}>Submit and score</Btn>}
+      <Result id="M17" />
+      {done && <Table head={['Seq', 'Answer', 'Why']} rows={TRAIL.map((r) => [r.seq, r.answer === 'none' ? 'No issue' : TRAIL_TEXT[r.answer], r.why])} />}
+      {done && <Btn tone="grey" onClick={() => setA({})}>Clear my answers to try again</Btn>}
+    </Panel>
   )
 }

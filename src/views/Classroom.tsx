@@ -113,6 +113,7 @@ function Student({ s, me, refresh, run }: { s: Session; me: Me; refresh: () => v
 function Instructor({ s, me, refresh, run }: { s: Session; me: Me; refresh: () => void; run: (f: () => Promise<void>) => void }) {
   const [a, setA] = useState({ missionId: 'M1', difficulty: 'standard', dueAt: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10), note: '' })
   const [open, setOpen] = useState<string | null>(null)
+  const { p } = useStore()
   const [detail, setDetail] = useState<{ score: number; detail: string[] } | null>(null)
   const [comment, setComment] = useState('')
   const name = (id: string) => me.members?.find((m) => m.id === id)?.name ?? id
@@ -136,7 +137,7 @@ function Instructor({ s, me, refresh, run }: { s: Session; me: Me; refresh: () =
         <Table head={['Student', 'Mission', 'Submitted (UTC)', 'Reported', 'Verified', '']} rows={me.submissions.map((x) => [name(x.memberId), title(asg(x.assignmentId)?.missionId ?? ''), fmtUtc(x.submittedAt) + (asg(x.assignmentId) && x.submittedAt > asg(x.assignmentId)!.dueAt ? ' (late)' : ''), `${x.score}%`, x.verifiedScore === null ? '—' : `${x.verifiedScore}%`, <Btn className="py-0.5" onClick={() => { setOpen(x.id); setDetail(null); setComment('') }}>Review</Btn>])} empty="No submissions yet." />
         {open && <div className="rounded border border-lab-line p-2 space-y-2">
           <div className="flex gap-2">
-            <Btn tone="solid" onClick={() => run(async () => { const r = await api<{ submission: { project: Submission } }>(s, 'GET', `/submissions/${open}`); const v = await verifySubmission(r.submission.project); setDetail(v); await api(s, 'PATCH', `/submissions/${open}`, { verifiedScore: v.score }); refresh() })}>Re-score in this browser</Btn>
+            <Btn tone="solid" onClick={() => run(async () => { const r = await api<{ submission: { project: Submission } }>(s, 'GET', `/submissions/${open}`); const v = await verifySubmission(r.submission.project, p); setDetail(v); await api(s, 'PATCH', `/submissions/${open}`, { verifiedScore: v.score }); refresh() })}>Re-score in this browser</Btn>
             <Btn tone="grey" onClick={() => setOpen(null)}>Close</Btn>
           </div>
           {detail && <><p className="text-sm">Verified score <b>{detail.score}%</b></p><ul className="list-disc pl-5 text-xs text-lab-text-muted">{detail.detail.map((d) => <li key={d}>{d}</li>)}</ul></>}

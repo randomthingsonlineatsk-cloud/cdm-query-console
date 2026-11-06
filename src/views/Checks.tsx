@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { CATEGORY_LABEL, SHIPPED_CHECKS, CTX_FNS } from '../domain/checks'
+import { VAX_CHECKS } from '../domain/vax/checks'
 import { runTest, fieldsOfForm } from '../domain/engine'
 import { validate } from '../domain/expr'
 import { audit, me, nowUtc, runChecks, allSubjects } from '../domain/project'
@@ -71,7 +72,7 @@ function CheckDetail({ c, results }: { c: Check; results: Map<string, boolean> }
   const [msg, setMsg] = useState(c.message)
   const fields = fieldsOfForm(c.form)
   const err = validate(expr, fields, CTX_FNS)
-  const shipped = SHIPPED_CHECKS.find((x) => x.id === c.id)!
+  const shipped = SHIPPED_CHECKS.find((x) => x.id === c.id) ?? VAX_CHECKS.find((x) => x.id === c.id) ?? c
   const locked = !!p.startup.uatSigned && p.live
   const save = () => act((pp) => {
     if (err) throw new Error(err)

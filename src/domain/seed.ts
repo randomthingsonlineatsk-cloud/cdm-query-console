@@ -3,7 +3,9 @@
 // they differ, or where a value is true but unusual, the difference is a planted issue in the
 // answer key, with the check or listing that should find it.
 
-import { SITES, VISITS, STUDY, type Site } from './study'
+import { HLV_DEF, ACTIVE, type Site } from './study'
+// The generator always uses the shipped hypertension study, whichever study is open.
+const SITES = HLV_DEF.sites, VISITS = HLV_DEF.visits, STUDY = HLV_DEF.study
 import { rng, addDays, hash as hashFn, type Rng } from './util'
 
 export interface Entry {
@@ -18,7 +20,7 @@ export interface Issue {
   kind: 'error' | 'true-value'      // error: the site corrects it; true-value: the site confirms it
   find: IssueFinder; note: string
 }
-export interface SeedSubject { id: string; site: string; scr: string; d1?: string; fate: 'completed' | 'screen-fail' | 'early-ae' | 'early-withdrawal' | 'lost'; lastVisit: string; arm: 'VSC-9' | 'Placebo' }
+export interface SeedSubject { id: string; site: string; scr: string; d1?: string; fate: 'completed' | 'screen-fail' | 'early-ae' | 'early-withdrawal' | 'lost'; lastVisit: string; arm: 'VSC-9' | 'ALV-3' | 'Placebo' }
 export interface SeedStudy { subjects: SeedSubject[]; entries: Entry[]; issues: Issue[]; hidden: Entry[] } // hidden: records the site enters only when asked
 
 const LAG: Record<Site['profile'], [number, number]> = { clean: [1, 3], slow: [2, 5], 'new-coordinator': [3, 7], 'under-reports': [2, 5], 'other-units': [2, 5], late: [10, 21] }
@@ -246,7 +248,10 @@ export function generateStudy(seed = 204201): SeedStudy {
 }
 
 let cache: SeedStudy | null = null
-export const seedStudy = () => (cache ??= generateStudy())
+export const hlvSeed = () => (cache ??= generateStudy())
+// The open study's seed (the vaccine study registers its own generator).
+export const seedRegistry: { vax?: () => SeedStudy } = {}
+export const seedStudy = (): SeedStudy => (ACTIVE.id === HLV_DEF.study.protocol || !seedRegistry.vax ? hlvSeed() : seedRegistry.vax())
 export const STUDY_START = STUDY.start
 
 export const SEED_VERSION = 5
