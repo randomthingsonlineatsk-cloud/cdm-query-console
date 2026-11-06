@@ -74,6 +74,12 @@ export const SHIPPED_CHECKS: Check[] = [
   c('LB-11', 'ALT above 3 × ULN (120 U/L)', 'protocol', 'LB', 'ALT', 'ALT > 120', 'ALT is {ALT} U/L, above three times the upper limit of normal. Please confirm the value and whether an adverse event was reported.', [T('180 fires', { ALT: '180' }, true), T('28 passes', { ALT: '28' }, false)]),
   c('LB-12', 'Sample date differs from the visit date', 'date', 'LB', 'LBDAT', "present(LBDAT) and present(visdat(vis())) and LBDAT != visdat(vis())", 'The sample is dated {LBDAT}, but the visit date is {visdat}. Please confirm the collection date.', [T('Different fires', { LBDAT: '2026-04-03' }, true, { vis: 'W4', 'visdat:W4': '2026-04-01' }), T('Same passes', { LBDAT: '2026-04-01' }, false, { vis: 'W4', 'visdat:W4': '2026-04-01' })]),
   c('LB-13', 'Potassium above 5.5 on treatment with no hyperkalaemia AE', 'cross-form', 'LB', 'K', "vis() != 'SCR' and K > 5.5 and aematch('kal') = 0", 'Potassium is {K} mmol/L on treatment and no adverse event of hyperkalaemia is recorded. Please confirm the value and whether an AE should be reported.', [T('5.9 with no AE fires', { K: '5.9' }, true, { vis: 'W4', 'aematch:kal': '0' }), T('5.9 with AE passes', { K: '5.9' }, false, { vis: 'W4', 'aematch:kal': '1' })]),
+  // LBC — central laboratory sample (keys for the vendor reconciliation)
+  miss('LBC-01', 'LBC', 'LBPERF'),
+  miss('LBC-02', 'LBC', 'LBREFID', "LBPERF = 'Y'", { LBPERF: 'Y' }),
+  miss('LBC-03', 'LBC', 'LBDAT', "LBPERF = 'Y'", { LBPERF: 'Y' }),
+  c('LBC-04', 'Accession number format', 'range', 'LBC', 'LBREFID', "not pattern(LBREFID, 'NG######')", 'Accession number "{LBREFID}" does not match the requisition format NG followed by six digits. Please check the requisition.', [T('Fires', { LBREFID: '1234567' }, true), T('Passes', { LBREFID: 'NG123456' }, false)]),
+  c('LBC-05', 'Collection time format', 'range', 'LBC', 'LBTIM', "not pattern(LBTIM, '##:##')", 'Collection time "{LBTIM}" is not in 24-hour HH:MM format. Please check the requisition.', [T('Fires', { LBTIM: '930' }, true), T('Passes', { LBTIM: '09:30' }, false)]),
   // EG — ECG
   miss('EG-01', 'EG', 'EGDAT'), miss('EG-02', 'EG', 'QTCF'), miss('EG-03', 'EG', 'EGINTP'),
   c('EG-04', 'QTcF outside 300 to 600 ms', 'range', 'EG', 'QTCF', 'QTCF < 300 or QTCF > 600', 'QTcF is {QTCF} ms, outside 300 to 600 ms. Please verify against the ECG tracing.', [T('41 fires', { QTCF: '41' }, true), T('412 passes', { QTCF: '412' }, false)]),

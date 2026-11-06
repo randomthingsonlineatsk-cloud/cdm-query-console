@@ -111,3 +111,4 @@ export function Stat({ label, value, tone = 'grey' }: { label: string; value: Re
   const color = { blue: 'text-lab-fda', green: 'text-lab-cdsco', amber: 'text-lab-amber', red: 'text-lab-red', purple: 'text-lab-ema', grey: 'text-lab-text' }[tone]
   return <div className="rounded border border-lab-line bg-lab-panel-strong/60 px-3 py-2"><p className="font-mono text-[10px] uppercase text-lab-text-muted">{label}</p><p className={cn('font-mono text-lg', color)}>{value}</p></div>
 }
+export const ic = (extra: string) => cn(inputCls, extra)

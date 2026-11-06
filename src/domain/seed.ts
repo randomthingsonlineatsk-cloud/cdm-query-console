@@ -4,7 +4,7 @@
 // answer key, with the check or listing that should find it.
 
 import { SITES, VISITS, STUDY, type Site } from './study'
-import { rng, addDays, type Rng } from './util'
+import { rng, addDays, hash as hashFn, type Rng } from './util'
 
 export interface Entry {
   subj: string; site: string; visit: string; form: string; inst: number
@@ -19,7 +19,7 @@ export interface Issue {
   find: IssueFinder; note: string
 }
 export interface SeedSubject { id: string; site: string; scr: string; d1?: string; fate: 'completed' | 'screen-fail' | 'early-ae' | 'early-withdrawal' | 'lost'; lastVisit: string; arm: 'VSC-9' | 'Placebo' }
-export interface SeedStudy { subjects: SeedSubject[]; entries: Entry[]; issues: Issue[] }
+export interface SeedStudy { subjects: SeedSubject[]; entries: Entry[]; issues: Issue[]; hidden: Entry[] } // hidden: records the site enters only when asked
 
 const LAG: Record<Site['profile'], [number, number]> = { clean: [1, 3], slow: [2, 5], 'new-coordinator': [3, 7], 'under-reports': [2, 5], 'other-units': [2, 5], late: [10, 21] }
 export const RESPONSE_DAYS: Record<Site['profile'], [number, number]> = { clean: [1, 4], slow: [14, 35], 'new-coordinator': [4, 9], 'under-reports': [3, 7], 'other-units': [3, 7], late: [7, 14] }
@@ -235,11 +235,120 @@ export function generateStudy(seed = 204201): SeedStudy {
       }
     }
   }
+  const hidden: Entry[] = []
+  issueN = phase2(rng(seed + 11), subjects, entries, issues, hidden, issueN)
   const kept = entries.filter((e) => !dropped.has(e))
   kept.sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.subj.localeCompare(b.subj))
-  return { subjects, entries: kept, issues }
+  return { subjects, entries: kept, issues, hidden }
 }
 
 let cache: SeedStudy | null = null
 export const seedStudy = () => (cache ??= generateStudy())
 export const STUDY_START = STUDY.start
+
+export const SEED_VERSION = 2
+export const accession = (subj: string, visit: string) => 'NG' + String(parseInt(hashSeed(subj + visit).slice(-8), 16) % 1_000_000).padStart(6, '0')
+
+// Phase 2 additions: verbatim terms for coding, the central lab sample form, the SAEs for
+// reconciliation, and the EDC-side errors that reconciliation should find. A separate
+// generator keeps every Phase 1 value unchanged.
+const AE_VARIANTS: Record<string, { v: string; clarify?: string }[]> = {
+  Headache: [{ v: 'Head ache' }, { v: 'Headaches' }, { v: 'Headace' }, { v: 'Frontal headache' }],
+  Dizziness: [{ v: 'Dizzy' }, { v: 'Feeling dizzy' }, { v: 'Dizzyness' }],
+  Nausea: [{ v: 'Nauseous' }, { v: 'Feeling sick' }],
+  'Dry cough': [{ v: 'Cough' }, { v: 'Coughing' }],
+  Fatigue: [{ v: 'Tiredness' }, { v: 'Feeling tired' }, { v: 'Tierd' }],
+  'Ankle swelling': [{ v: 'Swollen ankles' }, { v: 'Swelling both ankles' }],
+  'Upper respiratory tract infection': [{ v: 'URTI' }, { v: 'Common cold' }, { v: 'Cold', clarify: 'Common cold' }],
+  'Back pain': [{ v: 'Low back ache' }, { v: 'Lower back pain' }, { v: 'Backache' }],
+  Diarrhoea: [{ v: 'Diarrhea' }, { v: 'Loose stools' }],
+  Insomnia: [{ v: 'Difficulty sleeping' }, { v: 'Poor sleep' }],
+  'Muscle cramps': [{ v: 'Leg cramps' }, { v: 'Cramps in calves' }],
+  'Rash on forearm': [{ v: 'Itchy rash forearm' }, { v: 'Skin rash' }],
+}
+const CM_VARIANTS: Record<string, string[]> = {
+  Atorvastatin: ['Lipidra', 'Atorvastatine', 'Lipidra 20 mg'],
+  Metformin: ['Glucofen', 'Metformin XR'],
+  Omeprazole: ['Omepra', 'Omeprazol'],
+  Levothyroxine: ['Thyrolex', 'L-thyroxine'],
+  Cetirizine: ['Cetrin'],
+  Paracetamol: ['Acetaminophen', 'Pyrexol'],
+}
+const SAES: { subj: string; day: number; term: string; crit: string[]; rel: string; acn: string; dur: number }[] = [
+  { subj: '101-001', day: 34, term: 'Atrial fibrillation', crit: ['AESHOSP'], rel: 'POSSIBLY RELATED', acn: 'DRUG INTERRUPTED', dur: 6 },
+  { subj: '101-006', day: 48, term: 'Kidney stone', crit: ['AESHOSP'], rel: 'NOT RELATED', acn: 'DOSE NOT CHANGED', dur: 4 },
+  { subj: '102-008', day: 27, term: 'Wrist fracture', crit: ['AESHOSP'], rel: 'UNLIKELY RELATED', acn: 'DOSE NOT CHANGED', dur: 30 },
+  { subj: '103-005', day: 22, term: 'Hypotension', crit: ['AESMIE'], rel: 'POSSIBLY RELATED', acn: 'DRUG INTERRUPTED', dur: 3 },
+  { subj: '104-001', day: 41, term: 'Cellulitis left leg', crit: ['AESHOSP'], rel: 'NOT RELATED', acn: 'DRUG INTERRUPTED', dur: 12 },
+  { subj: '104-006', day: 55, term: 'Acute kidney injury', crit: ['AESHOSP'], rel: 'POSSIBLY RELATED', acn: 'DRUG WITHDRAWN', dur: 10 },
+  { subj: '105-008', day: 18, term: 'Angioedema', crit: ['AESLIFE', 'AESHOSP'], rel: 'RELATED', acn: 'DRUG INTERRUPTED', dur: 3 },
+  { subj: '106-005', day: 30, term: 'Appendicitis', crit: ['AESHOSP'], rel: 'NOT RELATED', acn: 'DRUG INTERRUPTED', dur: 7 },
+  { subj: '106-007', day: 25, term: 'Transient ischaemic attack', crit: ['AESHOSP'], rel: 'UNLIKELY RELATED', acn: 'DOSE NOT CHANGED', dur: 1 },
+]
+export const SAE_SUBJECTS = ['102-002', '105-005', '106-003', ...SAES.map((x) => x.subj)]
+
+function phase2(r: Rng, subjects: SeedSubject[], entries: Entry[], issues: Issue[], hidden: Entry[], n: number): number {
+  const id = () => `PI-${String(++n).padStart(3, '0')}`
+  const svDate = (subj: string, v: string) => entries.find((e) => e.subj === subj && e.visit === v && e.form === 'SV')
+  const nextSv = (subj: string, date: string) => entries.filter((e) => e.subj === subj && e.form === 'SV' && e.values.VISOCCUR === 'Y' && e.visitDate >= date).sort((a, b) => a.visitDate.localeCompare(b.visitDate))[0]
+  const lastInst = (subj: string, form: string) => Math.max(0, ...entries.filter((e) => e.subj === subj && e.form === form && e.inst < 50).map((e) => e.inst))
+  const site = (subj: string) => SITES.find((s) => s.id === subj.slice(0, 3))!
+  const issue = (e: Entry, field: string, kind: Issue['kind'], find: IssueFinder, note: string) => issues.push({ id: id(), subj: e.subj, site: e.site, visit: e.visit, form: e.form, inst: e.inst, field, kind, find, note })
+  const planted = (e: Entry) => issues.some((i) => i.subj === e.subj && i.form === e.form && i.inst === e.inst && i.visit === e.visit)
+
+  // 1. Verbatim variety for coding.
+  for (const e of entries) {
+    if (e.form === 'AE' && !planted(e) && AE_VARIANTS[e.truth.AETERM] && r.chance(0.4)) {
+      const pick = r.pick(AE_VARIANTS[e.truth.AETERM])
+      e.values.AETERM = pick.v
+      if (pick.clarify) { e.truth.AETERM = pick.clarify; issue(e, 'AETERM', 'error', { listing: 'coding' }, `Ambiguous verbatim "${pick.v}"; the coder queries it and the site clarifies "${pick.clarify}".`) }
+      else e.truth.AETERM = pick.v
+    }
+    if (e.form === 'CM' && !planted(e) && CM_VARIANTS[e.truth.CMTRT] && r.chance(0.35)) { e.truth.CMTRT = e.values.CMTRT = r.pick(CM_VARIANTS[e.truth.CMTRT]) }
+  }
+  const extraLog = (subj: string, form: 'AE' | 'CM', truth: Record<string, string>, onset: string) => {
+    const sv = nextSv(subj, onset)
+    const e: Entry = { subj, site: subj.slice(0, 3), visit: 'LOG', form, inst: lastInst(subj, form) + 1, visitDate: sv?.visitDate ?? onset, entryDate: sv ? addDays(sv.entryDate, 1) : addDays(onset, 10), values: { ...truth }, truth: { ...truth } }
+    entries.push(e); return e
+  }
+  const sub = (id: string) => subjects.find((s) => s.id === id)!
+  const blank = { AESDTH: 'N', AESLIFE: 'N', AESHOSP: 'N', AESDISAB: 'N', AESCONG: 'N', AESMIE: 'N' }
+  const nonSer = { AESDTH: '', AESLIFE: '', AESHOSP: '', AESDISAB: '', AESCONG: '', AESMIE: '' }
+  // Coding conventions: a diagnosis with its symptoms, and the antiplatelet chosen by indication.
+  { const d1 = sub('101-008').d1!; const e = extraLog('101-008', 'AE', { AETERM: 'Fever, cough, sore throat - URTI', AESTDAT: addDays(d1, 19), AEONGO: 'N', AEENDAT: addDays(d1, 25), AESEV: 'MILD', AESER: 'N', ...nonSer, AEREL: 'NOT RELATED', AEACN: 'DOSE NOT CHANGED', AEOUT: 'RECOVERED/RESOLVED', AECOM: '' }, addDays(d1, 19)); void e }
+  { const d1 = sub('101-009').d1!; extraLog('101-009', 'CM', { CMTRT: 'Aspirin', CMINDC: 'Prevention of heart attack', CMDSTXT: '75', CMDOSU: 'mg', CMROUTE: 'ORAL', CMSTDAT: '2021-04-12', CMONGO: 'Y', CMENDAT: '' }, svDate('101-009', 'SCR')!.visitDate) }
+  { const d1 = sub('104-004').d1!; extraLog('104-004', 'CM', { CMTRT: 'Aspirin', CMINDC: 'Osteoarthritis of the knee', CMDSTXT: '300', CMDOSU: 'mg', CMROUTE: 'ORAL', CMSTDAT: '2024-09-01', CMONGO: 'Y', CMENDAT: '' }, svDate('104-004', 'SCR')!.visitDate); void d1 }
+
+  // 2. Central laboratory sample form at screening, Week 4 and Week 12.
+  for (const sv of entries.filter((e) => e.form === 'SV' && ['SCR', 'W4', 'W12'].includes(e.visit) && e.values.VISOCCUR === 'Y')) {
+    const t = { LBPERF: 'Y', LBREFID: accession(sv.subj, sv.visit), LBDAT: sv.visitDate, LBTIM: `${String(8 + r.int(0, 3)).padStart(2, '0')}:${String(r.int(0, 11) * 5).padStart(2, '0')}` }
+    entries.push({ subj: sv.subj, site: sv.site, visit: sv.visit, form: 'LBC', inst: 1, visitDate: sv.visitDate, entryDate: sv.entryDate, values: { ...t }, truth: { ...t } })
+  }
+  const lbc = (subj: string, v: string) => entries.find((e) => e.subj === subj && e.visit === v && e.form === 'LBC')
+  { const e = lbc('102-003', 'W4'); if (e) { const a = e.truth.LBREFID; e.values.LBREFID = a.slice(0, 4) + a[5] + a[4] + a.slice(6); issue(e, 'LBREFID', 'error', { listing: 'ext-lab' }, 'Accession number typed with two digits swapped; it does not match the central lab record.') } }
+  { const e = lbc('104-007', 'SCR'); if (e) { e.values.LBDAT = addDays(e.truth.LBDAT, 1); issue(e, 'LBDAT', 'error', { listing: 'ext-lab' }, 'Collection date one day later than on the requisition and in the central lab file.') } }
+  { const e = lbc('101-003', 'SCR'); if (e) { const [h, m] = e.truth.LBTIM.split(':'); e.truth.LBTIM = `${h}:${m}`; e.values.LBTIM = `${String(Number(h) + 12)}:${m}`; issue(e, 'LBTIM', 'error', { listing: 'ext-lab' }, 'Collection time recorded on a 12-hour clock as evening; the requisition says morning.') } }
+
+  // 3. SAEs: nine more, so twelve reach the safety database.
+  for (const x of SAES) {
+    const d1 = sub(x.subj).d1!
+    const st = addDays(d1, x.day)
+    const crit = { ...blank }; for (const c of x.crit) crit[c as keyof typeof crit] = 'Y'
+    extraLog(x.subj, 'AE', { AETERM: x.term, AESTDAT: st, AEONGO: 'N', AEENDAT: addDays(st, x.dur), AESEV: 'SEVERE', AESER: 'Y', ...crit, AEREL: x.rel, AEACN: x.acn, AEOUT: 'RECOVERED/RESOLVED', AECOM: '' }, st)
+  }
+  const sae = (subj: string) => entries.filter((e) => e.subj === subj && e.form === 'AE' && e.truth.AESER === 'Y').pop()!
+  { const e = sae('102-002'); e.values.AESTDAT = addDays(e.truth.AESTDAT, 1); issue(e, 'AESTDAT', 'error', { listing: 'sae-recon' }, 'SAE onset date in the EDC is one day after the date on the SAE report.') }
+  { const e = sae('101-001'); e.values.AEREL = 'NOT RELATED'; issue(e, 'AEREL', 'error', { listing: 'sae-recon' }, 'Causality in the EDC differs from the investigator’s assessment on the SAE report.') }
+  { const e = sae('104-001'); e.values.AEACN = 'DOSE NOT CHANGED'; issue(e, 'AEACN', 'error', { listing: 'sae-recon' }, 'Action taken in the EDC says dose not changed; the drug was interrupted.') }
+  // An SAE reported to safety but never entered in the EDC: the site enters it when asked.
+  { const d1 = sub('103-007').d1!; const st = addDays(d1, 36); const sv = nextSv('103-007', st) ?? svDate('103-007', 'D1')!
+    const e: Entry = { subj: '103-007', site: '103', visit: 'LOG', form: 'AE', inst: 40, visitDate: sv.visitDate, entryDate: sv.entryDate, values: {}, truth: { AETERM: 'Concussion', AESTDAT: st, AEONGO: 'N', AEENDAT: addDays(st, 5), AESEV: 'MODERATE', AESER: 'Y', ...blank, AESHOSP: 'Y', AEREL: 'NOT RELATED', AEACN: 'DOSE NOT CHANGED', AEOUT: 'RECOVERED/RESOLVED', AECOM: '' } }
+    e.values = { ...e.truth }; hidden.push(e)
+    issues.push({ id: id(), subj: '103-007', site: '103', visit: 'LOG', form: 'AE', inst: 40, field: 'AETERM', kind: 'error', find: { listing: 'sae-missing' }, note: 'An SAE on the safety database with no AE in the EDC: the site enters it.' }) }
+
+  // 4. IRT: a kit number typed wrongly at the site.
+  { const e = entries.find((x) => x.subj === '102-005' && x.visit === 'W4' && x.form === 'EX'); if (e && e.truth.EXKIT) { e.values.EXKIT = `K${Number(e.truth.EXKIT.slice(1)) + 1}`; issue(e, 'EXKIT', 'error', { listing: 'ext-irt' }, 'Kit number in the EDC differs from the kit IRT assigned.') } }
+  void site; void hashSeed
+  return n
+}
+const hashSeed = (s: string) => hashFn(s)

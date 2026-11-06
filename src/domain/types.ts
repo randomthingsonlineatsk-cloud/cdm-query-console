@@ -1,10 +1,10 @@
 // Data model. Every record that a person creates carries userId, and the project carries
 // classId, so the shared classroom mode can be added later without a migration.
 
-export type Role = 'dm' | 'dmlead' | 'cra' | 'site' | 'pi' | 'coder' | 'system'
+export type Role = 'dm' | 'dmlead' | 'cra' | 'site' | 'pi' | 'coder' | 'safety' | 'system'
 export const ROLE_LABEL: Record<Role, string> = {
   dm: 'Clinical data manager', dmlead: 'Lead data manager', cra: 'Clinical research associate',
-  site: 'Site study coordinator', pi: 'Principal investigator', coder: 'Medical coder', system: 'System',
+  site: 'Site study coordinator', pi: 'Principal investigator', coder: 'Medical coder', safety: 'Drug safety physician', system: 'System',
 }
 
 export interface User { id: string; name: string; role: Role; siteId?: string; pin: string; trained: boolean }
@@ -83,4 +83,40 @@ export interface Project {
   audit: AuditEntry[]
   signatures: Signature[]
   missions: MissionRun[]
+  seedVersion?: number
+  // Phase 2
+  coding: Record<ItemKey, CodingRecord>
+  synonyms: Record<string, { dict: 'SMD' | 'SDD'; code: string; atc?: string; userId: string; utc: string }>
+  smdVersion: '1.0' | '1.1'
+  smdUpgrade?: { utc: string; userId: string; note: string; reviewed: string[]; signature?: Signature }
+  sae: SaeRecon
+  ext: ExtRecon
+}
+
+export type CodingStatus = 'uncoded' | 'coded' | 'query' | 'approved'
+export interface CodingRecord {
+  key: ItemKey; dict: 'SMD' | 'SDD'; verbatim: string; status: CodingStatus
+  code?: string; atc?: string; method?: 'auto' | 'synonym' | 'manual'; version?: string
+  codedBy?: string; codedUtc?: string; approvedBy?: string; approvedUtc?: string; queryId?: string
+  previous?: { code: string; version: string; reason: string }
+  review?: boolean // hierarchy changed in a dictionary upgrade; needs review
+  history: { utc: string; userId: string; action: string; detail: string }[]
+}
+
+export type SaeClass = 'edc' | 'safety' | 'acceptable' | 'not-reported' | 'missing-edc'
+export interface ReconDecision { cls: SaeClass | 'vendor' | 'no-action'; reason: string; userId: string; utc: string; queryId?: string; noteDue?: string; done?: boolean; reply?: string }
+export interface SaeRecon {
+  links: Record<string, string>            // EDC AE form key -> safety case id (manual links)
+  decisions: Record<string, ReconDecision> // discrepancy id -> decision
+  safetyFixes: Record<string, Record<string, string>> // case id -> fields corrected by the safety team
+  createdCases: string[]                    // EDC-only SAEs the safety team has since entered
+  cutoff?: string
+  signoffDm?: Signature; signoffSafety?: Signature
+}
+export interface ExtRecon {
+  transfers: Record<string, { status: 'accepted' | 'rejected'; reason: string; userId: string; utc: string }>
+  decisions: Record<string, ReconDecision>
+  rules: { id: string; vendor: string; test: string; from: string; to: string; factor: number; site?: string; userId: string; utc: string }[]
+  vendorFixes: Record<string, string>       // discrepancy id -> date the vendor fixed it
+  signoff?: Signature
 }

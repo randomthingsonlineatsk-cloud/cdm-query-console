@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { verifyAudit, userById } from '../domain/project'
-import { Panel, Pill, Btn, Table, Select, inputCls, fmtUtc } from './ui'
+import { Panel, Pill, Btn, Table, Select, inputCls, ic, fmtUtc } from './ui'
 
 const ALCOA = [
   ['Attributable', 'Every entry names the user ID and role.'],
@@ -28,7 +28,7 @@ export default function AuditView() {
     <div className="space-y-4">
       <Panel title="Audit trail" sub="Computer-generated, append-only and always on (21 CFR 11.10(e), EU GMP Annex 11 §9). Who, what, when and why for every change." right={<div className="flex items-center gap-2"><Btn onClick={() => setCheck(verifyAudit(p))}>Verify chain</Btn>{check !== null && (check < 0 ? <Pill tone="green">Intact · {p.audit.length} entries</Pill> : <Pill tone="red">Broken at #{check + 1}</Pill>)}</div>}>
         <div className="flex flex-wrap gap-2">
-          <input aria-label="Search" className={`${inputCls} w-64`} placeholder="Search entity, value or reason" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input aria-label="Search" className={ic('w-64')} placeholder="Search entity, value or reason" value={q} onChange={(e) => setQ(e.target.value)} />
           <Select aria-label="Action" className="w-48" value={action} onChange={(e) => setAction(e.target.value)} options={[{ value: 'all', label: 'All actions' }, ...actions.map((a) => ({ value: a, label: a }))]} />
           <Select aria-label="User" className="w-48" value={who} onChange={(e) => setWho(e.target.value)} options={[{ value: 'all', label: 'All users' }, ...users.map((u) => ({ value: u, label: `${u} · ${userById(p, u).name}` }))]} />
         </div>

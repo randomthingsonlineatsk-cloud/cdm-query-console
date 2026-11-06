@@ -5,7 +5,12 @@ import { scoreDmp, DMP_ERRORS } from './dmp'
 import { CHECK_BUGS } from './checks'
 import { runTest } from './engine'
 import { seedStudy } from './seed'
-import { advance, value, seedEntry, audit, SYSTEM, me, goLive } from './project'
+import { advance, value, seedEntry, audit, SYSTEM, me, goLive, nowUtc } from './project'
+import { isCorrect, expected as expectedCode } from './coding'
+import { exactLlt } from './dictmed'
+import { exactDrug } from './dictdrug'
+import { discrepancies, statusOf, inScope } from './safety'
+import { transferLog, shouldAccept, extDiscrepancies } from './external'
 import { scoreQuery, isActive } from './queries'
 import { addDays } from './util'
 import { formKeyOf } from './types'
@@ -16,10 +21,10 @@ export const MISSIONS: MissionDef[] = [
   { id: 'M2', phase: 1, title: 'Test the checks', brief: 'Run every UAT test case in the data validation specification. Three checks were programmed wrongly: find them, correct the logic, re-test until every case passes, and sign the UAT summary.', pass: '70% or more' },
   { id: 'M3', phase: 1, title: 'Clean a messy site', brief: 'Site 103 has a new study coordinator. In six simulated weeks, get every data issue at the site resolved: close good answers, re-query poor ones, and raise manual queries for what the checks cannot see. False queries and closing a query on wrong data cost points.', pass: '70% or more' },
   { id: 'M4', phase: 1, title: 'Write a good query', brief: 'Six data problems from manual review. Write the query you would send to the site for each. Queries are scored on the rules data managers use: name the data point, state what you saw, ask, do not lead, stay neutral, be brief.', pass: 'Average 70% or more' },
-  { id: 'M5', phase: 2, title: 'Code the backlog', brief: 'Review coder tasks and code AE and medication terms in the study dictionaries.', pass: 'Phase 2' },
-  { id: 'M6', phase: 2, title: 'Reconcile SAEs before the cut-off', brief: 'Compare the EDC with the safety database and resolve every discrepancy before the data cut.', pass: 'Phase 2' },
-  { id: 'M7', phase: 2, title: 'Reconcile the central lab transfer', brief: 'Match the vendor transfer to the EDC on keys, units and reference ranges under the data transfer agreement.', pass: 'Phase 2' },
-  { id: 'M8', phase: 2, title: 'Upgrade the dictionary', brief: 'Assess and apply a dictionary version upgrade with a recoding review.', pass: 'Phase 2' },
+  { id: 'M5', phase: 2, title: 'Code the backlog', brief: 'Starting the mission moves the clock to 3 August 2026 if it is earlier. Code every term the auto-coder could not: pick the most accurate lowest-level term, choose the drug class that fits the indication, query terms that cannot be coded safely, then have the coding reviewer approve.', pass: '70% or more' },
+  { id: 'M6', phase: 2, title: 'Reconcile SAEs before the cut-off', brief: 'Starting the mission moves the clock to 14 September 2026 and sets the data cut-off. Compare all twelve SAEs in the EDC with the safety database, class every discrepancy, get each one resolved, and have data management and drug safety sign off within three weeks. Safety queries are chased by the CRA, so sites answer them within a week.', pass: '70% or more' },
+  { id: 'M7', phase: 2, title: 'Reconcile the central lab transfer', brief: 'Starting the mission moves the clock to 10 August 2026. Check every central-lab transfer against its data transfer agreement, load or reject it, reconcile the latest load against the EDC, and fix the unit problem at one site with a documented conversion rule.', pass: '70% or more' },
+  { id: 'M8', phase: 2, title: 'Upgrade the dictionary', brief: 'Version 1.1 of the Study Medical Dictionary retires some terms and moves others. Review the impact, apply the upgrade with a signature, recode only what must be recoded, review the hierarchy changes and document the impact.', pass: '70% or more' },
   { id: 'M9', phase: 3, title: 'Spot the under-reporting site', brief: 'Use centralised monitoring to find the site with too few adverse events.', pass: 'Phase 3' },
   { id: 'M10', phase: 3, title: 'Keep within the QTLs', brief: 'Track quality tolerance limits and act on a breach.', pass: 'Phase 3' },
   { id: 'M11', phase: 4, title: 'Get to lock on time', brief: 'Complete the lock checklist and hard-lock the database by the planned date.', pass: 'Phase 4' },
@@ -34,6 +39,19 @@ function finish(p: Project, run: MissionRun, score: number, detail: string[]) {
 }
 export function startMission(p: Project, id: string): MissionRun {
   const run: MissionRun = { id, startedUtc: new Date().toISOString(), userId: p.currentUserId, answers: {} }
+  const jump = (target: string) => { if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up (mission M3).'); if (p.clock < target) advance(p, Math.round((Date.parse(target) - Date.parse(p.clock)) / 86400000)) }
+  if (id === 'M5') { jump('2026-08-03'); run.answers = { start: p.clock } }
+  if (id === 'M7') { jump('2026-08-10'); run.answers = { start: p.clock } }
+  if (id === 'M6') {
+    jump('2026-09-14')
+    p.sae.cutoff = p.clock; p.sae.signoffDm = undefined; p.sae.signoffSafety = undefined
+    run.answers = { start: p.clock, deadline: addDays(p.clock, 21), key: JSON.stringify(discrepancies(p).map((d) => ({ id: d.id, expected: d.expected, fk: d.pair.edc?.fk ?? '' }))) }
+  }
+  if (id === 'M8') {
+    if (p.smdVersion !== '1.0') throw new Error('This project is already on version 1.1. Start a new project to repeat the upgrade.')
+    if (!Object.values(p.coding).some((r) => r.code)) throw new Error('Nothing is coded yet. Go live and advance the clock first.')
+    run.answers = { start: p.clock, startUtc: nowUtc(p) }
+  }
   if (id === 'M3') {
     if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up.')
     const target = '2026-06-29'
@@ -121,4 +139,60 @@ export function preparedStartup(p: Project) {
   p.startup.goLive ??= sig('Released (prepared scenario)', 'Go-live')
   audit(p, SYSTEM, 'startup.prepared', 'Start-up', undefined, 'complete', 'Start-up completed by the prepared training scenario', utc)
   goLive(p)
+}
+
+// ---------- Phase 2 scoring ----------
+
+const indicationOf = (p: Project, key: string) => value(p, key.replace(/\|CMTRT$/, '|CMINDC'))
+const needsCoder = (r: { dict: string; verbatim: string }) => r.dict === 'SMD' ? !exactLlt(SMD10, r.verbatim) : !(exactDrug(r.verbatim)?.atc.length === 1)
+import { SMD_10 as SMD10 } from './dictmed'
+
+export function scoreM5(p: Project, run: MissionRun) {
+  const all = Object.values(p.coding)
+  const scope = all.filter((r) => needsCoder(r) && expectedCode(r.key.split('|')[2], r.verbatim, indicationOf(p, r.key), p.smdVersion))
+  const right = scope.filter((r) => isCorrect(p, r, indicationOf(p, r.key)))
+  const coded = all.filter((r) => r.status === 'coded' || r.status === 'approved')
+  const approved = coded.filter((r) => r.status === 'approved').length
+  const wrong = scope.filter((r) => (r.status === 'coded' || r.status === 'approved') && !isCorrect(p, r, indicationOf(p, r.key)))
+  const score = 80 * (scope.length ? right.length / scope.length : 1) + 20 * (coded.length ? approved / coded.length : 0)
+  finish(p, run, score, [`${right.length} of ${scope.length} terms that needed a coder handled correctly`, `${wrong.length} coded to the wrong term or class: ${wrong.map((r) => `"${r.verbatim}"`).join(', ') || 'none'}`, `${scope.filter((r) => r.status === 'uncoded').length} still uncoded`, `${approved} of ${coded.length} coded terms approved`])
+}
+
+export function scoreM6(p: Project, run: MissionRun) {
+  const key: { id: string; expected: string; fk: string }[] = JSON.parse(run.answers?.key ?? '[]')
+  let right = 0
+  const detail: string[] = []
+  for (const k of key) {
+    const ok = k.expected === 'link' ? Object.keys(p.sae.links).length > 0 && (!k.fk || !!p.sae.links[k.fk]) : p.sae.decisions[k.id]?.cls === k.expected
+    if (ok) right++; else detail.push(`${k.id.split('#')[1]} for ${k.id.split('|')[0] || k.id.split('~')[1]}: expected ${k.expected === 'link' ? 'a manual link to the misnumbered case' : k.expected}, got ${p.sae.decisions[k.id]?.cls ?? 'no decision'}`)
+  }
+  const open = discrepancies(p).filter((d) => inScope(p, d) && statusOf(p, d) !== 'accepted').length
+  const dl = run.answers?.deadline ?? ''
+  const signed = !!p.sae.signoffDm && !!p.sae.signoffSafety && p.sae.signoffDm.utc.slice(0, 10) <= dl && p.sae.signoffSafety.utc.slice(0, 10) <= dl
+  const score = 60 * (key.length ? right / key.length : 0) + (open === 0 ? 20 : 0) + (signed ? 20 : 0)
+  finish(p, run, score, [`${right} of ${key.length} discrepancies classed correctly`, ...detail, `${open} discrepancies still open or waiting`, signed ? 'Signed off by data management and drug safety by the deadline' : 'Not signed off by both by the deadline'])
+}
+
+export function scoreM7(p: Project, run: MissionRun) {
+  const ts = transferLog(p.clock).filter((t) => t.vendor === 'CL')
+  const tRight = ts.filter((t) => p.ext.transfers[t.id]?.status === (shouldAccept(p, t) ? 'accepted' : 'rejected')).length
+  const ds = extDiscrepancies(p, 'CL')
+  const decided = Object.entries(p.ext.decisions).filter(([id]) => id.startsWith('CL:'))
+  const current = new Map(ds.map((d) => [d.id, d]))
+  const dRight = decided.filter(([id, dec]) => !current.has(id) || current.get(id)!.expected === dec.cls).length
+  const undecided = ds.filter((d) => !p.ext.decisions[d.id]).length
+  const rule = p.ext.rules.find((r) => r.test === 'GLUC' && r.from === 'mg/dL' && r.to === 'mmol/L' && Math.abs(r.factor - 18.0) <= 0.2)
+  const score = 30 * (ts.length ? tRight / ts.length : 0) + 40 * (decided.length + undecided ? dRight / (decided.length + undecided) : 0) + (rule ? 20 : 0) + (undecided === 0 ? 10 : 0)
+  finish(p, run, score, [`${tRight} of ${ts.length} transfers correctly loaded or rejected`, `${dRight} of ${decided.length + undecided} discrepancies classed correctly`, `${undecided} discrepancies in the latest load not yet classed`, rule ? `Glucose conversion rule present (÷ ${rule.factor})` : 'No correct glucose mg/dL → mmol/L conversion rule'])
+}
+
+export function scoreM8(p: Project, run: MissionRun) {
+  const up = p.smdUpgrade
+  const recode = Object.values(p.coding).filter((r) => r.history.some((h) => h.action === 'upgrade: needs recoding'))
+  const recodedOk = recode.filter((r) => (r.status === 'coded' || r.status === 'approved') && isCorrect(p, r))
+  const reviewNeeded = Object.values(p.coding).filter((r) => r.history.some((h) => h.action === 'upgrade: hierarchy changed'))
+  const reviewed = reviewNeeded.filter((r) => !r.review)
+  const unnecessary = Object.values(p.coding).filter((r) => up && !r.history.some((h) => h.action.startsWith('upgrade')) && r.history.some((h) => h.action === 'coded' && h.utc > up.utc) && r.previous?.reason !== 'Verbatim changed at the site')
+  const score = (up?.signature ? 20 : 0) + 50 * (recode.length ? recodedOk.length / recode.length : up ? 1 : 0) + 20 * (reviewNeeded.length ? reviewed.length / reviewNeeded.length : up ? 1 : 0) + ((up?.note.length ?? 0) >= 40 ? 10 : 0) - 5 * unnecessary.length
+  finish(p, run, score, [up ? 'Upgrade applied with signature' : 'Upgrade not applied', `${recodedOk.length} of ${recode.length} retired terms recoded correctly`, `${reviewed.length} of ${reviewNeeded.length} hierarchy changes reviewed`, (up?.note.length ?? 0) >= 40 ? 'Impact documented' : 'Impact note missing or too short', `${unnecessary.length} unnecessary recodes`])
 }
