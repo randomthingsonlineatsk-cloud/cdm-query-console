@@ -1,5 +1,6 @@
 // The data management plan for HLV-204-201, as delivered for review. Eight statements are
 // wrong; each has a correction to choose. Other statements are correct and should be left.
+import { CODELISTS, type Field } from './study'
 
 export interface DmpOption { id: string; text: string }
 export interface DmpStatement { id: string; text: string; error?: { correct: string; why: string; options: DmpOption[] } }
@@ -131,6 +132,91 @@ export const CCG_FORM: Record<string, string[]> = {
   EOS: ['Complete at the last visit or on discontinuation. Screen failures: select Screen failure.'],
   AE: ['One event per record. Record a diagnosis where known, otherwise each sign or symptom separately. If serious, tick every criterion that applies. An ended event needs an end date.'],
   CM: ['Use the generic name where known, one medication per record. Give the specific condition as the indication (not “pain”).'],
+}
+
+// Field-level completion instructions, keyed FORM.FIELD. fieldGuide() adds the conventions
+// every field shares (format, unit, required, codelist, derived) so the site sees one line.
+export const CCG_FIELD: Record<string, string> = {
+  'SV.VISOCCUR': 'Yes if the subject attended, even if not every assessment was done. No if the visit was missed; leave the other forms of the visit blank.',
+  'SV.VISDAT': 'The date the subject attended the clinic, from the visit note. Must fall in the visit window; a visit out of window is still entered and becomes a deviation.',
+  'SV.UNSREAS': 'Unscheduled visits only. The reason in a few words, for example “repeat potassium” or “BP check after dose change”.',
+  'IC.DSSTDAT': 'The date the subject signed the consent form, as written on the form. It must be on or before every other study date.',
+  'IC.ICVER': 'The version printed in the footer of the signed form, for example v2.0. If the subject re-consented, record the latest version signed.',
+  'DM.BRTHYR': 'Four digits. Year only: a full date of birth is not collected.',
+  'DM.SEX': 'Sex as recorded in the medical record, not gender identity.',
+  'DM.RACE': 'As reported by the subject. Do not assign race from appearance. Select Not reported if the subject declines.',
+  'IE.IEYN': 'Answer after every criterion has been checked against source. Yes only if all inclusion criteria are met and no exclusion criterion applies.',
+  'IE.IETESTCD': 'Only when the answer above is No: the first criterion not met. Record any further criteria in the source.',
+  'MH.MHTERM': 'One condition per record, as a diagnosis where known (for example “type 2 diabetes”, not “high sugar”).',
+  'MH.MHSTDAT': 'As much of the date as the subject or the record gives. If only the year is known, contact data management rather than guessing a day.',
+  'MH.MHONGO': 'Yes if the condition is still present at consent. A condition that worsens after consent is also recorded as an adverse event.',
+  'VS.VSDAT': 'The date of the measurement, usually the visit date.',
+  'VS.SYSBP': 'Seated, after 5 minutes of rest, mean of three readings, rounded to a whole number. This is the primary endpoint at Week 12.',
+  'VS.DIABP': 'Same readings as the systolic value; mean of three, whole number.',
+  'VS.PULSE': 'Seated, at the time of the first blood pressure reading.',
+  'VS.WEIGHT': 'Without shoes or heavy clothing, one decimal place.',
+  'VS.HEIGHT': 'Screening only, without shoes, whole centimetres. Leave blank at later visits.',
+  'VS.BMI': 'Calculated by the system from weight and screening height. Do not enter or overwrite it.',
+  'LB.LBDAT': 'The date the sample was taken, not the date the report was printed.',
+  'LB.GLUC': 'Fasting value exactly as on the local laboratory report. Do not convert units.',
+  'LB.GLUCU': 'The unit printed on the report next to the glucose result.',
+  'LB.K': 'Exactly as on the report. A haemolysed sample is still entered, with a comment, and repeated.',
+  'LB.CREAT': 'Exactly as on the report, in the unit shown on the form. If the report uses a different unit, contact data management.',
+  'LB.ALT': 'Exactly as on the report.',
+  'LBC.LBPERF': 'Yes if a central laboratory sample was taken at this visit. No if not, and record the reason in the source.',
+  'LBC.LBREFID': 'Copy the accession number from the requisition label exactly. It links this record to the central laboratory transfer.',
+  'LBC.LBDAT': 'The collection date on the requisition.',
+  'LBC.LBTIM': '24-hour clock, HH:MM, as on the requisition.',
+  'EG.EGDAT': 'The date on the ECG print-out.',
+  'EG.QTCF': 'The QTcF value printed by the machine. Do not recalculate.',
+  'EG.EGINTP': 'The investigator’s own reading, signed and dated on the print-out. Abnormal, clinically significant findings after consent are adverse events.',
+  'EX.EXDISP': 'Yes if a new kit was handed to the subject at this visit. No new kit is dispensed at Week 12.',
+  'EX.EXKIT': 'From the kit label: K followed by four digits. Must match the kit assigned by the IRT.',
+  'EX.EXDSPQ': 'Tablets in the kit handed out, as counted at dispensing (30 for a full kit).',
+  'EX.EXRET': 'Tablets counted back from the previous kit, including an empty bottle (0). Blank only at Day 1, when there is no previous kit.',
+  'EX.EXCOMPL': 'Calculated by the system from tablets dispensed and returned. Do not enter it.',
+  'DV.DVSTDAT': 'The date the deviation happened; if that is unknown, the date it was identified.',
+  'DV.DVTERM': 'What happened, in plain words, without subject-identifying details.',
+  'DV.DVDECOD': 'The category from the deviation plan that best fits.',
+  'DV.DVIMPT': 'Set by the study team when the deviation is classified, not by the site.',
+  'EOS.DSDECOD': 'The main reason. If the subject withdrew because of an adverse event, select Adverse event and make sure the event is on the AE form.',
+  'EOS.EOSDAT': 'The date of the last visit or of the decision to stop, whichever is later.',
+  'AE.AETERM': 'One event per record, as a diagnosis where known; otherwise each sign or symptom on its own record. No abbreviations.',
+  'AE.AESTDAT': 'The date the event started or, for a pre-existing condition, the date it worsened.',
+  'AE.AEONGO': 'Yes if the event has not resolved at this visit. If No, give the end date.',
+  'AE.AEENDAT': 'The date the event resolved or stabilised. Blank while ongoing.',
+  'AE.AESEV': 'Mild, moderate or severe as judged by the investigator. Severity is not seriousness: a severe headache is not automatically serious.',
+  'AE.AESER': 'Yes if any of the seriousness criteria below applies. Report a serious event to the sponsor within 24 hours of awareness, as well as entering it here.',
+  'AE.AESDTH': 'Tick if the event caused the death.',
+  'AE.AESLIFE': 'Tick only if the subject was at immediate risk of death at the time of the event.',
+  'AE.AESHOSP': 'Tick for an inpatient admission or a prolonged stay. A planned admission for a pre-existing condition is not an AE.',
+  'AE.AESDISAB': 'Tick if the event caused a substantial disruption of the ability to carry out normal life functions.',
+  'AE.AESCONG': 'Tick for a congenital anomaly or birth defect in a child of a subject.',
+  'AE.AESMIE': 'Tick if, in the investigator’s judgement, the event is medically important even though no other criterion applies.',
+  'AE.AEREL': 'The investigator’s assessment of whether the study drug could have caused the event.',
+  'AE.AEACN': 'What was done with the study drug because of this event.',
+  'AE.AEOUT': 'The outcome at the end date, or the current status if ongoing.',
+  'AE.AECOM': 'Optional. Anything that helps a reviewer understand the event; no subject-identifying details.',
+  'CM.CMTRT': 'Generic name where known, one medication per record. For combination products, record the trade name.',
+  'CM.CMINDC': 'The specific condition treated (for example “osteoarthritis of the knee”, not “pain”). If it is for an AE, use the AE term.',
+  'CM.CMDSTXT': 'The amount taken each time, as a number.',
+  'CM.CMDOSU': 'The unit of the dose above.',
+  'CM.CMROUTE': 'How the medication is taken.',
+  'CM.CMSTDAT': 'The date the subject started taking it. If unknown, contact data management.',
+  'CM.CMONGO': 'Yes if still being taken at this visit. If No, give the end date.',
+  'CM.CMENDAT': 'The last day the medication was taken. Blank while ongoing.',
+}
+
+// The instruction a site user sees for one field: the field's own line plus the shared conventions.
+export function fieldGuide(form: string, f: Field): { text: string; rules: string[] } {
+  const rules: string[] = []
+  if (f.derived) rules.push('Derived by the system')
+  else if (f.required) rules.push(f.showIf ? 'Required when it applies' : 'Required')
+  else rules.push('Complete if applicable')
+  if (f.type === 'date') rules.push('YYYY-MM-DD')
+  if (f.unit) rules.push(`Unit: ${f.unit}`)
+  if (f.codelist) rules.push(`Codelist ${f.codelist}: ${(CODELISTS[f.codelist] ?? []).map((o) => o.value).join(', ')}`)
+  return { text: CCG_FIELD[`${form}.${f.id}`] ?? '', rules }
 }
 
 // Risk assessment (ICH E6(R3) 3.10): risks to critical-to-quality factors and quality tolerance limits.

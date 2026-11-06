@@ -9,7 +9,7 @@
 
 import type { Check, Project, Signature } from './types'
 import { FORMS, VISITS, CODELISTS, STUDY, type FormDef, type Visit } from './study'
-import { CCG_GENERAL, CCG_FORM } from './dmp'
+import { CCG_GENERAL, CCG_FORM, CCG_FIELD } from './dmp'
 import { SHIPPED_CHECKS, CTX_FNS } from './checks'
 import { validate } from './expr'
 import { runTest } from './engine'
@@ -24,18 +24,18 @@ export interface StudyBuild {
   forms: Record<string, FormDef>
   codelists: Record<string, { value: string; label: string }[]>
   checks: Check[]
-  ccg: { general: string[]; forms: Record<string, string[]> }
+  ccg: { general: string[]; forms: Record<string, string[]>; fields?: Record<string, string> }
 }
 
 // The built-in study as shipped, kept so a project without an imported build gets it back.
-const DEFAULT = structuredClone({ visits: VISITS, forms: FORMS, codelists: CODELISTS, general: CCG_GENERAL, ccgForms: CCG_FORM })
+const DEFAULT = structuredClone({ visits: VISITS, forms: FORMS, codelists: CODELISTS, general: CCG_GENERAL, ccgForms: CCG_FORM, ccgFields: CCG_FIELD })
 
 export function exportBuild(p: Project): StudyBuild {
   return {
     format: BUILD_FORMAT, version: 1,
     study: { protocol: STUDY.protocol, title: STUDY.title, buildVersion: p.build?.study.buildVersion ?? '1.0', source: 'CDM Query & Edit-Check Console' },
     visits: structuredClone(VISITS), forms: structuredClone(FORMS), codelists: structuredClone(CODELISTS),
-    checks: structuredClone(p.checks), ccg: { general: [...CCG_GENERAL], forms: structuredClone(CCG_FORM) },
+    checks: structuredClone(p.checks), ccg: { general: [...CCG_GENERAL], forms: structuredClone(CCG_FORM), fields: { ...CCG_FIELD } },
   }
 }
 
@@ -98,13 +98,18 @@ export function checkBuild(text: string): BuildReport {
   }
   for (const c of SHIPPED_CHECKS) if (!ids.has(c.id)) changes.push(`Check ${c.id} removed`)
   if (b.ccg && JSON.stringify(b.ccg.forms) !== JSON.stringify(DEFAULT.ccgForms)) changes.push('CRF completion guidelines updated')
+  if (b.ccg?.fields) {
+    const n = Object.keys(b.ccg.fields).filter((k) => b.ccg.fields![k] !== DEFAULT.ccgFields[k]).length
+    if (n) changes.push(`Field-level completion guidelines: ${n} changed or added`)
+    for (const k of Object.keys(b.ccg.fields)) { const [fm, fd] = k.split('.'); if (!b.forms[fm]?.fields.some((x) => x.id === fd)) warnings.push(`Completion guideline ${k} is for a field that is not in the build.`) }
+  }
   return { errors, changes, warnings, build: errors.length ? undefined : b }
 }
 
 // Put the study definition in force: the project's imported build, or the shipped study.
 export function applyStudy(p: Project) {
   seedStudy() // the simulated study is always generated from the shipped build
-  const src = p.build ?? { visits: DEFAULT.visits, forms: DEFAULT.forms, codelists: DEFAULT.codelists, ccg: { general: DEFAULT.general, forms: DEFAULT.ccgForms } }
+  const src = p.build ?? { visits: DEFAULT.visits, forms: DEFAULT.forms, codelists: DEFAULT.codelists, ccg: { general: DEFAULT.general, forms: DEFAULT.ccgForms, fields: DEFAULT.ccgFields } }
   VISITS.splice(0, VISITS.length, ...structuredClone(src.visits))
   for (const k of Object.keys(FORMS)) delete FORMS[k]
   Object.assign(FORMS, structuredClone(src.forms))
@@ -113,6 +118,8 @@ export function applyStudy(p: Project) {
   CCG_GENERAL.splice(0, CCG_GENERAL.length, ...src.ccg.general)
   for (const k of Object.keys(CCG_FORM)) delete CCG_FORM[k]
   Object.assign(CCG_FORM, structuredClone(src.ccg.forms))
+  for (const k of Object.keys(CCG_FIELD)) delete CCG_FIELD[k]
+  Object.assign(CCG_FIELD, { ...DEFAULT.ccgFields, ...(src.ccg.fields ?? {}) })
 }
 
 export function importBuild(p: Project, b: StudyBuild, s: Signature) {

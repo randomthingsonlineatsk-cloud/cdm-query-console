@@ -23,7 +23,7 @@ complete, valid example.
     "tests": [ { "name": "1480 fires", "values": { "SYSBP": "1480" }, "fire": true }, { "name": "148 passes", "values": { "SYSBP": "148" }, "fire": false } ],
     "active": true
   } ],
-  "ccg": { "general": ["…"], "forms": { "VS": ["…"] } }
+  "ccg": { "general": ["…"], "forms": { "VS": ["…"] }, "fields": { "VS.SYSBP": "Seated, after 5 minutes of rest, mean of three readings…" } }
 }
 ```
 
@@ -42,6 +42,10 @@ complete, valid example.
   casebook functions `consent`, `rand`, `visdat`, `val`, `vis`, `today`, `winlo`, `winhi`,
   `prevvisdat`, `lastvisdat`, `prevdisp`, `prevdispdat`, `eos`, `eosdat`, `aecount`, `aematch`.
   `{FIELD}` in `message` inserts a value. Each check should have at least two test cases.
+- **ccg**: the CRF completion guidelines. `general` lists study-wide conventions, `forms` gives
+  instructions per form, and the optional `fields` gives one instruction per field, keyed
+  `FORM.FIELD`. Field lines missing from a build keep the console's own text. The eCRF shows
+  each field's line together with its format, unit, codelist and whether it is required.
 
 ## What an import may change
 

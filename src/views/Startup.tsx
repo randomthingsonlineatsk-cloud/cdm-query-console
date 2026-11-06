@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { DMP, DMP_VERSION, CCG_GENERAL, CCG_FORM, RISKS, QTLS } from '../domain/dmp'
+import { DMP, DMP_VERSION, CCG_GENERAL, CCG_FORM, RISKS, QTLS, fieldGuide } from '../domain/dmp'
 import { FORMS } from '../domain/study'
 import { audit, me, goLive } from '../domain/project'
 import { ROLE_LABEL } from '../domain/types'
@@ -83,7 +83,9 @@ function CcgView() {
         {Object.entries(CCG_FORM).map(([f, lines]) => (
           <Panel key={f} title={`${FORMS[f].name} (${FORMS[f].domain})`}>
             <ul className="list-disc pl-5 space-y-1 text-sm">{lines.map((l) => <li key={l}>{l}</li>)}</ul>
-            <p className="text-[11px] text-lab-text-muted">Fields: {FORMS[f].fields.map((x) => `${x.id}${x.required ? '*' : ''}`).join(', ')}</p>
+            <details className="text-xs"><summary className="cursor-pointer text-lab-text-muted">Field by field ({FORMS[f].fields.length})</summary>
+              <dl className="mt-1 space-y-1">{FORMS[f].fields.map((x) => { const g = fieldGuide(f, x); return <div key={x.id}><dt className="font-mono text-[11px]">{x.id}{x.required ? '*' : ''} · {x.label}</dt><dd className="text-lab-text-muted">{g.text} <span className="font-mono text-[10px]">[{g.rules.join(' · ')}]</span></dd></div> })}</dl>
+            </details>
           </Panel>
         ))}
       </div>

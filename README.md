@@ -115,6 +115,9 @@ system; never enter real patient data.
 - **Forms:** a CDASH DV (protocol deviation) eCRF form behind the deviation log; drug
   accountability (tablets dispensed and returned, derived compliance, a check on 80–120%);
   unscheduled visits with a reason and their own listing.
+- **Field-level CRF completion guidelines:** every eCRF field has its own instruction, shown
+  in the casebook, in the edit dialog and on the Start-up tab, with its format, unit, codelist
+  and whether it is required.
 - **Interim lock:** clean and freeze data up to a cut-off and take a signed snapshot while
   the database stays open.
 - **Keyboard use:** dialogs take focus, keep Tab inside, close on Escape and return focus;

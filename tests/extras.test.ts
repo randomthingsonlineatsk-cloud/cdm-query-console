@@ -125,3 +125,29 @@ describe('study build files', () => {
     expect(F.VS.fields.some((f) => f.id === 'VSPOS')).toBe(false)
   })
 })
+
+import { CCG_FIELD, fieldGuide } from '../src/domain/dmp'
+describe('field-level completion guidelines', () => {
+  test('every eCRF field has its own instruction, and none is for a field that does not exist', () => {
+    applyStudy(createProject())
+    const all = Object.values(F).flatMap((fm) => fm.fields.map((x) => `${fm.id}.${x.id}`))
+    expect(all.filter((k) => !CCG_FIELD[k])).toEqual([])
+    expect(Object.keys(CCG_FIELD).filter((k) => !all.includes(k))).toEqual([])
+    const g = fieldGuide('VS', F.VS.fields.find((x) => x.id === 'SYSBP')!)
+    expect(g.rules).toContain('Unit: mmHg')
+    expect(fieldGuide('VS', F.VS.fields.find((x) => x.id === 'BMI')!).rules[0]).toBe('Derived by the system')
+  })
+  test('the build file carries them, and an amended line is reported', () => {
+    const p = createProject()
+    const b = exportBuild(p)
+    expect(Object.keys(b.ccg.fields!).length).toBe(Object.keys(CCG_FIELD).length)
+    b.ccg.fields!['VS.WEIGHT'] = 'Weigh on the calibrated clinic scale, one decimal place.'
+    const r = checkBuild(JSON.stringify(b))
+    expect(r.errors).toEqual([])
+    expect(r.changes.some((c) => c.includes('Field-level completion guidelines: 1'))).toBe(true)
+    importBuild(p, r.build!, { meaning: 'x', userId: 'jweber', role: 'dmlead', utc: '', what: '' })
+    expect(CCG_FIELD['VS.WEIGHT']).toContain('calibrated')
+    applyStudy(createProject())
+    expect(CCG_FIELD['VS.WEIGHT']).not.toContain('calibrated')
+  })
+})
