@@ -121,6 +121,18 @@ system; never enter real patient data.
   tabs follow the arrow-key pattern; focus is always visible. `e2e/keyboard.cjs` walks the
   main flows with the keyboard only.
 
+- **Study build files:** export the study (visits, forms, codelists, edit checks, CRF
+  completion guidelines) as a `cdm-study-build` file, or import an amended one from a build
+  tool. The import is checked against the protocol and needs the lead data manager's
+  signature; it voids the UAT sign-off. Format: `docs/study-build-format.md`.
+- **Classroom mode (optional):** an instructor creates a class and sets missions as
+  assignments with a level and a due date; students join with a code, run the mission in its
+  prepared project and submit it. The instructor re-scores each submission in their own
+  browser with the app's scoring, comments, and sees a leaderboard. It uses the shared
+  classroom server (Cloudflare Worker and D1) kept in the
+  [eCTD Dossier Builder](https://github.com/randomthingsonlineatsk-cloud/ectd-dossier-builder)
+  repository, routes under `/cdm/v1`. Set `VITE_CLASSROOM_API` at build time to use your own.
+
 All four phases and the additions are complete.
 
 ## Run it
@@ -132,7 +144,8 @@ npm test         # domain tests (Vitest)
 npm run build    # production build in dist/
 ```
 
-React 19, TypeScript, Vite and Tailwind CSS. Browser only; no server.
+React 19, TypeScript, Vite and Tailwind CSS. Everything runs in the browser; only classroom
+mode talks to a server.
 
 ## Licence
 

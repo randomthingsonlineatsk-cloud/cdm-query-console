@@ -18,8 +18,9 @@ import Coding from './views/Coding'
 import Recon from './views/Recon'
 import Oversight from './views/Oversight'
 import Lock from './views/Lock'
+import Classroom from './views/Classroom'
 
-export type View = 'overview' | 'startup' | 'casebook' | 'checks' | 'listings' | 'queries' | 'coding' | 'recon' | 'oversight' | 'lock' | 'missions' | 'audit' | 'project'
+export type View = 'overview' | 'startup' | 'casebook' | 'checks' | 'listings' | 'queries' | 'coding' | 'recon' | 'oversight' | 'lock' | 'missions' | 'audit' | 'project' | 'classroom'
 interface Nav { view: View; arg?: string; go: (v: View, arg?: string) => void }
 const NavCtx = createContext<Nav>({ view: 'overview', go: () => {} })
 export const useNav = () => useContext(NavCtx)
@@ -27,17 +28,17 @@ export const useNav = () => useContext(NavCtx)
 const VIEWS: { id: View; label: string }[] = [
   { id: 'overview', label: 'Study' }, { id: 'startup', label: 'Start-up' }, { id: 'casebook', label: 'Casebook' },
   { id: 'checks', label: 'Edit checks' }, { id: 'listings', label: 'Listings' }, { id: 'queries', label: 'Queries' }, { id: 'coding', label: 'Coding' }, { id: 'recon', label: 'Reconciliation' }, { id: 'oversight', label: 'Oversight' }, { id: 'lock', label: 'Lock' },
-  { id: 'missions', label: 'Missions' }, { id: 'audit', label: 'Audit trail' }, { id: 'project', label: 'Project' },
+  { id: 'missions', label: 'Missions' }, { id: 'classroom', label: 'Classroom' }, { id: 'audit', label: 'Audit trail' }, { id: 'project', label: 'Project' },
 ]
 
 function Shell() {
   const { p, act, error, setError, saved } = useStore()
-  const [nav, setNav] = useState<{ view: View; arg?: string }>({ view: 'overview' })
+  const [nav, setNav] = useState<{ view: View; arg?: string }>(() => ({ view: location.hash === '#/classroom' ? 'classroom' : 'overview' }))
   const go = (view: View, arg?: string) => { setNav({ view, arg }); window.scrollTo({ top: 0 }) }
   const u = me(p)
   const open = p.queries.filter((q) => q.status === 'open').length
   const answered = p.queries.filter((q) => q.status === 'answered').length
-  const V = { overview: Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, lock: Lock, missions: Missions, audit: AuditView, project: ProjectView }[nav.view]
+  const V = { overview: Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, lock: Lock, missions: Missions, audit: AuditView, project: ProjectView, classroom: Classroom }[nav.view]
   return (
     <NavCtx.Provider value={{ ...nav, go }}>
       <div className="min-h-screen bg-lab-bg text-lab-text flex flex-col">
@@ -76,7 +77,7 @@ function Shell() {
         <footer className="border-t border-lab-line text-[11px] text-lab-text-muted">
           <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between gap-2">
             <span>Built by Khan Gulrez Shagufa Fazal Ahmed</span>
-            <span>Training simulator. Fictional study, sponsor, sites, subjects and data. Saved in this browser only{saved ? ` · saved ${saved}` : ''}.</span>
+            <span>Training simulator. Fictional study, sponsor, sites, subjects and data. Saved in this browser{saved ? ` · saved ${saved}` : ''}.</span>
           </div>
         </footer>
       </div>

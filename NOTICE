@@ -11,7 +11,9 @@ The study HLV-204-201, the drug Vasclarin (VSC-9), the sponsor, the CRO, the sit
 people and all subject data are fictional. Regulations, guidelines and standards (ICH E6(R3),
 21 CFR Part 11, EU GMP Annex 11, CDISC CDASH, GDPR, India's DPDP Act) are named for
 education; descriptions are summaries, not regulatory advice. No commercial EDC system is
-reproduced. The app is not a validated system and must not hold real patient data.
+reproduced. The app is not a validated system and must not hold real patient data. Classroom mode
+sends the submitted mission project, the class and student names and an optional email
+address to the classroom server; nothing else leaves the browser.
 
 This software bundles React and React DOM (MIT License, Copyright (c) Meta Platforms, Inc.
 and affiliates), class-variance-authority (Apache License 2.0), clsx (MIT), tailwind-merge
