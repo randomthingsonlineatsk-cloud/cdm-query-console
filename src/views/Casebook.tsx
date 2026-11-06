@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { SITES, VISITS, FORMS, CODELISTS, LOG_FORMS, sdtmTarget, type Field } from '../domain/study'
+import { SITES, VISITS, FORMS, CODELISTS, LOG_FORMS, STUDY, sdtmTarget, type Field } from '../domain/study'
 import { fieldGuide } from '../domain/dmp'
 import { value, editValue, enterForm, me, raiseManual, runChecks, nowUtc, VISIT_NAME } from '../domain/project'
 import { isActive, scoreQuery } from '../domain/queries'
@@ -17,7 +17,7 @@ export default function Casebook() {
   const [fk, setFk] = useState<string | null>(nav.arg && nav.arg.split('|').length >= 4 ? nav.arg.split('|').slice(0, 4).join('|') : null)
   const [annot, setAnnot] = useState(false)
   const [guide, setGuide] = useState(false)
-  if (!subjects.length) return <Panel title="Casebook" sub="No data yet.">{p.live ? <p className="text-sm">Advance the study clock: the first subject is screened on 2 March 2026.</p> : <p className="text-sm">The database is not live. Complete start-up and go live; sites then enter data as the study clock moves.</p>}</Panel>
+  if (!subjects.length) return <Panel title="Casebook" sub="No data yet.">{p.live ? <p className="text-sm">Advance the study clock: the first {STUDY.protocol === 'ALV-3-301' ? 'participant is vaccinated' : 'subject is screened'} on {STUDY.start}.</p> : <p className="text-sm">The database is not live. Complete start-up and go live; sites then enter data as the study clock moves.</p>}</Panel>
   return (
     <div className="grid lg:grid-cols-[220px_1fr] gap-4">
       <Panel title="Subjects" className="lg:max-h-[75vh] lg:overflow-y-auto">
@@ -73,7 +73,7 @@ function SubjectGrid({ subj, fk, setFk }: { subj: string; fk: string | null; set
         return (
           <div key={form} className="flex flex-wrap items-center gap-1">
             <span className="font-mono text-[11px] text-lab-text-muted w-40">{FORMS[form].name}</span>
-            {keys.length ? keys.map((k) => chip(k, `#${k.split('|')[3]} ${value(p, `${k}|${form === 'AE' ? 'AETERM' : 'CMTRT'}`) || '(blank)'}`)) : <span className="text-[11px] text-lab-text-muted">None recorded</span>}
+            {keys.length ? keys.map((k) => chip(k, `#${k.split('|')[3]} ${value(p, `${k}|${({ AE: 'AETERM', CM: 'CMTRT', REACT: 'CETERM', DV: 'DVTERM' } as Record<string, string>)[form] ?? 'AETERM'}`) || '(blank)'}`)) : <span className="text-[11px] text-lab-text-muted">None recorded</span>}
             {u.role === 'site' && <Btn tone="grey" className="py-0.5" onClick={() => addLog(form)}>+ Add</Btn>}
           </div>
         )

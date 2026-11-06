@@ -17,6 +17,9 @@ import { CLOSE_OUT } from './seed'
 import { scoreQuery, isActive } from './queries'
 import { addDays } from './util'
 import { formKeyOf, type Level } from './types'
+import { VAX_MISSIONS, VAX_MISSION_IDS, startVaxMission, vaxMissionClock, scoreM14 as vM14, scoreM15 as vM15, scoreM16 as vM16, scoreTrail } from './vax/missions'
+import { applyStudy } from './build'
+import { createVaxProject } from './project'
 
 export interface MissionDef { id: string; phase: number; title: string; brief: string; pass: string }
 export const MISSIONS: MissionDef[] = [
@@ -33,6 +36,7 @@ export const MISSIONS: MissionDef[] = [
   { id: 'M11', phase: 4, title: 'Lock on time', brief: 'Runs in a new project prepared to just after last subject last visit, with most of the cleaning done. In 30 study days, finish what is left (open queries, uncoded terms, SDV at two subjects, unclassified deviations, a privacy problem, the investigator signatures and the audit trail review), soft-lock, and hard-lock with the lead data manager’s and the sponsor’s signatures.', pass: '70% or more' },
   { id: 'M13', phase: 4, title: 'Audit the trail', brief: 'Before relying on site 106’s electronic source system, audit an extract of its audit trail. For each of the twenty entries, name the ALCOA+ attribute it breaks, or mark it as fine. Twelve entries break one attribute each.', pass: '70% or more' },
   { id: 'M12', phase: 4, title: 'Unlock correctly', brief: 'After hard lock, the close-out visit finds an adverse event that was never entered. Follow the unlock procedure: a justified request limited to the affected subject, two approvals, the correction through a query, re-coding, re-SDV and a new investigator signature, then re-lock.', pass: '70% or more' },
+  ...VAX_MISSIONS,
 ]
 
 export const latestRun = (p: Project, id: string): MissionRun | undefined => [...p.missions].reverse().find((m) => m.id === id)
@@ -47,6 +51,10 @@ function finish(p: Project, run: MissionRun, score: number, detail: string[]) {
 export function startMission(p: Project, id: string): MissionRun {
   const run: MissionRun = { id, startedUtc: new Date().toISOString(), userId: p.currentUserId, answers: {}, level: p.missionLevel ?? 'standard' }
   const jump = (target: string) => { if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up (mission M3).'); if (p.clock < target) advance(p, Math.round((Date.parse(target) - Date.parse(p.clock)) / 86400000)) }
+  if (VAX_MISSION_IDS.includes(id) && id !== 'M17') {
+    if (p.study !== 'ALV-3-301') throw new Error(`${id} runs on the vaccine study. Start it from the Missions tab to get a prepared project.`)
+    startVaxMission(p, run, (n) => days(p, n))
+  }
   if (id === 'M2') {
     run.answers = { startUtc: nowUtc(p), scope: JSON.stringify(M2_SCOPE) }
   }
@@ -292,6 +300,14 @@ export function scoreM13(p: Project, run: MissionRun) {
   finish(p, run, r.score - (k(run) - 1) * 5 * r.falseFlags, [`${r.found} of ${r.violations} violations named correctly`, `${r.falseFlags} sound entries flagged as violations`, `${r.unanswered} entries not reviewed`])
 }
 
+export function scoreM14(p: Project, run: MissionRun) { const r = vM14(p, run); finish(p, run, r.score, r.detail) }
+export function scoreM15(p: Project, run: MissionRun) { const r = vM15(p, run); finish(p, run, r.score, r.detail) }
+export function scoreM16(p: Project, run: MissionRun) { const r = vM16(p, run); finish(p, run, r.score, r.detail) }
+export function scoreM17(p: Project, run: MissionRun) {
+  const r = scoreTrail(run.answers ?? {})
+  finish(p, run, r.score - (k(run) - 1) * 5 * r.falseFlags, [`${r.found} of ${r.issues} problems named correctly`, `${r.falseFlags} sound entries flagged`, `${r.unanswered} entries not reviewed`])
+}
+
 export function certificate(runs: MissionRun[], userId: string, name: string) {
   const passed = MISSIONS.map((m) => runs.filter((r) => r.id === m.id && r.passed).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]).filter((r): r is MissionRun => !!r)
   const code = hashStr(`${name.trim().toLowerCase()}|${passed.map((r) => `${r.id}:${r.score}`).join(',')}|${userId}`).slice(-10).toUpperCase()
@@ -309,16 +325,19 @@ export function progress(p: Project, run: MissionRun): { score: number; detail: 
   f(c, r)
   return { score: r.score ?? 0, detail: (r.detail ?? []).filter((d) => !d.startsWith('Level:')) }
 }
-Object.assign(SCORERS, { M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6: scoreM6, M7: scoreM7, M8: scoreM8, M9: scoreM9, M10: scoreM10, M11: scoreM11, M12: scoreM12 })
+Object.assign(SCORERS, { M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6: scoreM6, M7: scoreM7, M8: scoreM8, M9: scoreM9, M10: scoreM10, M11: scoreM11, M12: scoreM12, M14: scoreM14, M15: scoreM15, M16: scoreM16 })
 
 // Every mission starts from its own prepared project (a snapshot of the study at the right
 // moment); the learner's other projects are left untouched.
-export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none' }
+export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none' }
 export function prepareMission(base: Project, id: string, create: (userId: string, classId: string) => Project, prep: { lock: (p: Project) => void; locked: (p: Project) => void }): Project {
-  const np = create(base.userId, base.classId)
+  const kind = MISSION_PROJECT[id]
+  const np = kind === 'vax' ? createVaxProject(base.userId, base.classId) : create(base.userId, base.classId)
+  applyStudy(np) // the prepared project's study is put in force before any preparation
   np.name = `${id} ${MISSIONS.find((m) => m.id === id)!.title}`
   np.missionLevel = base.missionLevel
-  const kind = MISSION_PROJECT[id]
+  const target = kind === 'vax' ? vaxMissionClock(id) : undefined
+  if (target && np.clock < target) advance(np, Math.round((Date.parse(target) - Date.parse(np.clock)) / 86400000))
   if (id === 'M2') {
     // Everything outside the release is already validated: its UAT results are on file and its logic is correct.
     for (const c of np.checks) {

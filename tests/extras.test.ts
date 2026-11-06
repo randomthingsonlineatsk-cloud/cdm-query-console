@@ -12,7 +12,7 @@ describe('M13 audit the trail', () => {
     const run = startMission(p, 'M13'); run.answers = Object.fromEntries(EXTRACT.map((r) => [r.seq, r.answer])); scoreM13(p, run)
     expect(run.score).toBe(100)
     expect(scoreExtract(Object.fromEntries(EXTRACT.map((r) => [r.seq, 'none']))).score).toBe(40)
-    expect(MISSIONS).toHaveLength(13)
+    expect(MISSIONS).toHaveLength(17)
   })
   test('own audit trail entries are labelled', () => {
     const p = createProject()
@@ -48,7 +48,7 @@ import { prepareMission as prep, MISSION_PROJECT, M4_SCENARIOS, scoreM4 } from '
 import { upgradeImpact } from '../src/domain/coding'
 const noLock = { lock: () => {}, locked: () => {} }
 describe('prepared projects and spec sizes', () => {
-  test('every mission has a project plan', () => { expect(Object.keys(MISSION_PROJECT)).toHaveLength(13) })
+  test('every mission has a project plan', () => { expect(Object.keys(MISSION_PROJECT)).toHaveLength(17) })
   test('M5: 30 AE verbatims, auto-coding off for AEs', () => {
     const p = prep(createProject(), 'M5', createProject, noLock)
     const run = p.missions.at(-1)!

@@ -7,6 +7,7 @@ import { FORMS, SITES, VISITS, fieldOf } from './study'
 import { formsOfSubject, runChecksOnSubject } from './engine'
 import { audit, me, nowUtc, seedEntry, enterForm, runChecks, simSiteUser, value, writeValue } from './project'
 import { seedStudy, UNDER_REPORTED } from './seed'
+import { VAX_DEV_CHECKS } from './vax/checks'
 import { safetyDb } from './safety'
 import { metrics, isActive, ageOf } from './queries'
 import { QTLS } from './dmp'
@@ -65,7 +66,7 @@ export const DV_CATEGORIES: DvCategory[] = ['Eligibility', 'Informed consent', '
 
 export function addDeviation(p: Project, d: { subj: string; category: DvCategory; description: string; source: string; key?: ItemKey }, u = me(p)) {
   if (!['dm', 'dmlead', 'cra', 'system'].includes(u.role)) throw new Error('Data management or the CRA logs deviations.')
-  if (!/^10[1-6]-\d{3}$/.test(d.subj)) throw new Error('Give a subject number such as 103-004.')
+  if (!/^\d{3}-\d{3}$/.test(d.subj) || !Object.keys(p.forms).some((k) => k.startsWith(d.subj + '|'))) throw new Error('Give a subject number that is in the study, such as 103-004.')
   if (!d.description.trim()) throw new Error('Describe the deviation.')
   const dv: Deviation = { id: `DV-${String(p.deviations.length + 1).padStart(3, '0')}`, ...d, identified: p.clock, userId: u.id, utc: nowUtc(p), status: 'to classify' }
   p.deviations.push(dv)
@@ -80,7 +81,7 @@ export function addDeviation(p: Project, d: { subj: string; category: DvCategory
 }
 // Called when data management closes a query from a deviation-type check with the data confirmed.
 export function deviationFromQuery(p: Project, checkId: string, key: ItemKey, queryId: string) {
-  const cat = DEV_CHECKS[checkId]; if (!cat) return
+  const cat = (DEV_CHECKS[checkId] ?? VAX_DEV_CHECKS[checkId]) as DvCategory | undefined; if (!cat) return
   const k = parseKey(key)
   if (!runChecksOnSubject(p, k.subj).some((f) => f.checkId === checkId && f.key === key)) return
   if (p.deviations.some((d) => d.key === key && d.category === cat)) return

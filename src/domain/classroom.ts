@@ -5,7 +5,8 @@
 // submission in their own browser, comment, and see a leaderboard.
 
 import type { MissionRun, Project } from './types'
-import { SCORERS, scoreM4, scoreM13 } from './missions'
+import { SCORERS, scoreM4, scoreM13, scoreM17 } from './missions'
+import { applyStudy } from './build'
 import { migrate } from './project'
 
 export const DEFAULT_API = 'https://ectd-classroom.randomthingsonlineatsk.workers.dev/cdm/v1'
@@ -50,17 +51,18 @@ export async function submissionPayload(p: Project, run: MissionRun) {
   return { project: sub, score: run.score, checks: (run.detail ?? []).map((d, i) => ({ id: `d${i + 1}`, label: d, ok: true })) }
 }
 
-// Re-score a submitted mission project with this copy of the app's scoring.
-export async function verifySubmission(file: Submission): Promise<{ score: number; detail: string[]; project: Project }> {
+// Re-score a submitted mission project with this copy of the app's scoring. The submitted
+// project's study is put in force while scoring, then the instructor's own project (restore) again.
+export async function verifySubmission(file: Submission, restore?: Project): Promise<{ score: number; detail: string[]; project: Project }> {
   if (file?.kind !== SUBMISSION_KIND) throw new Error('This is not a CDM Query & Edit-Check Console mission submission.')
   const p = migrate(JSON.parse(await gunzip(file.gz)) as Project)
   const run = p.missions.find((m) => m.id === file.missionId && m.startedUtc === file.runStartedUtc)
   if (!run) throw new Error(`The submitted project has no run of ${file.missionId}.`)
   const copy: MissionRun = { ...run, score: undefined, passed: undefined, detail: undefined }
   p.missions.push(copy)
-  const f = SCORERS[file.missionId] ?? (file.missionId === 'M4' ? scoreM4 : file.missionId === 'M13' ? scoreM13 : undefined)
+  const f = SCORERS[file.missionId] ?? ({ M4: scoreM4, M13: scoreM13, M17: scoreM17 } as Record<string, typeof scoreM4>)[file.missionId]
   if (!f) throw new Error(`No scoring for ${file.missionId} in this version of the app.`)
-  f(p, copy)
-  p.missions.pop()
+  applyStudy(p)
+  try { f(p, copy) } finally { p.missions.pop(); if (restore) applyStudy(restore) }
   return { score: copy.score ?? 0, detail: copy.detail ?? [], project: p }
 }

@@ -4,7 +4,7 @@
 export interface Site { id: string; name: string; country: string; profile: SiteProfile; labUnit: 'mmol/L' | 'mg/dL' }
 export type SiteProfile = 'clean' | 'slow' | 'new-coordinator' | 'under-reports' | 'other-units' | 'late'
 
-export const STUDY = {
+export const STUDY: { protocol: string; title: string; sponsor: string; cro: string; drug: string; ctVersion: string; cdash: string; start: string; design?: string } = {
   protocol: 'HLV-204-201',
   title: 'A randomised, double-blind, placebo-controlled phase 2 study of Vasclarin (VSC-9) in adults with stage 1 or 2 hypertension',
   sponsor: 'Halvern Therapeutics (fictional)',
@@ -44,7 +44,7 @@ export const VISITS: Visit[] = [
   { id: 'FU', name: 'Week 14 follow-up', day: 99, lo: 96, hi: 102, forms: ['SV', 'VS', 'EOS'] },
   { id: 'UNS', name: 'Unscheduled', day: 0, lo: -9999, hi: 9999, forms: ['SV', 'VS'] },
 ]
-export const LOG_FORMS = ['AE', 'CM', 'DV'] // subject-level, repeating
+export const LOG_FORMS: string[] = ['AE', 'CM', 'DV'] // subject-level, repeating
 
 export type FieldType = 'text' | 'number' | 'date' | 'select' | 'yn'
 export interface Field {
@@ -176,6 +176,16 @@ export const FORMS: Record<string, FormDef> = {
     { id: 'CMENDAT', label: 'End date', type: 'date', showIf: { field: 'CMONGO', equals: 'N' } },
   ] },
 }
+
+// Which study the console is running. Two studies share the same tools: HLV-204-201 (the
+// hypertension trial) and ALV-3-301 (the vaccine trial with an e-diary, Phase 5). The study
+// definition above is swapped in place when a project of the other study is opened
+// (applyStudy in build.ts); HLV_DEF keeps the shipped hypertension study.
+export const HLV_ID = 'HLV-204-201'
+export const VAX_ID = 'ALV-3-301'
+export const ACTIVE = { id: HLV_ID as string }
+export const isVax = () => ACTIVE.id === VAX_ID
+export const HLV_DEF = structuredClone({ study: STUDY, sites: SITES, visits: VISITS, logForms: LOG_FORMS, forms: FORMS, codelists: CODELISTS })
 
 export const visitById = (id: string) => VISITS.find((v) => v.id === id)!
 export const fieldOf = (form: string, field: string) => FORMS[form].fields.find((f) => f.id === field)

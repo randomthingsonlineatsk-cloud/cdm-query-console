@@ -6,7 +6,10 @@ import { formKeyOf, parseKey } from './types'
 import { freshChecks, SHIPPED_CHECKS } from './checks'
 import { runChecksOnSubject, formsOfSubject } from './engine'
 import { seedStudy, RESPONSE_DAYS, SEED_VERSION, type Entry, type Issue } from './seed'
-import { FORMS, SITES, VISITS } from './study'
+import { FORMS, SITES, VISITS, ACTIVE, VAX_ID } from './study'
+import { freshVaxChecks } from './vax/checks'
+import { processDiary, emptyVax } from './vax/diary'
+import { VAX_START } from './vax/seed'
 import { addDays, hash, simUtc, nowMinutes } from './util'
 import { scoreQuery, isActive } from './queries'
 import { syncCoding } from './coding'
@@ -57,6 +60,7 @@ export function migrate(p: Project): Project {
   p.sdv ??= {}; p.sdvPlan ??= { mode: 'targeted' }; p.deviations ??= []; p.monitoring ??= { decisions: {}, forCause: {} }; p.qtlLog ??= []
   p.lock ??= { status: 'open', events: [], piSign: {}, hardSigs: [], unlocks: [] }
   for (const u of DEFAULT_USERS) if (!p.users.some((x) => x.id === u.id)) p.users.push({ ...u })
+  if (p.study === VAX_ID) { p.vax ??= emptyVax(); return p }
   for (const c of SHIPPED_CHECKS) if (!p.checks.some((x) => x.id === c.id)) p.checks.push({ ...c, tests: c.tests.map((t) => ({ ...t })) })
   return p
 }
@@ -243,8 +247,9 @@ const seedByForm = () => {
   for (const e of seedStudy().entries) m.set(`${e.subj}|${e.visit}|${e.form}|${e.inst}`, e)
   return m
 }
-let seedIndex: Map<string, Entry> | null = null
-export const seedEntry = (fk: string) => (seedIndex ??= seedByForm()).get(fk)
+const seedIndex: Record<string, Map<string, Entry>> = {}
+export const seedEntry = (fk: string) => (seedIndex[ACTIVE.id] ??= seedByForm()).get(fk)
+export const resetSeedIndex = () => { /* indexes are kept per study */ }
 export function issueFor(key: ItemKey): Issue | undefined {
   const k = parseKey(key)
   const same = seedStudy().issues.filter((i) => i.subj === k.subj && i.visit === k.visit && i.form === k.form && i.inst === k.inst)
@@ -267,6 +272,10 @@ function siteRespond(p: Project, q: Query, date: string) {
   if (issue?.find && 'listing' in issue.find && issue.find.listing === 'ae-dup') {
     respond(p, q.id, 'This is a duplicate entry of the same event. The duplicate record has been deleted.', u, utc)
     deleteForm(p, fk, u, `Duplicate entry deleted in response to ${q.id}`, utc); return
+  }
+  if (issue?.find && 'listing' in issue.find && issue.find.listing === 'diary-recon' && k.form === 'AE') {
+    respond(p, q.id, 'Agreed: this fever is already in the e-diary as a solicited reaction. The duplicate AE record has been deleted.', u, utc)
+    deleteForm(p, fk, u, `Diary reaction entered again as an AE; deleted in response to ${q.id}`, utc); return
   }
   if (issue?.find && 'listing' in issue.find && issue.find.listing === 'close-out') {
     const h = seedStudy().hidden.find((e) => e.subj === k.subj && e.inst === issue.inst)
@@ -305,7 +314,7 @@ function siteRespond(p: Project, q: Query, date: string) {
 
 export function goLive(p: Project) {
   p.live = true
-  audit(p, SYSTEM, 'study.go-live', 'HLV-204-201', 'build', 'live', 'Production database released for data entry')
+  audit(p, SYSTEM, 'study.go-live', ACTIVE.id, 'build', 'live', 'Production database released for data entry')
 }
 
 // Move the study clock forward. Sites enter visits as they happen (with their usual lag)
@@ -327,7 +336,8 @@ export function advance(p: Project, days: number) {
     }
     if (touched.size) runChecks(p, [...touched], simUtc(p.clock, 18 * 60))
     for (const q of p.queries) if (q.status === 'open' && q.dueDate && q.dueDate <= p.clock) siteRespond(p, q, p.clock)
-    processSafety(p); processVendors(p); processMonitoring(p)
+    if (p.study === VAX_ID) processDiary(p)
+    else { processSafety(p); processVendors(p); processMonitoring(p) }
   }
   audit(p, SYSTEM, 'clock.advance', 'study clock', undefined, p.clock, `Advanced ${days} day${days === 1 ? '' : 's'}`, simUtc(p.clock, 23 * 60))
 }
@@ -354,4 +364,27 @@ export function sign(p: Project, userId: string, pin: string, meaning: string, w
   return s
 }
 
-export const VISIT_NAME = Object.fromEntries([...VISITS.map((v) => [v.id, v.name]), ['LOG', 'Subject logs']])
+export const VISIT_NAME: Record<string, string> = {}
+export function refreshVisitNames() {
+  for (const k of Object.keys(VISIT_NAME)) delete VISIT_NAME[k]
+  Object.assign(VISIT_NAME, Object.fromEntries([...VISITS.map((v) => [v.id, v.name]), ['LOG', ACTIVE.id === VAX_ID ? 'Participant logs' : 'Subject logs']]))
+}
+refreshVisitNames()
+
+// A project of the vaccine study ALV-3-301. Start-up (DMP, UAT, risk assessment) is practised
+// on HLV-204-201, so this study opens live on the day before the first dose, with its build
+// validated and signed off by the training scenario.
+export function createVaxProject(userId = 'local-user', classId = 'none'): Project {
+  const p = createProject(userId, classId)
+  p.study = VAX_ID; p.name = 'ALV-3-301 data management (vaccine trial)'
+  p.checks = freshVaxChecks(); p.vax = emptyVax()
+  p.clock = addDays(VAX_START, -1); p.live = true
+  const sig = (meaning: string, what: string): Signature => ({ meaning, userId: 'system', role: 'system', utc: simUtc(p.clock, 8 * 60), what })
+  p.startup.dmpApproved = sig('Approved', 'Data management plan ALV-3-301 v1.0'); p.startup.ccgApproved = sig('Approved', 'CRF completion guidelines ALV-3-301 v1.0')
+  p.startup.uatSigned = sig('Approved', 'UAT summary ALV-3-301 release 1.0'); p.startup.riskApproved = sig('Approved', 'Risk assessment ALV-3-301'); p.startup.goLive = sig('Approved', 'Go-live ALV-3-301')
+  for (const u of p.users) u.trained = true
+  // Outside the blinded team: prepares the syringes and holds the allocation.
+  p.users.push({ id: 'lhaas', name: 'Lena Haas', role: 'pharm', pin: '9999', trained: true })
+  audit(p, SYSTEM, 'study.go-live', VAX_ID, 'build', 'live', 'Vaccine study opened live: start-up was completed by the training scenario', simUtc(p.clock, 8 * 60))
+  return p
+}

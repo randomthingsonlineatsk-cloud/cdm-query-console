@@ -1,10 +1,10 @@
 // Data model. Every record that a person creates carries userId, and the project carries
 // classId, so the shared classroom mode can be added later without a migration.
 
-export type Role = 'dm' | 'dmlead' | 'cra' | 'site' | 'pi' | 'coder' | 'safety' | 'sponsor' | 'system'
+export type Role = 'dm' | 'dmlead' | 'cra' | 'site' | 'pi' | 'coder' | 'safety' | 'sponsor' | 'pharm' | 'system'
 export const ROLE_LABEL: Record<Role, string> = {
   dm: 'Clinical data manager', dmlead: 'Lead data manager', cra: 'Clinical research associate',
-  site: 'Site study coordinator', pi: 'Principal investigator', coder: 'Medical coder', safety: 'Drug safety physician', sponsor: 'Sponsor clinical lead', system: 'System',
+  site: 'Site study coordinator', pi: 'Principal investigator', coder: 'Medical coder', safety: 'Drug safety physician', sponsor: 'Sponsor clinical lead', pharm: 'Unblinded pharmacist (vaccine trial)', system: 'System',
 }
 
 export interface User { id: string; name: string; role: Role; siteId?: string; pin: string; trained: boolean }
@@ -103,6 +103,28 @@ export interface Project {
   missionLevel?: Level
   noAutoAe?: boolean // mission M5: adverse events are not auto-coded
   build?: import('./build').StudyBuild // an imported study build, if any
+  // Phase 5: which study this project runs (absent = HLV-204-201) and the e-diary state.
+  study?: 'HLV-204-201' | 'ALV-3-301'
+  vax?: VaxState
+}
+
+export interface DiaryDay {
+  entered?: boolean          // resolved: entered within the window, or missed
+  enteredUtc?: string
+  uploadDate?: string        // the date the vendor's transfer carried it
+  values?: Record<string, string>
+  openedOn?: string          // date the data manager first saw it open (window closes at noon)
+  alertDate?: string         // date the site was alerted about it
+  changes?: { utc: string; field: string; from: string; to: string; dcf: string }[]
+}
+export interface DcfDecision { decision: 'send' | 'return'; value?: string; reason: string; userId: string; utc: string; applied?: string }
+export interface VaxState {
+  days: Record<string, DiaryDay>              // participant|dose|day
+  alerts: { key: string; date: string; userId: string; utc: string; note: string }[]
+  deviceFixed: Record<string, string>         // participant -> date the sync problem was fixed
+  dcf: Record<string, DcfDecision>
+  recon: Record<string, 'match' | 'site' | 'vendor'>
+  vendorQueries: { id: string; about: string; text: string; utc: string; userId: string }[]
 }
 
 export type LockStatus = 'open' | 'soft' | 'hard' | 'unlocked'

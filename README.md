@@ -8,9 +8,13 @@ metrics, and an ALCOA+ audit trail.
 
 **Live app:** https://randomthingsonlineatsk-cloud.github.io/cdm-query-console/
 
-Everything is fictional: the study HLV-204-201, Vasclarin (VSC-9), Halvern Therapeutics,
-Marrowbridge Clinical, the six sites and all 60 subjects. Training only; not a validated
-system; never enter real patient data.
+A second study, the vaccine trial ALV-3-301, teaches participant-reported data: an
+electronic diary of solicited reactions, compliance, corrections through the diary vendor,
+and reconciliation (Phase 5).
+
+Everything is fictional: the studies HLV-204-201 and ALV-3-301, Vasclarin (VSC-9), Aurelivax
+(ALV-3), Halvern Therapeutics, Aurelis Vaccines, Marrowbridge Clinical, all sites, subjects and
+participants. Training only; not a validated system; never enter real patient data.
 
 ## What Phase 1 covers
 
@@ -95,7 +99,7 @@ system; never enter real patient data.
   and the lock record, with a retention date (25 years) and a checksum. A CDASH-style CSV
   export is also available at any time from the Project tab.
 - **Missions M11 and M12** (Lock on time; Unlock correctly), each in a prepared project of
-  its own, and a **certificate** for ten of twelve missions passed at 70% or more, with a
+  its own, and a **certificate** for ten missions passed at 70% or more, with a
   verification code.
 - **Links** to the companion apps (Clinical Trial Simulator, eCTD Dossier Builder, the PV
   apps, and the planned EDC Study Build Lab, Medical Coding Trainer, SDTM Mapping Trainer
@@ -136,7 +140,34 @@ system; never enter real patient data.
   [eCTD Dossier Builder](https://github.com/randomthingsonlineatsk-cloud/ectd-dossier-builder)
   repository, routes under `/cdm/v1`. Set `VITE_CLASSROOM_API` at build time to use your own.
 
-All four phases and the additions are complete.
+## What Phase 5 adds: a vaccine trial with an e-diary
+
+Start it from Project → Start a new project → "vaccine trial with e-diary (ALV-3-301)".
+
+- **The study:** an observer-blind, randomised 2:1, placebo-controlled phase 3 trial of a
+  fictional two-dose respiratory vaccine in healthy adults, 60 participants at 4 sites,
+  doses on Day 1 and Day 29, phone contacts on Days 8 and 36, follow-up to Day 181.
+- **E-diary** for 7 days after each dose (oral temperature, redness and swelling in mm,
+  pain and seven systemic reactions, medicines taken, medical visits), each day open until
+  12:00 the next day. Grades are derived on the FDA *Toxicity Grading Scale for Healthy
+  Adult and Adolescent Volunteers Enrolled in Preventive Vaccine Clinical Trials* (2007).
+- **Compliance** by participant and day, with alerts to sites while a day is still open; a
+  device that does not sync shows up as late uploads.
+- **Corrections (DCF):** diary data are electronic source and cannot be edited by data
+  management. A change goes to the diary vendor through a data clarification form only
+  with a contemporaneous source, as the EMA *Guideline on computerised systems and
+  electronic data in clinical trials* (2023, Annex 5) describes; the rest are returned.
+- **Vendor transfers**, **reconciliation** (diary against the eCRF continuing-reaction,
+  medication and AE records, the vendor's device links, and the central lab) and the
+  **immunogenicity** transfer (titres below the lower limit of quantification, haemolysed
+  and missing samples).
+- **Blinding:** the data management team never sees the allocation; only the unblinded
+  pharmacist (Lena Haas, PIN 9999) can, and viewing it is audited.
+- **Missions M14 to M17:** keep the diary complete, correct participant data, reconcile the
+  diary, and review an e-diary audit trail. The certificate counts passes on either study
+  (ten of seventeen).
+
+All five phases and the additions are complete.
 
 ## Run it
 

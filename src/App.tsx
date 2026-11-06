@@ -3,7 +3,7 @@ import { StoreProvider, useStore } from './state'
 import { ROLE_LABEL } from './domain/types'
 import { advance, me, audit } from './domain/project'
 import { isActive } from './domain/queries'
-import { STUDY } from './domain/study'
+import { STUDY, VAX_ID } from './domain/study'
 import { Btn, Pill, Select } from './views/ui'
 import Overview from './views/Overview'
 import Startup from './views/Startup'
@@ -19,8 +19,10 @@ import Recon from './views/Recon'
 import Oversight from './views/Oversight'
 import Lock from './views/Lock'
 import Classroom from './views/Classroom'
+import Diary from './views/vax/Diary'
+import VaxOverview from './views/vax/VaxOverview'
 
-export type View = 'overview' | 'startup' | 'casebook' | 'checks' | 'listings' | 'queries' | 'coding' | 'recon' | 'oversight' | 'lock' | 'missions' | 'audit' | 'project' | 'classroom'
+export type View = 'overview' | 'startup' | 'casebook' | 'checks' | 'listings' | 'queries' | 'coding' | 'recon' | 'oversight' | 'lock' | 'missions' | 'audit' | 'project' | 'classroom' | 'diary'
 interface Nav { view: View; arg?: string; go: (v: View, arg?: string) => void }
 const NavCtx = createContext<Nav>({ view: 'overview', go: () => {} })
 export const useNav = () => useContext(NavCtx)
@@ -28,8 +30,10 @@ export const useNav = () => useContext(NavCtx)
 const VIEWS: { id: View; label: string }[] = [
   { id: 'overview', label: 'Study' }, { id: 'startup', label: 'Start-up' }, { id: 'casebook', label: 'Casebook' },
   { id: 'checks', label: 'Edit checks' }, { id: 'listings', label: 'Listings' }, { id: 'queries', label: 'Queries' }, { id: 'coding', label: 'Coding' }, { id: 'recon', label: 'Reconciliation' }, { id: 'oversight', label: 'Oversight' }, { id: 'lock', label: 'Lock' },
-  { id: 'missions', label: 'Missions' }, { id: 'classroom', label: 'Classroom' }, { id: 'audit', label: 'Audit trail' }, { id: 'project', label: 'Project' },
+  { id: 'diary', label: 'E-diary' }, { id: 'missions', label: 'Missions' }, { id: 'classroom', label: 'Classroom' }, { id: 'audit', label: 'Audit trail' }, { id: 'project', label: 'Project' },
 ]
+
+const VAX_HIDDEN: View[] = ['startup', 'listings', 'coding', 'recon', 'oversight', 'lock']
 
 function Shell() {
   const { p, act, error, setError, saved } = useStore()
@@ -38,7 +42,11 @@ function Shell() {
   const u = me(p)
   const open = p.queries.filter((q) => q.status === 'open').length
   const answered = p.queries.filter((q) => q.status === 'answered').length
-  const V = { overview: Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, lock: Lock, missions: Missions, audit: AuditView, project: ProjectView, classroom: Classroom }[nav.view]
+  const vax = p.study === VAX_ID
+  // The vaccine study practises the e-diary; start-up, coding, lock and the other areas are practised on HLV-204-201.
+  const shown = VIEWS.filter((v) => (vax ? !VAX_HIDDEN.includes(v.id) : v.id !== 'diary'))
+  const view = shown.some((v) => v.id === nav.view) ? nav.view : 'overview'
+  const V = { overview: vax ? VaxOverview : Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, lock: Lock, missions: Missions, audit: AuditView, project: ProjectView, classroom: Classroom, diary: Diary }[view]
   return (
     <NavCtx.Provider value={{ ...nav, go }}>
       <div className="min-h-screen bg-lab-bg text-lab-text flex flex-col">
@@ -61,9 +69,9 @@ function Shell() {
             </label>
           </div>
           <nav className="max-w-7xl mx-auto px-4 flex flex-wrap gap-1" aria-label="Main">
-            {VIEWS.map((v) => (
-              <button key={v.id} onClick={() => go(v.id)} aria-current={nav.view === v.id ? 'page' : undefined}
-                className={`px-3 py-1.5 font-mono text-xs border-b-2 ${nav.view === v.id ? 'border-lab-fda text-lab-fda' : 'border-transparent text-lab-text-muted hover:text-lab-text'}`}>
+            {shown.map((v) => (
+              <button key={v.id} onClick={() => go(v.id)} aria-current={view === v.id ? 'page' : undefined}
+                className={`px-3 py-1.5 font-mono text-xs border-b-2 ${view === v.id ? 'border-lab-fda text-lab-fda' : 'border-transparent text-lab-text-muted hover:text-lab-text'}`}>
                 {v.label}{v.id === 'queries' && (open + answered > 0) ? <span className="ml-1 text-lab-amber">{open}/{answered}</span> : null}
               </button>
             ))}
