@@ -47,7 +47,7 @@ export default function Overview() {
           <div className="flex gap-2"><Btn onClick={() => go('missions')}>Missions</Btn><Btn tone="grey" onClick={() => go('startup')}>Open start-up</Btn></div>
         </Panel>
         <Panel title="Visit schedule" sub="Study day 1 is randomisation. Windows are in study days.">
-          <Table head={['Visit', 'Target day', 'Window', 'Forms']} rows={VISITS.map((v) => [v.name, v.day, v.id === 'SCR' ? 'day −28 to −1' : `${v.lo} to ${v.hi}`, v.forms.map((f) => FORMS[f].name).join(', ')])} />
+          <Table head={['Visit', 'Target day', 'Window', 'Forms']} rows={VISITS.map((v) => [v.name, v.day, v.id === 'SCR' ? 'day −28 to −1' : v.id === 'UNS' ? 'as needed' : `${v.lo} to ${v.hi}`, v.forms.map((f) => FORMS[f].name).join(', ')])} />
           <p className="text-[11px] text-lab-text-muted">Adverse events and concomitant medications are subject-level logs; medical history is taken at screening.</p>
         </Panel>
       </div>

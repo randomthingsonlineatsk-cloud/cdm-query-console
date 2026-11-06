@@ -45,6 +45,16 @@ function subjectFns(forms: FormData[], visit: string, today: string): Record<str
       for (let j = i - 1; j >= 0; j--) { const d = visdat(VISITS[j].id); if (d) return d }
       return ''
     },
+    prevdisp: (field) => {
+      const i = VISITS.findIndex((v) => v.id === visit)
+      for (let j = i - 1; j >= 0; j--) if (get(VISITS[j].id, 'EX', 'EXDISP') === 'Y') return get(VISITS[j].id, 'EX', String(field))
+      return ''
+    },
+    prevdispdat: () => {
+      const i = VISITS.findIndex((v) => v.id === visit)
+      for (let j = i - 1; j >= 0; j--) if (get(VISITS[j].id, 'EX', 'EXDISP') === 'Y') return visdat(VISITS[j].id)
+      return ''
+    },
     lastvisdat: () => VISITS.map((v) => visdat(v.id)).filter(Boolean).sort().pop() ?? '',
     eos: () => eosForm()?.values.DSDECOD ?? '',
     eosdat: () => eosForm()?.values.EOSDAT ?? '',
@@ -62,7 +72,7 @@ export function testCtx(t: CheckTest): Ctx {
     fn: {
       consent: () => g('consent'), rand: () => g('rand'), vis: () => g('vis') || 'W4', today: () => g('today') || '2026-06-01',
       visdat: (v) => g(`visdat:${v}`), val: (v, f, x) => g(`val:${v}|${f}|${x}`),
-      winlo: () => g('winlo'), winhi: () => g('winhi'), prevvisdat: () => g('prevvisdat'), lastvisdat: () => g('lastvisdat'),
+      winlo: () => g('winlo'), winhi: () => g('winhi'), prevvisdat: () => g('prevvisdat'), lastvisdat: () => g('lastvisdat'), prevdisp: (f) => g(`prevdisp:${f}`), prevdispdat: () => g('prevdispdat'),
       eos: () => g('eos'), eosdat: () => g('eosdat'),
       aecount: (f, v) => Number(g(`aecount:${f}|${v}`) || 0), aematch: (x) => Number(g(`aematch:${x}`) || 0),
     },

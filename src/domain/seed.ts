@@ -125,7 +125,7 @@ export function generateStudy(seed = 204201): SeedStudy {
       const last = EARLY_LAST[id]
       const visitDates: Record<string, string> = { SCR: scr, D1: d1 }
       let kit = 1000 + Number(site.id) * 10 + n * 7
-      for (const v of VISITS.filter((x) => x.id !== 'SCR')) {
+      for (const v of VISITS.filter((x) => x.id !== 'SCR' && x.id !== 'UNS')) {
         if (last && VISITS.findIndex((x) => x.id === v.id) > VISITS.findIndex((x) => x.id === last)) break
         const vd = v.id === 'D1' ? d1 : addDays(d1, v.day - 1 + r.int(-2, 2))
         visitDates[v.id] = vd
@@ -239,6 +239,7 @@ export function generateStudy(seed = 204201): SeedStudy {
   issueN = phase2(rng(seed + 11), subjects, entries, issues, hidden, issueN)
   issueN = phase3(subjects, entries, issues, hidden, issueN)
   issueN = phase4(subjects, entries, issues, hidden, issueN)
+  issueN = phase5(rng(seed + 13), subjects, entries, issues, issueN)
   const kept = entries.filter((e) => !dropped.has(e))
   kept.sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.subj.localeCompare(b.subj))
   return { subjects, entries: kept, issues, hidden }
@@ -248,7 +249,7 @@ let cache: SeedStudy | null = null
 export const seedStudy = () => (cache ??= generateStudy())
 export const STUDY_START = STUDY.start
 
-export const SEED_VERSION = 4
+export const SEED_VERSION = 5
 export const accession = (subj: string, visit: string) => 'NG' + String(parseInt(hashSeed(subj + visit).slice(-8), 16) % 1_000_000).padStart(6, '0')
 
 // Phase 2 additions: verbatim terms for coding, the central lab sample form, the SAEs for
@@ -397,5 +398,42 @@ function phase4(subjects: SeedSubject[], entries: Entry[], issues: Issue[], hidd
   const t = { AETERM: CLOSE_OUT.term, AESTDAT: st, AEONGO: 'N', AEENDAT: addDays(st, 1), AESEV: 'MILD', AESER: 'N', AESDTH: '', AESLIFE: '', AESHOSP: '', AESDISAB: '', AESCONG: '', AESMIE: '', AEREL: 'UNLIKELY RELATED', AEACN: 'DOSE NOT CHANGED', AEOUT: 'RECOVERED/RESOLVED', AECOM: '' }
   hidden.push({ subj: s.id, site: '105', visit: 'LOG', form: 'AE', inst: CLOSE_OUT.inst, visitDate: st, entryDate: st, values: { ...t }, truth: { ...t } })
   issues.push({ id: `PI-${String(++n).padStart(3, '0')}`, subj: s.id, site: '105', visit: 'LOG', form: 'AE', inst: CLOSE_OUT.inst, field: 'AETERM', kind: 'error', find: { listing: 'close-out' }, note: 'An AE in the source notes found at the close-out visit, after lock.' })
+  return n
+}
+
+// Drug accountability and unscheduled visits. Each kit holds 30 tablets, one a day: tablets
+// returned follow the days since the kit was dispensed. One subject takes far fewer.
+function phase5(r: Rng, subjects: SeedSubject[], entries: Entry[], issues: Issue[], n: number): number {
+  const order = ['D1', 'W2', 'W4', 'W8', 'W12']
+  for (const s of subjects) {
+    const ex = order.map((v) => entries.find((e) => e.subj === s.id && e.visit === v && e.form === 'EX'))
+    let prev: Entry | undefined
+    for (const e of ex) {
+      if (!e) continue
+      if (e.truth.EXDISP === 'Y') { e.truth.EXDSPQ = '30'; if (e.values.EXDISP === 'Y') e.values.EXDSPQ = '30' }
+      if (e.visit !== 'D1' && prev) {
+        const d = Math.round((Date.parse(e.visitDate) - Date.parse(prev.visitDate)) / 86400000)
+        let ret = Math.max(0, 30 - d + r.int(0, 2))
+        if (s.id === '104-007' && e.visit === 'W8') ret = Math.min(30, 30 - d + 12)
+        const planted = issues.some((i) => i.subj === e.subj && i.visit === e.visit && i.form === 'EX' && i.field === 'EXRET')
+        if (!planted && e.truth.EXRET !== '') { e.truth.EXRET = String(ret); if (e.values.EXRET !== '') e.values.EXRET = String(ret) }
+      }
+      if (e.truth.EXDISP === 'Y') prev = e
+    }
+  }
+  { const e = entries.find((x) => x.subj === '104-007' && x.visit === 'W8' && x.form === 'EX'); if (e) issues.push({ id: `PI-${String(++n).padStart(3, '0')}`, subj: e.subj, site: e.site, visit: 'W8', form: 'EX', inst: 1, field: 'EXRET', kind: 'true-value', find: { check: 'EX-10' }, note: 'A real compliance problem (57%): the site confirms; record an investigational-product deviation.' }) }
+  // Unscheduled visits after three SAEs, for a blood-pressure check.
+  const UNS = [{ subj: '102-002', after: 'Chest pain', d: 12, reason: 'Blood pressure check after hospital discharge' }, { subj: '105-005', after: 'Syncope', d: 10, reason: 'Review after fainting episode' }, { subj: '101-001', after: 'Atrial fibrillation', d: 8, reason: '' }]
+  for (const u of UNS) {
+    const ae = entries.find((e) => e.subj === u.subj && e.form === 'AE' && e.truth.AETERM === u.after)
+    if (!ae) continue
+    const date = addDays(ae.truth.AESTDAT, u.d)
+    const site = u.subj.slice(0, 3)
+    const sv: Entry = { subj: u.subj, site, visit: 'UNS', form: 'SV', inst: 1, visitDate: date, entryDate: addDays(date, 3), values: { VISOCCUR: 'Y', VISDAT: date, UNSREAS: u.reason }, truth: { VISOCCUR: 'Y', VISDAT: date, UNSREAS: u.reason || 'Rate check after atrial fibrillation' } }
+    const base = entries.find((e) => e.subj === u.subj && e.form === 'VS' && e.visit === 'SCR')!
+    const t = { VSDAT: date, SYSBP: String(Number(base.truth.SYSBP) - r.int(8, 18)), DIABP: String(Number(base.truth.DIABP) - r.int(4, 9)), PULSE: String(r.int(64, 92)), WEIGHT: base.truth.WEIGHT, HEIGHT: '', BMI: '' }
+    entries.push(sv, { subj: u.subj, site, visit: 'UNS', form: 'VS', inst: 1, visitDate: date, entryDate: addDays(date, 3), values: { ...t }, truth: { ...t } })
+    if (!u.reason) issues.push({ id: `PI-${String(++n).padStart(3, '0')}`, subj: u.subj, site, visit: 'UNS', form: 'SV', inst: 1, field: 'UNSREAS', kind: 'error', find: { check: 'SV-08' }, note: 'Unscheduled visit with no reason recorded.' })
+  }
   return n
 }

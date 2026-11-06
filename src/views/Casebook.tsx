@@ -92,7 +92,7 @@ function FormPanel({ fk, annot, setAnnot }: { fk: string; annot: boolean; setAnn
   const [raise, setRaise] = useState<Field | null>(null)
   const [hist, setHist] = useState<Field | null>(null)
   const u = me(p)
-  const vals = Object.fromEntries(def.fields.map((f) => [f.id, value(p, `${fk}|${f.id}`)]))
+  const vals: Record<string, string> = { ...Object.fromEntries(def.fields.map((f) => [f.id, value(p, `${fk}|${f.id}`)])), __visit: visit }
   return (
     <Panel title={`${def.name}${def.repeating ? ` #${inst}` : ''} · ${VISIT_NAME[visit]}`} sub={`${subj} · CDASH domain ${def.domain} · entered ${fmtUtc(fs?.enteredUtc)} UTC by ${fs?.enteredBy}${fs?.deleted ? ` · DELETED: ${fs.deletedReason}` : ''}`}
       right={<label className="flex items-center gap-1.5 text-xs text-lab-text-muted"><input type="checkbox" checked={annot} onChange={(e) => setAnnot(e.target.checked)} />Annotated CRF</label>}>

@@ -5,7 +5,7 @@ import type { Deviation, DvCategory, ItemKey, MonitoringDecision, Project, Signa
 import { parseKey } from './types'
 import { FORMS, SITES, VISITS, fieldOf } from './study'
 import { formsOfSubject, runChecksOnSubject } from './engine'
-import { audit, me, nowUtc, seedEntry, enterForm, runChecks, simSiteUser, value } from './project'
+import { audit, me, nowUtc, seedEntry, enterForm, runChecks, simSiteUser, value, writeValue } from './project'
 import { seedStudy, UNDER_REPORTED } from './seed'
 import { safetyDb } from './safety'
 import { metrics, isActive, ageOf } from './queries'
@@ -19,7 +19,7 @@ const SAE_FORM_ALL = true
 export function sdvRequired(p: Project, fk: string): string[] {
   const [, , form] = fk.split('|')
   const def = FORMS[form]
-  const vals = Object.fromEntries(def.fields.map((f) => [f.id, value(p, `${fk}|${f.id}`)]))
+  const vals: Record<string, string> = { ...Object.fromEntries(def.fields.map((f) => [f.id, value(p, `${fk}|${f.id}`)])), __visit: fk.split('|')[1] }
   const visible = def.fields.filter((f) => !f.derived && (!f.showIf || vals[f.showIf.field] === f.showIf.equals))
   if (p.sdvPlan.mode === 'full') return visible.map((f) => f.id)
   if (form === 'IE' || (SAE_FORM_ALL && form === 'AE' && vals.AESER === 'Y')) return visible.map((f) => f.id)
@@ -60,7 +60,7 @@ export function setSdvPlan(p: Project, mode: 'targeted' | 'full', s: Signature) 
 
 // ---------- protocol deviations ----------
 
-export const DEV_CHECKS: Record<string, DvCategory> = { 'SV-04': 'Visit window', 'SV-05': 'Visit window', 'IC-03': 'Informed consent', 'IC-04': 'Informed consent', 'CM-10': 'Prohibited medication', 'EX-03': 'Investigational product', 'EX-08': 'Investigational product', 'DM-04': 'Eligibility', 'IE-03': 'Eligibility', 'IE-04': 'Eligibility', 'IE-05': 'Eligibility' }
+export const DEV_CHECKS: Record<string, DvCategory> = { 'EX-10': 'Investigational product', 'SV-04': 'Visit window', 'SV-05': 'Visit window', 'IC-03': 'Informed consent', 'IC-04': 'Informed consent', 'CM-10': 'Prohibited medication', 'EX-03': 'Investigational product', 'EX-08': 'Investigational product', 'DM-04': 'Eligibility', 'IE-03': 'Eligibility', 'IE-04': 'Eligibility', 'IE-05': 'Eligibility' }
 export const DV_CATEGORIES: DvCategory[] = ['Eligibility', 'Informed consent', 'Visit window', 'Prohibited medication', 'Investigational product', 'Safety reporting', 'Procedure not done', 'Other']
 
 export function addDeviation(p: Project, d: { subj: string; category: DvCategory; description: string; source: string; key?: ItemKey }, u = me(p)) {
@@ -70,6 +70,12 @@ export function addDeviation(p: Project, d: { subj: string; category: DvCategory
   const dv: Deviation = { id: `DV-${String(p.deviations.length + 1).padStart(3, '0')}`, ...d, identified: p.clock, userId: u.id, utc: nowUtc(p), status: 'to classify' }
   p.deviations.push(dv)
   audit(p, u, 'deviation.log', dv.id, undefined, `${d.subj} ${d.category}`, d.description)
+  // Every deviation is also recorded on the subject's DV eCRF form (CDASH DV domain).
+  if (Object.keys(p.forms).some((k) => k.startsWith(d.subj + '|'))) {
+    const inst = Math.max(0, ...Object.keys(p.forms).filter((k) => k.startsWith(`${d.subj}|LOG|DV|`)).map((k) => Number(k.split('|')[3]))) + 1
+    enterForm(p, d.subj, 'LOG', 'DV', inst, { DVSTDAT: p.clock, DVTERM: `${dv.id}: ${d.description}`.slice(0, 200), DVDECOD: d.category.toUpperCase(), DVIMPT: '' }, u, dv.utc)
+    dv.dvForm = `${d.subj}|LOG|DV|${inst}`
+  }
   return dv
 }
 // Called when data management closes a query from a deviation-type check with the data confirmed.
@@ -87,6 +93,7 @@ export function classify(p: Project, id: string, important: boolean, rationale: 
   if (!rationale.trim()) throw new Error('Give the rationale for the classification.')
   const d = p.deviations.find((x) => x.id === id)!
   Object.assign(d, { important, rationale: rationale.trim(), classifiedBy: u.id, status: 'classified' })
+  if (d.dvForm && p.items[`${d.dvForm}|DVIMPT`]) writeValue(p, `${d.dvForm}|DVIMPT`, important ? 'Y' : 'N', u, `Classified: ${rationale.trim()}`)
   audit(p, u, 'deviation.classify', id, undefined, important ? 'important' : 'not important', rationale.trim())
 }
 // The study's deviation plan: what counts as important here (affects subject safety, rights,

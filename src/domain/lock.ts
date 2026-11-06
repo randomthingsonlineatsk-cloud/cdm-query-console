@@ -141,15 +141,56 @@ export function approveUnlock(p: Project, s: Signature) {
   }
 }
 
+// ---------- interim lock ----------
+
+// The date a form belongs to: its visit date, or for log forms the start date of the record.
+export function formDate(p: Project, fk: string): string {
+  const [subj, visit, form] = fk.split('|')
+  if (visit !== 'LOG') return p.forms[fk]?.visitDate ?? value(p, `${subj}|${visit}|SV|1|VISDAT`) ?? ''
+  return value(p, `${fk}|${{ AE: 'AESTDAT', CM: 'CMSTDAT', DV: 'DVSTDAT' }[form] ?? 'AESTDAT'}`) || '9999'
+}
+export function interimChecklist(p: Project, cutoff: string): CheckItem[] {
+  const due = seedStudy().entries.filter((e) => e.visitDate <= cutoff)
+  const notIn = due.filter((e) => !p.enteredSeed[`${e.subj}|${e.visit}|${e.form}|${e.inst}`]).length
+  const forms = Object.keys(p.forms).filter((k) => !p.forms[k].deleted && formDate(p, k) <= cutoff)
+  const fset = new Set(forms)
+  const q = p.queries.filter((x) => isActive(x) && fset.has(x.key.split('|').slice(0, 4).join('|'))).length
+  let req = 0, done = 0
+  for (const fk of forms) for (const f of sdvRequired(p, fk)) { req++; if (sdvState(p, `${fk}|${f}`) === 'verified') done++ }
+  const cod = Object.values(p.coding).filter((r) => fset.has(r.key.split('|').slice(0, 4).join('|')))
+  const notAppr = cod.filter((r) => r.status !== 'approved').length
+  const saeOk = !!p.sae.signoffDm && !!p.sae.signoffSafety && (p.sae.cutoff ?? '') >= cutoff
+  return [
+    { id: 'data', label: `Data up to ${cutoff} entered`, ok: cutoff <= p.clock && notIn === 0, evidence: cutoff > p.clock ? 'The cut-off is in the future' : `${notIn} forms from visits up to the cut-off not entered`, view: 'oversight' },
+    { id: 'queries', label: 'Queries on that data closed', ok: q === 0, evidence: `${q} active queries`, view: 'queries' },
+    { id: 'sdv', label: 'SDV complete for that data', ok: req > 0 && done === req, evidence: `${done} of ${req} required fields verified`, view: 'oversight' },
+    { id: 'coding', label: 'Terms in that data coded and approved', ok: notAppr === 0, evidence: `${cod.length - notAppr} of ${cod.length} approved`, view: 'coding' },
+    { id: 'sae', label: 'SAE reconciliation signed at or after the cut-off', ok: saeOk, evidence: saeOk ? `Signed, cut-off ${p.sae.cutoff}` : 'Not signed for this cut-off', view: 'recon' },
+  ]
+}
+// An interim lock freezes a copy of the data up to a cut-off (for an interim analysis or a
+// DSMB) while the live database stays open.
+export function interimLock(p: Project, cutoff: string, s: Signature): Uint8Array {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(cutoff)) throw new Error('Give the cut-off as YYYY-MM-DD.')
+  const failing = interimChecklist(p, cutoff).filter((c) => !c.ok)
+  if (failing.length) throw new Error(`Not ready for the interim lock: ${failing.map((c) => c.label).join('; ')}.`)
+  const files = formCsvs(p, cutoff)
+  files.unshift({ name: 'README.txt', content: `Interim snapshot of ${STUDY.protocol} (fictional training study): data with visit or start dates up to ${cutoff}, taken ${s.utc}. The live database remains open.\r\n` })
+  const checksum = hash(files.map((f) => f.name + f.content).join('\n'))
+  p.lock.interims = [...(p.lock.interims ?? []), { cutoff, utc: s.utc, signature: s, checksum, forms: files.length - 1 }]
+  lockEvent(p, userOf(p, s), 'interim', `Interim lock at cut-off ${cutoff}; snapshot checksum ${checksum}`)
+  return zip(files)
+}
+
 // ---------- archive ----------
 
 const csvCell = (v: unknown) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
 const csv = (rows: unknown[][]) => rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n'
 
 // CDASH-style CSV per form: one row per form instance, one column per CDASH variable.
-export function formCsvs(p: Project): { name: string; content: string }[] {
+export function formCsvs(p: Project, cutoff?: string): { name: string; content: string }[] {
   return Object.values(FORMS).map((f) => {
-    const keys = Object.keys(p.forms).filter((k) => k.split('|')[2] === f.id && !p.forms[k].deleted).sort()
+    const keys = Object.keys(p.forms).filter((k) => k.split('|')[2] === f.id && !p.forms[k].deleted && (!cutoff || formDate(p, k) <= cutoff)).sort()
     const head = ['STUDYID', 'SITEID', 'SUBJID', 'VISIT', 'INSTANCE', ...f.fields.map((x) => x.id)]
     const rows = keys.map((k) => { const [subj, visit, , inst] = k.split('|'); return [STUDY.protocol, subj.slice(0, 3), subj, visit, inst, ...f.fields.map((x) => value(p, `${k}|${x.id}`))] })
     return { name: `data/${f.id.toLowerCase()}.csv`, content: csv([head, ...rows]) }
@@ -268,7 +309,7 @@ export function prepareForLock(p: Project) {
   asRole(p, 'cra', () => { for (const fk of Object.keys(p.forms)) if (!p.forms[fk].deleted && !skip.includes(fk.slice(0, 7))) for (const f of sdvRequired(p, fk)) if (sdvState(p, `${fk}|${f}`) !== 'verified') verify(p, `${fk}|${f}`) })
   // Four fresh queries, as a last listing review might raise.
   asRole(p, 'dm', () => {
-    const picks = ['101-006|W8|VS|1|PULSE', '102-009|W12|VS|1|WEIGHT', '104-010|W4|LB|1|ALT', '105-001|SCR|EG|1|QTCF'].filter((k) => p.items[k])
+    const picks = ['101-006|W8|VS|1|PULSE', '101-008|W12|VS|1|WEIGHT', '104-010|W4|LB|1|ALT', '105-001|SCR|EG|1|QTCF'].filter((k) => p.items[k])
     for (const k of picks) raiseManual(p, k, `Final review: the value ${value(p, k)} is recorded here. Please confirm it against the source document?`)
   })
   audit(p, SYSTEM, 'scenario.prepare', 'Lock scenario', undefined, p.clock, 'Study prepared to just before lock by the training scenario')

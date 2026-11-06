@@ -68,3 +68,34 @@ describe('prepared projects and spec sizes', () => {
     expect(run.score).toBe(0)
   })
 })
+
+import { advance as adv, closeQuery as closeQ, value as val } from '../src/domain/project'
+import { addDeviation, classify as classifyDv } from '../src/domain/oversight'
+import { prepareLocked, interimChecklist, interimLock } from '../src/domain/lock'
+import { sign as signFn } from '../src/domain/project'
+describe('form gaps and interim lock', () => {
+  test('drug accountability derives compliance and flags the non-compliant subject; unscheduled visits arrive', () => {
+    const p = createProject(); preparedStartup(p); adv(p, 160)
+    const c = val(p, '101-001|W4|EX|1|EXCOMPL')
+    expect(Number(c)).toBeGreaterThan(80)
+    expect(p.queries.some((q) => q.checkId === 'EX-10' && q.key.startsWith('104-007|W8'))).toBe(true)
+    expect(Object.keys(p.forms).some((k) => k.includes('|UNS|SV|'))).toBe(true)
+    expect(p.queries.some((q) => q.checkId === 'SV-08')).toBe(true)
+  })
+  test('a deviation is recorded on the DV form and its classification too', () => {
+    const p = createProject(); preparedStartup(p); adv(p, 40); p.currentUserId = 'arao'
+    const d = addDeviation(p, { subj: '101-001', category: 'Visit window', description: 'Week 2 visit two days late', source: 'Manual' })
+    expect(d.dvForm).toBeDefined()
+    classifyDv(p, d.id, false, 'Not the primary endpoint visit')
+    expect(val(p, `${d.dvForm}|DVIMPT`)).toBe('N')
+  })
+  test('interim lock takes a snapshot of clean data up to a cut-off', () => {
+    const p = createProject(); prepareLocked(p)
+    expect(interimChecklist(p, '2026-06-01').every((i) => i.ok)).toBe(true)
+    const s = signFn(p, 'jweber', '2222', 'Interim', 'x', ['dmlead']) as never
+    const z = interimLock(p, '2026-06-01', s)
+    expect(z[0]).toBe(0x50)
+    expect(p.lock.interims).toHaveLength(1)
+    void closeQ
+  })
+})

@@ -116,11 +116,12 @@ export interface LockState {
   hardSigs: Signature[]
   unlocks: UnlockRequest[]
   archive?: { utc: string; retention: string; checksum: string; files: number }
+  interims?: { cutoff: string; utc: string; signature: Signature; checksum: string; forms: number }[]
 }
 
 export type DvCategory = 'Eligibility' | 'Informed consent' | 'Visit window' | 'Prohibited medication' | 'Investigational product' | 'Safety reporting' | 'Procedure not done' | 'Other'
 export interface Deviation {
-  id: string; subj: string; category: DvCategory; description: string; source: string; key?: ItemKey
+  id: string; subj: string; category: DvCategory; description: string; source: string; key?: ItemKey; dvForm?: string
   identified: string; userId: string; utc: string
   important?: boolean; classifiedBy?: string; rationale?: string; status: 'to classify' | 'classified'
 }
