@@ -12,6 +12,7 @@ import { scoreQuery, isActive } from './queries'
 import { syncCoding } from './coding'
 import { processSafety } from './safety'
 import { processVendors } from './external'
+import { deviationFromQuery, processMonitoring } from './oversight'
 
 export const DEFAULT_USERS: User[] = [
   { id: 'arao', name: 'Asha Rao', role: 'dm', pin: '1111', trained: true },
@@ -39,6 +40,7 @@ export function createProject(userId = 'local-user', classId = 'none'): Project 
     seedVersion: SEED_VERSION, coding: {}, synonyms: {}, smdVersion: '1.0',
     sae: { links: {}, decisions: {}, safetyFixes: {}, createdCases: [] },
     ext: { transfers: {}, decisions: {}, rules: [], vendorFixes: {} },
+    sdv: {}, sdvPlan: { mode: 'targeted' }, deviations: [], monitoring: { decisions: {}, forCause: {} }, qtlLog: [],
   }
   audit(p, SYSTEM, 'project.create', p.id, undefined, p.name, 'New project from the study template', simUtc(p.clock, 9 * 60))
   return p
@@ -50,6 +52,7 @@ export function migrate(p: Project): Project {
   p.coding ??= {}; p.synonyms ??= {}; p.smdVersion ??= '1.0'
   p.sae ??= { links: {}, decisions: {}, safetyFixes: {}, createdCases: [] }
   p.ext ??= { transfers: {}, decisions: {}, rules: [], vendorFixes: {} }
+  p.sdv ??= {}; p.sdvPlan ??= { mode: 'targeted' }; p.deviations ??= []; p.monitoring ??= { decisions: {}, forCause: {} }; p.qtlLog ??= []
   for (const u of DEFAULT_USERS) if (!p.users.some((x) => x.id === u.id)) p.users.push({ ...u })
   for (const c of SHIPPED_CHECKS) if (!p.checks.some((x) => x.id === c.id)) p.checks.push({ ...c, tests: c.tests.map((t) => ({ ...t })) })
   return p
@@ -159,6 +162,7 @@ export function closeQuery(p: Project, id: string, text = 'Response accepted.', 
   if (!CAN_CLOSE.includes(u.role) && !(u.role === 'cra' && q.raisedBy === u.id)) throw new Error('Data management closes queries.')
   if (q.status !== 'answered') throw new Error('Close a query after the site has answered it.')
   closeQ(p, q, u, 'close', text, nowUtc(p))
+  if (q.checkId) deviationFromQuery(p, q.checkId, q.key, q.id)
 }
 export function cancelQuery(p: Project, id: string, reason: string, u = me(p)) {
   const q = p.queries.find((x) => x.id === id)!
@@ -297,7 +301,7 @@ export function advance(p: Project, days: number) {
     }
     if (touched.size) runChecks(p, [...touched], simUtc(p.clock, 18 * 60))
     for (const q of p.queries) if (q.status === 'open' && q.dueDate && q.dueDate <= p.clock) siteRespond(p, q, p.clock)
-    processSafety(p); processVendors(p)
+    processSafety(p); processVendors(p); processMonitoring(p)
   }
   audit(p, SYSTEM, 'clock.advance', 'study clock', undefined, p.clock, `Advanced ${days} day${days === 1 ? '' : 's'}`, simUtc(p.clock, 23 * 60))
 }

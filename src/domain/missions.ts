@@ -11,6 +11,7 @@ import { exactLlt } from './dictmed'
 import { exactDrug } from './dictdrug'
 import { discrepancies, statusOf, inScope } from './safety'
 import { transferLog, shouldAccept, extDiscrepancies } from './external'
+import { signals, expectedFinding, qtlStatus } from './oversight'
 import { scoreQuery, isActive } from './queries'
 import { addDays } from './util'
 import { formKeyOf } from './types'
@@ -25,8 +26,8 @@ export const MISSIONS: MissionDef[] = [
   { id: 'M6', phase: 2, title: 'Reconcile SAEs before the cut-off', brief: 'Starting the mission moves the clock to 14 September 2026 and sets the data cut-off. Compare all twelve SAEs in the EDC with the safety database, class every discrepancy, get each one resolved, and have data management and drug safety sign off within three weeks. Safety queries are chased by the CRA, so sites answer them within a week.', pass: '70% or more' },
   { id: 'M7', phase: 2, title: 'Reconcile the central lab transfer', brief: 'Starting the mission moves the clock to 10 August 2026. Check every central-lab transfer against its data transfer agreement, load or reject it, reconcile the latest load against the EDC, and fix the unit problem at one site with a documented conversion rule.', pass: '70% or more' },
   { id: 'M8', phase: 2, title: 'Upgrade the dictionary', brief: 'Version 1.1 of the Study Medical Dictionary retires some terms and moves others. Review the impact, apply the upgrade with a signature, recode only what must be recoded, review the hierarchy changes and document the impact.', pass: '70% or more' },
-  { id: 'M9', phase: 3, title: 'Spot the under-reporting site', brief: 'Use centralised monitoring to find the site with too few adverse events.', pass: 'Phase 3' },
-  { id: 'M10', phase: 3, title: 'Keep within the QTLs', brief: 'Track quality tolerance limits and act on a breach.', pass: 'Phase 3' },
+  { id: 'M9', phase: 3, title: 'Spot the suspicious sites', brief: 'Starting the mission moves the clock to 31 August 2026. Review every flag in centralised monitoring. Decide which are real problems and act on them (a for-cause visit, retraining or escalation), and record why the others need no action. Then let the for-cause visit happen.', pass: '70% or more' },
+  { id: 'M10', phase: 3, title: 'Keep within the QTLs', brief: 'Starting the mission moves the clock to 5 October 2026. Check the quality tolerance limits, find the one that is breached, record its root cause and corrective action with a signature, and log and classify the deviations behind it.', pass: '70% or more' },
   { id: 'M11', phase: 4, title: 'Get to lock on time', brief: 'Complete the lock checklist and hard-lock the database by the planned date.', pass: 'Phase 4' },
   { id: 'M12', phase: 4, title: 'Unlock and correct', brief: 'Follow the unlock procedure for a late finding and re-lock.', pass: 'Phase 4' },
 ]
@@ -52,6 +53,8 @@ export function startMission(p: Project, id: string): MissionRun {
     if (!Object.values(p.coding).some((r) => r.code)) throw new Error('Nothing is coded yet. Go live and advance the clock first.')
     run.answers = { start: p.clock, startUtc: nowUtc(p) }
   }
+  if (id === 'M9') { jump('2026-08-31'); run.answers = { start: p.clock, flags: JSON.stringify(signals(p).filter((x) => x.flagged).map((x) => x.id)) } }
+  if (id === 'M10') { jump('2026-10-05'); run.answers = { start: p.clock, startUtc: nowUtc(p) } }
   if (id === 'M3') {
     if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up.')
     const target = '2026-06-29'
@@ -196,3 +199,36 @@ export function scoreM8(p: Project, run: MissionRun) {
   const score = (up?.signature ? 20 : 0) + 50 * (recode.length ? recodedOk.length / recode.length : up ? 1 : 0) + 20 * (reviewNeeded.length ? reviewed.length / reviewNeeded.length : up ? 1 : 0) + ((up?.note.length ?? 0) >= 40 ? 10 : 0) - 5 * unnecessary.length
   finish(p, run, score, [up ? 'Upgrade applied with signature' : 'Upgrade not applied', `${recodedOk.length} of ${recode.length} retired terms recoded correctly`, `${reviewed.length} of ${reviewNeeded.length} hierarchy changes reviewed`, (up?.note.length ?? 0) >= 40 ? 'Impact documented' : 'Impact note missing or too short', `${unnecessary.length} unnecessary recodes`])
 }
+
+export function scoreM9(p: Project, run: MissionRun) {
+  const flags: string[] = JSON.parse(run.answers?.flags ?? '[]')
+  const sigs = new Map(signals(p).map((x) => [x.id, x]))
+  let right = 0
+  const detail: string[] = []
+  for (const id of flags) {
+    const s = sigs.get(id); const dec = p.monitoring.decisions[id]
+    const exp = s ? expectedFinding(s) : { finding: 'explained' as const, why: '' }
+    const ok = !!dec && (exp.finding === 'either' || dec.finding === exp.finding) && (dec.finding === 'explained' || (exp.actions ?? []).includes(dec.action))
+    if (ok) right++; else detail.push(`${id}: expected ${exp.finding === 'action' ? `action (${exp.actions!.join(' or ')})` : 'explained, no action'} (${'why' in exp ? exp.why : ''}), got ${dec ? dec.finding + (dec.action ? ` (${dec.action})` : '') : 'no decision'}`)
+  }
+  const visit = String(p.monitoring.forCause['104'] ?? '').startsWith('done')
+  const falseActions = flags.filter((id) => { const s = sigs.get(id); return s && expectedFinding(s).finding === 'explained' && p.monitoring.decisions[id]?.finding === 'action' }).length
+  const score = 70 * (flags.length ? right / flags.length : 0) + (visit ? 20 : 0) + (falseActions === 0 ? 10 : 0)
+  finish(p, run, score, [`${right} of ${flags.length} flags handled correctly`, ...detail, visit ? 'For-cause visit at site 104 done; the missing AEs are now in the EDC' : 'No for-cause visit at site 104 yet (advance the clock after planning it)', `${falseActions} actions on flags that needed none`])
+}
+
+export function scoreM10(p: Project, run: MissionRun) {
+  const st = qtlStatus(p)
+  const breached = st.filter((x) => x.state === 'breached').map((x) => x.id)
+  const logged = p.qtlLog.filter((l) => l.utc >= (run.answers?.startUtc ?? ''))
+  const hit = breached.filter((id) => logged.some((l) => l.qtl === id))
+  const falseLogs = logged.filter((l) => !breached.includes(l.qtl)).length
+  const late = safetyDbLate(p)
+  const dvs = p.deviations.filter((d) => d.category === 'Safety reporting' && late.includes(d.subj))
+  const dvOk = late.filter((s) => dvs.some((d) => d.subj === s && d.important === true)).length
+  const score = 50 * (breached.length ? hit.length / breached.length : 1) + 30 * (late.length ? dvOk / late.length : 1) + (falseLogs === 0 ? 20 : 0)
+  finish(p, run, score, [`${hit.length} of ${breached.length} breached limits recorded with root cause and action`, `${dvOk} of ${late.length} late SAE reports logged as important safety-reporting deviations`, `${falseLogs} breach records for limits that were not breached`])
+}
+import { safetyDb } from './safety'
+import { daysBetween as dBetween } from './util'
+const safetyDbLate = (p: Project) => safetyDb(p).filter((c) => dBetween(c.aware, c.received) > 1).map((c) => c.subj)

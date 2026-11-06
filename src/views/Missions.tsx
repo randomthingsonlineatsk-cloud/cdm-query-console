@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, preparedStartup, siteIssueStatus } from '../domain/missions'
+import { MISSIONS, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, preparedStartup, siteIssueStatus } from '../domain/missions'
 import { scoreQuery } from '../domain/queries'
 import { Panel, Pill, Btn, TextArea, Table, Stat } from './ui'
 import { QualityMeter } from './Queries'
@@ -13,15 +13,15 @@ export default function Missions() {
   return (
     <div className="space-y-4">
       <Panel title="Missions" sub="Twelve scored missions across four phases. Passing ten at 70% or more earns the course certificate (Phase 4).">
-        <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Available now" value={MISSIONS.filter((m) => m.phase <= 2).length} tone="blue" /><Stat label="For certificate" value="10 of 12" /></div>
+        <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Available now" value={MISSIONS.filter((m) => m.phase <= 3).length} tone="blue" /><Stat label="For certificate" value="10 of 12" /></div>
       </Panel>
       <div className="grid md:grid-cols-2 gap-3">
         {MISSIONS.map((m) => {
           const r = latestRun(p, m.id)
           return (
-            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={m.phase > 2 ? `Coming in Phase ${m.phase}` : `Phase ${m.phase} · Pass: ${m.pass}`} right={r?.score !== undefined ? <Pill tone={r.passed ? 'green' : 'red'}>{r.score}%</Pill> : r ? <Pill tone="blue">In progress</Pill> : m.phase > 2 ? <Pill>Locked</Pill> : null}>
+            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={m.phase > 3 ? `Coming in Phase ${m.phase}` : `Phase ${m.phase} · Pass: ${m.pass}`} right={r?.score !== undefined ? <Pill tone={r.passed ? 'green' : 'red'}>{r.score}%</Pill> : r ? <Pill tone="blue">In progress</Pill> : m.phase > 3 ? <Pill>Locked</Pill> : null}>
               <p className="text-sm text-lab-text-muted">{m.brief}</p>
-              {m.phase <= 2 && <Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r ? 'Continue' : 'Start'}</Btn>}
+              {m.phase <= 3 && <Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r ? 'Continue' : 'Start'}</Btn>}
             </Panel>
           )
         })}
@@ -30,7 +30,7 @@ export default function Missions() {
       {open === 'M2' && <M2 />}
       {open === 'M3' && <M3 />}
       {open === 'M4' && <M4 />}
-      {['M5', 'M6', 'M7', 'M8'].includes(open ?? '') && <Phase2Mission id={open!} />}
+      {['M5', 'M6', 'M7', 'M8', 'M9', 'M10'].includes(open ?? '') && <Phase2Mission id={open!} />}
     </div>
   )
 }
@@ -127,10 +127,12 @@ function M4() {
   )
 }
 
-const P2: Record<string, { view: 'coding' | 'recon'; label: string; score: typeof scoreM5; tips: string[] }> = {
+const P2: Record<string, { view: 'coding' | 'recon' | 'oversight'; label: string; score: typeof scoreM5; tips: string[] }> = {
   M5: { view: 'coding', label: 'Open coding', score: scoreM5, tips: ['Code as Tomás Ibarra (medical coder); approve as Jonas Weber (lead data manager).', 'A trade name codes to its own record; a drug with two classes needs the class that matches the indication.', 'Query combined or ambiguous terms instead of coding them; they come back once the site answers.'] },
   M6: { view: 'recon', label: 'Open reconciliation', score: scoreM6, tips: ['Work as Asha Rao (data manager); sign off as Asha or Jonas and as Dr Ravi Menon (drug safety).', 'Check the SAE report in your head: which side moved away from it?', 'An unmatched pair on both sides may be one event with a mistyped key: link it.', 'Advance the clock so sites and drug safety can answer.'] },
   M7: { view: 'recon', label: 'Open reconciliation', score: scoreM7, tips: ['Load or reject every central-lab transfer on the Vendor transfers tab, then reconcile on Vendor reconciliation.', 'Read the DTA before classing a sample the EDC does not have.', 'A unit problem needs a vendor clarification and a conversion rule.'] },
+  M9: { view: 'oversight', label: 'Open oversight', score: scoreM9, tips: ['Work as Maya Lindqvist (CRA) or Asha Rao on Oversight → Centralised monitoring.', 'Ask of each flag: is it a pattern in how the site works, or chance at a small site?', 'A for-cause visit happens a week after it is planned: advance the clock, then score.'] },
+  M10: { view: 'oversight', label: 'Open oversight', score: scoreM10, tips: ['Compare each QTL with its limit on Oversight → Quality tolerance limits.', 'Record the breach as Jonas Weber, with root cause and corrective action.', 'Log the deviations behind the breach (category Safety reporting, one per subject) and classify them.', 'Check Reconciliation → SAE for the awareness and receipt dates.'] },
   M8: { view: 'coding', label: 'Open the upgrade', score: scoreM8, tips: ['Read the impact list on Coding → Version upgrade, write the impact note, and apply as Jonas Weber.', 'Recode only the retired terms; review hierarchy changes without recoding.'] },
 }
 function Phase2Mission({ id }: { id: string }) {

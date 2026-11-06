@@ -91,7 +91,22 @@ export interface Project {
   smdUpgrade?: { utc: string; userId: string; note: string; reviewed: string[]; signature?: Signature }
   sae: SaeRecon
   ext: ExtRecon
+  // Phase 3
+  sdv: Record<ItemKey, { userId: string; utc: string; ver: number }>
+  sdvPlan: { mode: 'targeted' | 'full'; signature?: Signature }
+  deviations: Deviation[]
+  monitoring: { decisions: Record<string, MonitoringDecision>; forCause: Record<string, string> }
+  qtlLog: QtlRecord[]
 }
+
+export type DvCategory = 'Eligibility' | 'Informed consent' | 'Visit window' | 'Prohibited medication' | 'Investigational product' | 'Safety reporting' | 'Procedure not done' | 'Other'
+export interface Deviation {
+  id: string; subj: string; category: DvCategory; description: string; source: string; key?: ItemKey
+  identified: string; userId: string; utc: string
+  important?: boolean; classifiedBy?: string; rationale?: string; status: 'to classify' | 'classified'
+}
+export interface MonitoringDecision { finding: 'action' | 'explained'; action?: 'for-cause visit' | 'site retraining' | 'escalate to sponsor'; note: string; userId: string; utc: string }
+export interface QtlRecord { id: string; qtl: string; observed: number; limit: number; rootCause: string; action: string; utc: string; signature: Signature }
 
 export type CodingStatus = 'uncoded' | 'coded' | 'query' | 'approved'
 export interface CodingRecord {
