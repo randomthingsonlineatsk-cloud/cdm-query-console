@@ -1,0 +1,193 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --lab-bg: 222 28% 7%;
+  --lab-panel: 222 24% 11%;
+  --lab-panel-strong: 222 22% 15%;
+  --lab-line: 222 16% 26%;
+  --lab-text: 210 22% 94%;
+  --lab-text-muted: 216 14% 64%;
+  --lab-fda: 208 85% 58%;
+  --lab-fda-soft: 208 85% 58% / 0.16;
+  --lab-ema: 258 70% 65%;
+  --lab-ema-soft: 258 70% 65% / 0.16;
+  --lab-cdsco: 152 55% 48%;
+  --lab-cdsco-soft: 152 55% 48% / 0.16;
+  --lab-amber: 38 92% 58%;
+  --lab-amber-soft: 38 92% 58% / 0.16;
+  --lab-red: 0 78% 62%;
+  --lab-red-soft: 0 78% 62% / 0.16;
+  --lab-grid: 222 16% 26% / 0.5;
+
+  --background: var(--lab-bg);
+  --foreground: var(--lab-text);
+  --card: var(--lab-panel);
+  --card-foreground: var(--lab-text);
+  --popover: var(--lab-panel-strong);
+  --popover-foreground: var(--lab-text);
+  --primary: var(--lab-fda);
+  --primary-foreground: 222 28% 7%;
+  --secondary: var(--lab-panel-strong);
+  --secondary-foreground: var(--lab-text);
+  --muted: var(--lab-panel-strong);
+  --muted-foreground: var(--lab-text-muted);
+  --accent: var(--lab-ema-soft);
+  --accent-foreground: var(--lab-ema);
+  --destructive: var(--lab-red);
+  --destructive-foreground: 0 0% 98%;
+  --border: var(--lab-line);
+  --input: var(--lab-line);
+  --ring: var(--lab-fda);
+  --chart-1: var(--lab-fda);
+  --chart-2: var(--lab-ema);
+  --chart-3: var(--lab-cdsco);
+  --chart-4: var(--lab-amber);
+  --chart-5: var(--lab-red);
+  --radius: 0.625rem;
+  --sidebar: var(--lab-panel);
+  --sidebar-foreground: var(--lab-text);
+  --sidebar-primary: var(--lab-fda);
+  --sidebar-primary-foreground: 222 28% 7%;
+  --sidebar-accent: var(--lab-panel-strong);
+  --sidebar-accent-foreground: var(--lab-text);
+  --sidebar-border: var(--lab-line);
+  --sidebar-ring: var(--lab-fda);
+}
+
+.dark {
+  --background: var(--lab-bg);
+  --foreground: var(--lab-text);
+  --card: var(--lab-panel);
+  --card-foreground: var(--lab-text);
+  --popover: var(--lab-panel-strong);
+  --popover-foreground: var(--lab-text);
+  --primary: var(--lab-fda);
+  --primary-foreground: 222 28% 7%;
+  --secondary: var(--lab-panel-strong);
+  --secondary-foreground: var(--lab-text);
+  --muted: var(--lab-panel-strong);
+  --muted-foreground: var(--lab-text-muted);
+  --accent: var(--lab-ema-soft);
+  --accent-foreground: var(--lab-ema);
+  --destructive: var(--lab-red);
+  --destructive-foreground: 0 0% 98%;
+  --border: var(--lab-line);
+  --input: var(--lab-line);
+  --ring: var(--lab-fda);
+  --sidebar: var(--lab-panel);
+  --sidebar-foreground: var(--lab-text);
+  --sidebar-primary: var(--lab-fda);
+  --sidebar-primary-foreground: 222 28% 7%;
+  --sidebar-accent: var(--lab-panel-strong);
+  --sidebar-accent-foreground: var(--lab-text);
+  --sidebar-border: var(--lab-line);
+  --sidebar-ring: var(--lab-fda);
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --color-lab-bg: hsl(var(--lab-bg));
+  --color-lab-panel: hsl(var(--lab-panel));
+  --color-lab-panel-strong: hsl(var(--lab-panel-strong));
+  --color-lab-line: hsl(var(--lab-line));
+  --color-lab-text: hsl(var(--lab-text));
+  --color-lab-text-muted: hsl(var(--lab-text-muted));
+  --color-lab-fda: hsl(var(--lab-fda));
+  --color-lab-fda-soft: hsl(var(--lab-fda-soft));
+  --color-lab-ema: hsl(var(--lab-ema));
+  --color-lab-ema-soft: hsl(var(--lab-ema-soft));
+  --color-lab-cdsco: hsl(var(--lab-cdsco));
+  --color-lab-cdsco-soft: hsl(var(--lab-cdsco-soft));
+  --color-lab-amber: hsl(var(--lab-amber));
+  --color-lab-amber-soft: hsl(var(--lab-amber-soft));
+  --color-lab-red: hsl(var(--lab-red));
+  --color-lab-red-soft: hsl(var(--lab-red-soft));
+  --color-lab-grid: hsl(var(--lab-grid));
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+body vite-error-overlay {
+  display: none;
+}
+
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseNode {
+  0%, 100% { stroke-opacity: 1; }
+  50% { stroke-opacity: 0.4; }
+}
+@keyframes stagePop {
+  0% { transform: scale(0.5); }
+  60% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes regionFade {
+  0% { opacity: 0; transform: translateX(-4px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes barGrowWidth {
+  0% { width: 0%; }
+}
+@keyframes factReveal {
+  0% { opacity: 0; transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
