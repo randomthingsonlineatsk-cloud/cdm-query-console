@@ -43,3 +43,28 @@ describe('levels', () => {
   })
 })
 function p1(p: ReturnType<typeof createProject>, st: { id: string; error?: { correct: string } }) { if (st.error) p.startup.dmpFlags[st.id] = st.error.correct; else if (st.id === '1.1' || st.id === '2.1') p.startup.dmpFlags[st.id] = 'x1' }
+
+import { prepareMission as prep, MISSION_PROJECT, M4_SCENARIOS, scoreM4 } from '../src/domain/missions'
+import { upgradeImpact } from '../src/domain/coding'
+const noLock = { lock: () => {}, locked: () => {} }
+describe('prepared projects and spec sizes', () => {
+  test('every mission has a project plan', () => { expect(Object.keys(MISSION_PROJECT)).toHaveLength(13) })
+  test('M5: 30 AE verbatims, auto-coding off for AEs', () => {
+    const p = prep(createProject(), 'M5', createProject, noLock)
+    const run = p.missions.at(-1)!
+    const scope: string[] = JSON.parse(run.answers!.scope)
+    expect(scope).toHaveLength(30)
+    expect(scope.every((k) => p.coding[k].status === 'uncoded' && k.includes('|AE|'))).toBe(true)
+    expect(Object.values(p.coding).some((r) => r.key.includes('|CM|') && r.method === 'auto')).toBe(true)
+  })
+  test('M8: the prepared project has coded terms the upgrade affects', () => {
+    const p = prep(createProject(), 'M8', createProject, noLock)
+    expect(upgradeImpact(p).some((i) => i.kind === 'recode')).toBe(true)
+  })
+  test('M4: ten drafts; an unchanged draft scores zero', () => {
+    expect(M4_SCENARIOS).toHaveLength(10)
+    const p = createProject(); const run = startMission(p, 'M4')
+    run.answers = Object.fromEntries(M4_SCENARIOS.map((s) => [s.id, s.poor])); scoreM4(p, run)
+    expect(run.score).toBe(0)
+  })
+})

@@ -9,13 +9,13 @@ import { STUDY } from '../domain/study'
 import { Panel, Btn, Table, inputCls, Pill } from './ui'
 
 export default function ProjectView() {
-  const { p, act, replace, setError } = useStore()
+  const { p, act, replace, setError, saved: savedAt } = useStore()
   const file = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
   const [saved, setSaved] = useState<Project[]>([])
   const refresh = () => listProjects().then((a) => setSaved(a.sort((x, y) => y.updatedUtc.localeCompare(x.updatedUtc)))).catch(() => {})
-  useEffect(() => { refresh() }, [p.id])
+  useEffect(() => { refresh() }, [p.id, savedAt])
   const csvZip = () => {
     const blob = new Blob([zip(formCsvs(p)) as Uint8Array<ArrayBuffer>], { type: 'application/zip' })
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${STUDY.protocol}-cdash-csv-${p.clock}.zip`; a.click(); URL.revokeObjectURL(a.href)
@@ -57,7 +57,7 @@ export default function ProjectView() {
         {msg && <p className="text-xs text-lab-cdsco">{msg}</p>}
         <p className="text-[11px] text-lab-text-muted">Exported files carry a checksum and the hash-chained audit trail; an edited file is flagged on import.</p>
       </Panel>
-      <Panel title="Saved projects" sub="Projects stored in this browser. Missions M11 and M12 run in projects of their own.">
+      <Panel title="Saved projects" sub="Projects stored in this browser. Each mission runs in a prepared project of its own.">
         <Table head={['Name', 'Study date', 'Last saved', '']} rows={saved.map((x) => [x.id === p.id ? <b>{x.name} (open)</b> : x.name, x.clock, x.updatedUtc.replace('T', ' ').slice(0, 16), x.id === p.id ? '' : <div className="flex gap-1"><Btn tone="blue" className="py-0.5" onClick={() => saveProject(p).finally(() => replace(migrate(x)))}>Open</Btn><Btn tone="red" className="py-0.5" onClick={() => deleteProject(x.id).then(refresh)}>Delete</Btn></div>])} empty="Nothing saved yet." />
       </Panel>
       <Panel title="Users and practice PINs" sub="Accounts are personal in real systems and a PIN is never shared. These are practice accounts so you can play every role.">

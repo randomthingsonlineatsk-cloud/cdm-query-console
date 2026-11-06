@@ -4,13 +4,16 @@ import { CATEGORY_LABEL, SHIPPED_CHECKS, CTX_FNS } from '../domain/checks'
 import { runTest, fieldsOfForm } from '../domain/engine'
 import { validate } from '../domain/expr'
 import { audit, me, nowUtc, runChecks, allSubjects } from '../domain/project'
+import { latestRun } from '../domain/missions'
 import { FORMS } from '../domain/study'
 import type { Check, CheckCategory } from '../domain/types'
 import { Panel, Pill, Btn, Table, Select, TextArea, SignBox, SigLine, Stat } from './ui'
 
 export default function Checks() {
   const { p, act } = useStore()
-  const [cat, setCat] = useState<CheckCategory | 'all'>('all')
+  const m2 = latestRun(p, 'M2')
+  const scope: string[] | null = m2 && m2.score === undefined && m2.answers?.scope ? JSON.parse(m2.answers.scope) : null
+  const [cat, setCat] = useState<CheckCategory | 'all' | 'release'>(scope ? 'release' : 'all')
   const [sel, setSel] = useState<string>(p.checks[0].id)
   const results = useMemo(() => {
     const last = new Map<string, boolean>()
@@ -20,7 +23,7 @@ export default function Checks() {
   const total = p.checks.reduce((n, c) => n + c.tests.length, 0)
   const run = p.checks.reduce((n, c) => n + c.tests.filter((t) => results.has(`${c.id}#${t.name}`)).length, 0)
   const failing = p.checks.reduce((n, c) => n + c.tests.filter((t) => results.get(`${c.id}#${t.name}`) === false).length, 0)
-  const list = p.checks.filter((c) => cat === 'all' || c.category === cat)
+  const list = p.checks.filter((c) => cat === 'all' || (cat === 'release' ? !!scope?.includes(c.id) : c.category === cat))
   const c = p.checks.find((x) => x.id === sel)!
   const runAll = () => act((pp) => {
     const u = me(pp), utc = nowUtc(pp)
@@ -38,7 +41,7 @@ export default function Checks() {
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <Btn tone="solid" onClick={runAll}>Run all test cases</Btn>
-          <Select aria-label="Category" className="w-56" value={cat} onChange={(e) => setCat(e.target.value as CheckCategory | 'all')} options={[{ value: 'all', label: 'All categories' }, ...Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }))]} />
+          <Select aria-label="Category" className="w-56" value={cat} onChange={(e) => setCat(e.target.value as CheckCategory | 'all' | 'release')} options={[...(scope ? [{ value: 'release', label: 'Release under test (12)' }] : []), { value: 'all', label: 'All categories' }, ...Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }))]} />
         </div>
       </Panel>
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4 items-start">

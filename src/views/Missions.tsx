@@ -1,46 +1,85 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, certificate, preparedStartup, siteIssueStatus } from '../domain/missions'
+import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, certificate, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
+import { listProjects } from '../domain/store'
+import type { MissionRun } from '../domain/types'
 import { scoreQuery } from '../domain/queries'
 import { Panel, Pill, Btn, TextArea, Table, Stat } from './ui'
 import { QualityMeter } from './Queries'
 
+function useAllRuns() {
+  const { p, tick } = useStore()
+  const [others, setOthers] = useState<MissionRun[]>([])
+  useEffect(() => { listProjects().then((all) => setOthers(all.filter((x) => x.id !== p.id && x.userId === p.userId).flatMap((x) => x.missions ?? []))).catch(() => {}) }, [p.id])
+  return useMemo(() => [...others, ...p.missions], [others, tick, p.missions.length])
+}
+const bestOf = (runs: MissionRun[], id: string) => runs.filter((r) => r.id === id && r.score !== undefined).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
+
 export default function Missions() {
   const { p, act } = useStore()
-  const [open, setOpen] = useState<string | null>(null)
-  const passed = MISSIONS.filter((m) => latestRun(p, m.id)?.passed).length
+  const runs = useAllRuns()
+  const here = MISSIONS.find((m) => { const r = latestRun(p, m.id); return r && r.score === undefined })
+  const [open, setOpen] = useState<string | null>(here?.id ?? null)
+  const passed = MISSIONS.filter((m) => bestOf(runs, m.id)?.passed).length
   return (
     <div className="space-y-4">
-      <Panel title="Missions" sub="Thirteen scored missions across four phases. Passing ten at 70% or more earns the course certificate.">
-        <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Available now" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
+      <Panel title="Missions" sub="Thirteen scored missions across four phases. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more earns the course certificate.">
+        <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Missions" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-lab-text-muted">Level for new runs</span>
           {(['guided', 'standard', 'expert'] as const).map((l) => <Btn key={l} tone={(p.missionLevel ?? 'standard') === l ? 'solid' : 'grey'} onClick={() => act((pp) => { pp.missionLevel = l })}>{l}</Btn>)}
           <span className="text-[11px] text-lab-text-muted">{LEVEL_TEXT[p.missionLevel ?? 'standard']} The pass mark is 70% at every level; the certificate shows each mission’s level.</span>
         </div>
+        {here && <p className="text-xs text-lab-amber">This project is the prepared project for {here.id} {here.title}.</p>}
       </Panel>
       <div className="grid md:grid-cols-2 gap-3">
         {MISSIONS.map((m) => {
+          const best = bestOf(runs, m.id)
           const r = latestRun(p, m.id)
           return (
-            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={m.phase > 4 ? `Coming in Phase ${m.phase}` : `Phase ${m.phase} · Pass: ${m.pass}`} right={r?.score !== undefined ? <Pill tone={r.passed ? 'green' : 'red'}>{r.score}%</Pill> : r ? <Pill tone="blue">In progress</Pill> : m.phase > 4 ? <Pill>Locked</Pill> : null}>
+            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
               <p className="text-sm text-lab-text-muted">{m.brief}</p>
-              {<Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r ? 'Continue' : 'Start'}</Btn>}
+              <Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r && r.score === undefined ? 'Continue' : 'Open'}</Btn>
             </Panel>
           )
         })}
       </div>
-      {open === 'M1' && <M1 />}
-      {open === 'M2' && <M2 />}
-      {open === 'M3' && <M3 />}
-      {open === 'M4' && <M4 />}
-      {['M5', 'M6', 'M7', 'M8', 'M9', 'M10'].includes(open ?? '') && <Phase2Mission id={open!} />}
-      {(open === 'M11' || open === 'M12') && <LockMission id={open} />}
-      {open === 'M13' && <M13 />}
-      <Certificate />
+      {open && <MissionPanel id={open} />}
+      <Certificate runs={runs} />
     </div>
   )
+}
+
+// A mission panel: start in a prepared project, or work the active run here.
+function MissionPanel({ id }: { id: string }) {
+  const { p, replace, setError } = useStore()
+  const [busy, setBusy] = useState(false)
+  const m = MISSIONS.find((x) => x.id === id)!
+  const run = latestRun(p, id)
+  const active = run && run.score === undefined ? run : undefined
+  if (MISSION_PROJECT[id] === 'none') return id === 'M4' ? <M4 /> : <M13 />
+  if (!active) {
+    const start = () => {
+      setBusy(true)
+      setTimeout(() => {
+        try { const np = prepareMission(p, id, createProject, { lock: prepareForLock, locked: prepareLocked }); saveProject(p).finally(() => replace(np)) }
+        catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+      }, 30)
+    }
+    return (
+      <Panel title={`${m.id} · ${m.title}`} sub={m.brief}>
+        <p className="text-xs text-lab-text-muted">Starts a new project prepared for this mission (any work done by the training scenario is labelled as such in the audit trail). The level is {p.missionLevel ?? 'standard'}. Your current project stays saved under Project → Saved projects.</p>
+        <Btn tone="solid" disabled={busy} onClick={start}>{busy ? 'Preparing the study (a few seconds)…' : 'Start in a new project'}</Btn>
+        <Result id={id} />
+      </Panel>
+    )
+  }
+  if (id === 'M1') return <M1 run={active} />
+  if (id === 'M2') return <M2 run={active} />
+  if (id === 'M3') return <M3 />
+  if (id === 'M11' || id === 'M12') return <LockMission id={id} />
+  return <Phase2Mission id={id} />
 }
 
 function Result({ id }: { id: string }) {
@@ -55,24 +94,24 @@ function Result({ id }: { id: string }) {
   )
 }
 
-function M1() {
+function M1({ run }: { run: MissionRun }) {
   const { p, act } = useStore()
   const { go } = useNav()
   return (
-    <Panel title="M1 · Fix the DMP" sub="Review the plan on the Start-up tab, then score your review here. You can score more than once; the latest score counts.">
-      <div className="flex gap-2"><Btn onClick={() => go('startup')}>Open the DMP</Btn><Btn tone="solid" onClick={() => act((pp) => scoreM1(pp, startMission(pp, 'M1')))}>Score my review</Btn></div>
+    <Panel title="M1 · Fix the DMP" sub="Review the plan on the Start-up tab, flag the statements that are wrong with their corrections, then finish here.">
+      <div className="flex gap-2"><Btn onClick={() => go('startup')}>Open the DMP</Btn><Btn tone="solid" onClick={() => act((pp) => scoreM1(pp, pp.missions.find((x) => x.startedUtc === run.startedUtc && x.id === 'M1')!))}>Finish and score</Btn></div>
       <p className="text-xs text-lab-text-muted">{Object.keys(p.startup.dmpFlags).length} statements flagged so far.</p>
       <Progress id="M1" /><Result id="M1" />
     </Panel>
   )
 }
 
-function M2() {
+function M2({ run }: { run: MissionRun }) {
   const { act } = useStore()
   const { go } = useNav()
   return (
-    <Panel title="M2 · Test the checks" sub="Run the test cases on the Edit checks tab. Read each failing case, decide whether the check or the test is wrong (here, it is the check), fix the logic, re-run, and sign the UAT summary.">
-      <div className="flex gap-2"><Btn onClick={() => go('checks')}>Open the edit checks</Btn><Btn tone="solid" onClick={() => act((pp) => scoreM2(pp, startMission(pp, 'M2')))}>Score my UAT</Btn></div>
+    <Panel title="M2 · Test the checks" sub="On the Edit checks tab, choose “Release under test”, run the twelve checks’ test cases, read each failing case, fix the logic, re-run, and sign the UAT summary.">
+      <div className="flex gap-2"><Btn onClick={() => go('checks')}>Open the edit checks</Btn><Btn tone="solid" onClick={() => act((pp) => scoreM2(pp, pp.missions.find((x) => x.startedUtc === run.startedUtc && x.id === 'M2')!))}>Finish and score</Btn></div>
       <Progress id="M2" /><Result id="M2" />
     </Panel>
   )
@@ -86,13 +125,6 @@ function M3() {
   const st = siteIssueStatus(p, '103').filter((x) => x.entered)
   return (
     <Panel title="M3 · Clean a messy site" sub="Site 103 (Sahyadri Heart Institute) has a new study coordinator. Starting the mission moves the clock to 29 June 2026 if it is earlier, and gives you six simulated weeks.">
-      {!p.live && (
-        <div className="rounded border border-lab-amber/60 p-3 space-y-2">
-          <p className="text-sm">The study is not live yet. Finish start-up yourself (missions M1 and M2 cover most of it), or use a prepared start-up: the training scenario corrects the faulty checks, runs UAT and signs. It is recorded in the audit trail as done by the scenario, not by you.</p>
-          <Btn tone="amber" onClick={() => act((pp) => preparedStartup(pp))}>Use the prepared start-up</Btn>
-        </div>
-      )}
-      {p.live && !activeRun && <Btn tone="solid" onClick={() => act((pp) => { startMission(pp, 'M3') })}>{run ? 'Start again' : 'Start the mission'}</Btn>}
       {activeRun && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -118,13 +150,14 @@ function M4() {
   const run = latestRun(p, 'M4')
   const [answers, setAnswers] = useState<Record<string, string>>(run?.answers ?? {})
   return (
-    <Panel title="M4 · Write a good query" sub="For each finding, write the query you would send. Live feedback shows the rules; the score is the average.">
+    <Panel title="M4 · Write a good query" sub="Each finding comes with the query a hurried colleague drafted. Rewrite it so it is neutral, specific and answerable. Unchanged text scores zero; the score is the average.">
       {M4_SCENARIOS.map((s, i) => {
         const sc = scoreQuery(answers[s.id] ?? '', s.mention)
         return (
           <div key={s.id} className="space-y-1.5 border-t border-lab-line pt-3">
-            <p className="text-sm"><span className="font-mono text-lab-fda">Scenario {String.fromCharCode(65 + i)}.</span> {s.data}</p>
-            <TextArea aria-label={`Query for scenario ${String.fromCharCode(65 + i)}`} value={answers[s.id] ?? ''} onChange={(e) => setAnswers({ ...answers, [s.id]: e.target.value })} />
+            <p className="text-sm"><span className="font-mono text-lab-fda">Query {String.fromCharCode(65 + i)}.</span> {s.data}</p>
+            <p className="text-xs"><span className="text-lab-text-muted">Draft: </span><span className="text-lab-red">“{s.poor}”</span></p>
+            <TextArea aria-label={`Rewrite of query ${String.fromCharCode(65 + i)}`} placeholder="Your rewrite" value={answers[s.id] ?? ''} onChange={(e) => setAnswers({ ...answers, [s.id]: e.target.value })} />
             {p.missionLevel !== 'expert' && <QualityMeter score={sc.score} rules={sc.rules} />}
           </div>
         )
@@ -152,9 +185,7 @@ function Phase2Mission({ id }: { id: string }) {
   const cfg = P2[id]
   return (
     <Panel title={`${m.id} · ${m.title}`} sub={m.brief}>
-      {!p.live && <div className="rounded border border-lab-amber/60 p-3 space-y-2"><p className="text-sm">The study must be live first.</p><Btn tone="amber" onClick={() => act((pp) => preparedStartup(pp))}>Use the prepared start-up</Btn></div>}
       {p.missionLevel !== 'expert' && <ul className="list-disc pl-5 text-xs text-lab-text-muted">{cfg.tips.map((t) => <li key={t}>{t}</li>)}</ul>}
-      {p.live && !active && <Btn tone="solid" onClick={() => act((pp) => { startMission(pp, id) })}>{run ? 'Start again' : 'Start the mission'}</Btn>}
       {active && <>
         <p className="text-xs">Started on study date {active.answers?.start}{active.answers?.deadline ? ` · sign-off deadline ${active.answers.deadline}` : ''} · now {p.clock}</p>
         <div className="flex gap-2"><Btn onClick={() => go(cfg.view)}>{cfg.label}</Btn><Btn tone="solid" onClick={() => act((pp) => cfg.score(pp, active))}>Finish and score</Btn></div>
@@ -171,29 +202,11 @@ import { saveProject } from '../domain/store'
 function LockMission({ id }: { id: 'M11' | 'M12' }) {
   const { p, act, replace, setError } = useStore()
   const { go } = useNav()
-  const [busy, setBusy] = useState(false)
   const run = latestRun(p, id)
   const active = run && run.score === undefined ? run : undefined
   const m = MISSIONS.find((x) => x.id === id)!
-  const fresh = () => {
-    setBusy(true)
-    setTimeout(() => {
-      try {
-        const np = createProject(p.userId, p.classId)
-        np.name = id === 'M11' ? 'M11 Lock on time' : 'M12 Unlock correctly'
-        if (id === 'M11') prepareForLock(np); else prepareLocked(np)
-        startMission(np, id)
-        saveProject(p).finally(() => replace(np))
-      } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
-    }, 30)
-  }
   return (
     <Panel title={`${m.id} · ${m.title}`} sub={m.brief}>
-      {!active && <div className="space-y-2">
-        <p className="text-xs text-lab-text-muted">This mission runs in a new project, prepared by the training scenario (its work is labelled as such in the audit trail). Your current project stays saved under Project → Saved projects.</p>
-        {id === 'M12' && p.lock.status === 'hard' && <Btn tone="blue" onClick={() => act((pp) => { startMission(pp, 'M12') })}>Start in this hard-locked project</Btn>}
-        <Btn tone="solid" disabled={busy} onClick={fresh}>{busy ? 'Preparing the study (a few seconds)…' : 'Start in a new project'}</Btn>
-      </div>}
       {active && <>
         {id === 'M12' && <p className="text-sm text-lab-red">{CLOSE_OUT_REPORT}</p>}
         <p className="text-xs">Started on study date {active.answers?.start}{active.answers?.deadline ? ` · lock deadline ${active.answers.deadline}` : ''} · now {p.clock}</p>
@@ -205,12 +218,12 @@ function LockMission({ id }: { id: 'M11' | 'M12' }) {
   )
 }
 
-function Certificate() {
+function Certificate({ runs }: { runs: MissionRun[] }) {
   const { p } = useStore()
   const [name, setName] = useState('')
-  const c = certificate(p, name || 'Learner')
+  const c = certificate(runs, p.userId, name || 'Learner')
   return (
-    <Panel title="Certificate" sub="Pass ten of the twelve missions at 70% or more. The certificate shows a verification code made from your name, your scores and this project.">
+    <Panel title="Certificate" sub="Pass ten of the thirteen missions at 70% or more, in any of your projects in this browser. The certificate shows a verification code made from your name, your scores and your user ID.">
       <p className="text-sm">{c.passed.length} of {MISSIONS.length} missions passed.</p>
       {c.eligible ? (
         <div className="space-y-2">
