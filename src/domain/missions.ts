@@ -16,7 +16,7 @@ import { CLOSE_OUT_REPORT, piCurrent } from './lock'
 import { CLOSE_OUT } from './seed'
 import { scoreQuery, isActive } from './queries'
 import { addDays } from './util'
-import { formKeyOf } from './types'
+import { formKeyOf, type Level } from './types'
 
 export interface MissionDef { id: string; phase: number; title: string; brief: string; pass: string }
 export const MISSIONS: MissionDef[] = [
@@ -37,19 +37,22 @@ export const MISSIONS: MissionDef[] = [
 
 export const latestRun = (p: Project, id: string): MissionRun | undefined => [...p.missions].reverse().find((m) => m.id === id)
 
+export const LEVEL_TEXT: Record<Level, string> = { guided: 'Guided: tips, a progress check while you work, and 50% more time.', standard: 'Standard: tips and the usual time.', expert: 'Expert: no tips or live feedback, 25% less time, and mistakes cost double.' }
+const k = (run: MissionRun) => (run.level === 'expert' ? 2 : 1)
+const days = (p: Project, n: number) => Math.round(n * ({ guided: 1.5, standard: 1, expert: 0.75 }[p.missionLevel ?? 'standard']))
 function finish(p: Project, run: MissionRun, score: number, detail: string[]) {
-  run.endedUtc = new Date().toISOString(); run.score = Math.max(0, Math.min(100, Math.round(score))); run.passed = run.score >= 70; run.detail = detail
+  run.endedUtc = new Date().toISOString(); run.score = Math.max(0, Math.min(100, Math.round(score))); run.passed = run.score >= 70; run.detail = [...detail, `Level: ${run.level ?? 'standard'}`]
   audit(p, me(p), 'mission.finish', run.id, undefined, `${run.score}%`, run.passed ? 'Passed' : 'Not passed')
 }
 export function startMission(p: Project, id: string): MissionRun {
-  const run: MissionRun = { id, startedUtc: new Date().toISOString(), userId: p.currentUserId, answers: {} }
+  const run: MissionRun = { id, startedUtc: new Date().toISOString(), userId: p.currentUserId, answers: {}, level: p.missionLevel ?? 'standard' }
   const jump = (target: string) => { if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up (mission M3).'); if (p.clock < target) advance(p, Math.round((Date.parse(target) - Date.parse(p.clock)) / 86400000)) }
   if (id === 'M5') { jump('2026-08-03'); run.answers = { start: p.clock } }
   if (id === 'M7') { jump('2026-08-10'); run.answers = { start: p.clock } }
   if (id === 'M6') {
     jump('2026-09-14')
     p.sae.cutoff = p.clock; p.sae.signoffDm = undefined; p.sae.signoffSafety = undefined
-    run.answers = { start: p.clock, deadline: addDays(p.clock, 21), key: JSON.stringify(discrepancies(p).map((d) => ({ id: d.id, expected: d.expected, fk: d.pair.edc?.fk ?? '' }))) }
+    run.answers = { start: p.clock, deadline: addDays(p.clock, days(p, 21)), key: JSON.stringify(discrepancies(p).map((d) => ({ id: d.id, expected: d.expected, fk: d.pair.edc?.fk ?? '' }))) }
   }
   if (id === 'M8') {
     if (p.smdVersion !== '1.0') throw new Error('This project is already on version 1.1. Start a new project to repeat the upgrade.')
@@ -58,13 +61,13 @@ export function startMission(p: Project, id: string): MissionRun {
   }
   if (id === 'M9') { jump('2026-08-31'); run.answers = { start: p.clock, flags: JSON.stringify(signals(p).filter((x) => x.flagged).map((x) => x.id)) } }
   if (id === 'M10') { jump('2026-10-05'); run.answers = { start: p.clock, startUtc: nowUtc(p) } }
-  if (id === 'M11') { run.answers = { start: p.clock, deadline: addDays(p.clock, 30), startUtc: nowUtc(p) } }
+  if (id === 'M11') { run.answers = { start: p.clock, deadline: addDays(p.clock, days(p, 30)), startUtc: nowUtc(p) } }
   if (id === 'M12') { if (p.lock.status !== 'hard') throw new Error('M12 needs a hard-locked study.'); run.answers = { start: p.clock, startUtc: nowUtc(p), report: CLOSE_OUT_REPORT } }
   if (id === 'M3') {
     if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up.')
     const target = '2026-06-29'
     if (p.clock < target) advance(p, Math.round((Date.parse(target) - Date.parse(p.clock)) / 86400000))
-    run.answers = { start: p.clock, deadline: addDays(p.clock, 42) }
+    run.answers = { start: p.clock, deadline: addDays(p.clock, days(p, 42)) }
   }
   p.missions.push(run)
   audit(p, me(p), 'mission.start', id, undefined, run.answers?.start ?? '', '')
@@ -73,7 +76,8 @@ export function startMission(p: Project, id: string): MissionRun {
 
 export function scoreM1(p: Project, run: MissionRun) {
   const s = scoreDmp(p.startup.dmpFlags)
-  finish(p, run, s.score, [`${s.right} of ${DMP_ERRORS.length} errors corrected`, `${s.wrongFix} flagged with the wrong correction`, `${s.falseFlag} correct statements flagged`, `${s.missed} errors not found`])
+  const sc = k(run) === 2 ? Math.max(0, Math.round(((s.right - s.falseFlag) / DMP_ERRORS.length) * 100)) : s.score
+  finish(p, run, sc, [`${s.right} of ${DMP_ERRORS.length} errors corrected`, `${s.wrongFix} flagged with the wrong correction`, `${s.falseFlag} correct statements flagged`, `${s.missed} errors not found`])
 }
 
 export function scoreM2(p: Project, run: MissionRun) {
@@ -114,7 +118,7 @@ export function scoreM3(p: Project, run: MissionRun) {
   const open = p.queries.filter((q) => q.key.startsWith('103-') && isActive(q)).length
   const quality = manual.length ? manual.reduce((s, q) => s + scoreQuery(q.msgs[0].text).score, 0) / manual.length : 100
   const late = p.clock > (run.answers?.deadline ?? '9999')
-  const score = 80 * (st.length ? resolved / st.length : 0) + 0.1 * quality + (open === 0 ? 10 : 0) - 3 * falseQ - 5 * closedWrong - (late ? 10 : 0)
+  const score = 80 * (st.length ? resolved / st.length : 0) + 0.1 * quality + (open === 0 ? 10 : 0) - 3 * k(run) * falseQ - 5 * k(run) * closedWrong - (late ? 10 : 0)
   finish(p, run, score, [`${resolved} of ${st.length} issues at site 103 resolved`, `${open} queries still open or answered at site 103`, `${falseQ} false queries on correct data`, `${closedWrong} queries closed while the data were still wrong`, `Manual query quality ${Math.round(quality)}%`, late ? 'Finished after the deadline (−10)' : 'Finished by the deadline'])
 }
 
@@ -218,7 +222,7 @@ export function scoreM9(p: Project, run: MissionRun) {
   }
   const visit = String(p.monitoring.forCause['104'] ?? '').startsWith('done')
   const falseActions = flags.filter((id) => { const s = sigs.get(id); return s && expectedFinding(s).finding === 'explained' && p.monitoring.decisions[id]?.finding === 'action' }).length
-  const score = 70 * (flags.length ? right / flags.length : 0) + (visit ? 20 : 0) + (falseActions === 0 ? 10 : 0)
+  const score = 70 * (flags.length ? right / flags.length : 0) + (visit ? 20 : 0) + (falseActions === 0 ? 10 : 0) - (k(run) - 1) * 10 * falseActions
   finish(p, run, score, [`${right} of ${flags.length} flags handled correctly`, ...detail, visit ? 'For-cause visit at site 104 done; the missing AEs are now in the EDC' : 'No for-cause visit at site 104 yet (advance the clock after planning it)', `${falseActions} actions on flags that needed none`])
 }
 
@@ -231,7 +235,7 @@ export function scoreM10(p: Project, run: MissionRun) {
   const late = safetyDbLate(p)
   const dvs = p.deviations.filter((d) => d.category === 'Safety reporting' && late.includes(d.subj))
   const dvOk = late.filter((s) => dvs.some((d) => d.subj === s && d.important === true)).length
-  const score = 50 * (breached.length ? hit.length / breached.length : 1) + 30 * (late.length ? dvOk / late.length : 1) + (falseLogs === 0 ? 20 : 0)
+  const score = 50 * (breached.length ? hit.length / breached.length : 1) + 30 * (late.length ? dvOk / late.length : 1) + (falseLogs === 0 ? 20 : 0) - (k(run) - 1) * 10 * falseLogs
   finish(p, run, score, [`${hit.length} of ${breached.length} breached limits recorded with root cause and action`, `${dvOk} of ${late.length} late SAE reports logged as important safety-reporting deviations`, `${falseLogs} breach records for limits that were not breached`])
 }
 import { safetyDb } from './safety'
@@ -268,7 +272,7 @@ export function scoreM12(p: Project, run: MissionRun) {
 // Certificate: ten of the twelve missions passed at 70% or more, with a verification code.
 export function scoreM13(p: Project, run: MissionRun) {
   const r = scoreExtract(run.answers ?? {})
-  finish(p, run, r.score, [`${r.found} of ${r.violations} violations named correctly`, `${r.falseFlags} sound entries flagged as violations`, `${r.unanswered} entries not reviewed`])
+  finish(p, run, r.score - (k(run) - 1) * 5 * r.falseFlags, [`${r.found} of ${r.violations} violations named correctly`, `${r.falseFlags} sound entries flagged as violations`, `${r.unanswered} entries not reviewed`])
 }
 
 export function certificate(p: Project, name: string) {
@@ -278,3 +282,14 @@ export function certificate(p: Project, name: string) {
 }
 import { hash as hashStr } from './util'
 import { scoreExtract } from './alcoa'
+
+// A progress check for guided runs: score a copy of the project without finishing the run.
+export const SCORERS: Record<string, (p: Project, r: MissionRun) => void> = {}
+export function progress(p: Project, run: MissionRun): { score: number; detail: string[] } | null {
+  const f = SCORERS[run.id]; if (!f) return null
+  const c: Project = structuredClone(p)
+  const r = c.missions.find((x) => x.id === run.id && x.startedUtc === run.startedUtc) ?? { ...run }
+  f(c, r)
+  return { score: r.score ?? 0, detail: (r.detail ?? []).filter((d) => !d.startsWith('Level:')) }
+}
+Object.assign(SCORERS, { M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6: scoreM6, M7: scoreM7, M8: scoreM8, M9: scoreM9, M10: scoreM10, M11: scoreM11, M12: scoreM12 })

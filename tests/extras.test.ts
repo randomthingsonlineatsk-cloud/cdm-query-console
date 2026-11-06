@@ -19,3 +19,27 @@ describe('M13 audit the trail', () => {
     expect(tagsFor(p.audit[0])).toContain('Attributable')
   })
 })
+
+import { progress, scoreM1 } from '../src/domain/missions'
+import { preparedStartup } from '../src/domain/missions'
+import { DMP } from '../src/domain/dmp'
+describe('levels', () => {
+  test('deadlines scale with the level, expert doubles penalties, progress does not finish the run', () => {
+    const g = createProject(); preparedStartup(g); g.missionLevel = 'guided'
+    const rg = startMission(g, 'M3')
+    expect(rg.level).toBe('guided')
+    expect(Date.parse(rg.answers!.deadline) - Date.parse(rg.answers!.start)).toBe(63 * 86400000)
+    const before = g.audit.length
+    const pr = progress(g, rg)!
+    expect(pr.score).toBeGreaterThanOrEqual(0)
+    expect(rg.score).toBeUndefined(); expect(g.audit.length).toBe(before)
+    const e = createProject(); e.missionLevel = 'expert'
+    for (const st of DMP.flatMap((s) => s.statements)) p1(e, st)
+    const re = startMission(e, 'M1'); scoreM1(e, re)
+    const s = createProject()
+    for (const st of DMP.flatMap((x) => x.statements)) p1(s, st)
+    const rs = startMission(s, 'M1'); scoreM1(s, rs)
+    expect(re.score!).toBeLessThan(rs.score!)
+  })
+})
+function p1(p: ReturnType<typeof createProject>, st: { id: string; error?: { correct: string } }) { if (st.error) p.startup.dmpFlags[st.id] = st.error.correct; else if (st.id === '1.1' || st.id === '2.1') p.startup.dmpFlags[st.id] = 'x1' }

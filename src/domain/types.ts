@@ -64,7 +64,8 @@ export interface Startup {
   goLive?: Signature
 }
 
-export interface MissionRun { id: string; startedUtc: string; endedUtc?: string; score?: number; passed?: boolean; detail?: string[]; userId: string; answers?: Record<string, string> }
+export type Level = 'guided' | 'standard' | 'expert'
+export interface MissionRun { id: string; startedUtc: string; endedUtc?: string; score?: number; passed?: boolean; detail?: string[]; userId: string; answers?: Record<string, string>; level?: Level }
 
 export interface Project {
   schema: 1; id: string; name: string; classId: string; userId: string
@@ -99,6 +100,7 @@ export interface Project {
   qtlLog: QtlRecord[]
   // Phase 4
   lock: LockState
+  missionLevel?: Level
 }
 
 export type LockStatus = 'open' | 'soft' | 'hard' | 'unlocked'
