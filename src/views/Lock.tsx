@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { checklist, randomised, piCurrent, privacyFindings, signCasebooks, recordAuditReview, confirmPrivacy, softLock, addHardSignature, requestUnlock, approveUnlock, createArchive, archiveFiles, retentionDate, LPLV, CLOSE_OUT_REPORT } from '../domain/lock'
+import { interimChecklist, interimLock, checklist, randomised, piCurrent, privacyFindings, signCasebooks, recordAuditReview, confirmPrivacy, softLock, addHardSignature, requestUnlock, approveUnlock, createArchive, archiveFiles, retentionDate, LPLV, CLOSE_OUT_REPORT } from '../domain/lock'
 import { latestRun } from '../domain/missions'
 import { me } from '../domain/project'
 import { STUDY } from '../domain/study'
@@ -50,12 +50,32 @@ export default function Lock() {
           {st === 'hard' && <Archive />}
         </Panel>
       </div>
+      {st === 'open' && <Interim />}
       {(st === 'hard' || p.lock.unlocks.length > 0) && <Unlock />}
       <Panel title="Lock record">
         <Table head={['When (UTC)', 'Who', 'Step', 'Detail']} rows={p.lock.events.map((e) => [fmtUtc(e.utc), e.userId, e.action, e.detail])} empty="No lock steps yet." />
       </Panel>
       <Panel title="Where the locked data go next"><AppLinks ids={['sdtm', 'tlf', 'ectd']} /></Panel>
     </div>
+  )
+}
+
+function Interim() {
+  const { p, act, tick } = useStore()
+  const [cut, setCut] = useState(p.clock)
+  const items = useMemo(() => (/^\d{4}-\d{2}-\d{2}$/.test(cut) ? interimChecklist(p, cut) : []), [tick, cut])
+  const run = (s: Parameters<typeof interimLock>[2]) => {
+    let bytes: Uint8Array | null = null
+    if (!act((pp) => { bytes = interimLock(pp, cut, s) }) || !bytes) return
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/zip' })); a.download = `${STUDY.protocol}-interim-${cut}.zip`; a.click(); URL.revokeObjectURL(a.href)
+  }
+  return (
+    <Panel title="Interim lock" sub="For an interim analysis or a data monitoring committee: clean and freeze the data up to a cut-off, take a signed snapshot, and keep the live database open.">
+      <div className="flex items-center gap-2"><span className="text-xs text-lab-text-muted">Cut-off</span><input aria-label="Interim cut-off" className={ic('w-36')} value={cut} onChange={(e) => setCut(e.target.value)} placeholder="YYYY-MM-DD" /></div>
+      <Table head={['', 'Item', 'Evidence']} rows={items.map((i) => [<span className={i.ok ? 'text-lab-cdsco' : 'text-lab-red'}>{i.ok ? '✓' : '✗'}</span>, i.label, <span className="text-[11px] text-lab-text-muted">{i.evidence}</span>])} empty="Enter a cut-off date." />
+      {items.length > 0 && items.every((i) => i.ok) && <SignBox meaning={`Interim lock at cut-off ${cut} approved`} what={`Interim lock ${cut}`} roles={['dmlead']} label="Sign and take the snapshot" onSigned={run} />}
+      <Table head={['Cut-off', 'Taken (UTC)', 'Signed by', 'Forms', 'Checksum']} rows={(p.lock.interims ?? []).map((x) => [x.cutoff, fmtUtc(x.utc), x.signature.userId, x.forms, <span className="font-mono text-[10px]">{x.checksum}</span>])} empty="No interim locks yet." />
+    </Panel>
   )
 }
 

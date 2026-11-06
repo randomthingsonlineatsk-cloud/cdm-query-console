@@ -205,6 +205,8 @@ export function requery(p: Project, id: string, text: string, u = me(p)) {
 
 export function runChecks(p: Project, subjects: string[], utc = nowUtc(p)) {
   for (const subj of subjects) {
+    // Derivations first, so checks on derived values see the new value.
+    for (const f of runChecksOnSubject(p, subj)) if (f.action === 'autofix' && f.fixValue !== undefined && p.items[f.key]) writeValue(p, f.key, f.fixValue, SYSTEM, `Derived by edit check ${f.checkId}`, utc)
     const firings = runChecksOnSubject(p, subj)
     const live = new Set<string>()
     for (const f of firings) {

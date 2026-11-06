@@ -9,13 +9,14 @@ import { daysBetween } from '../domain/util'
 import { Panel, Pill, Btn, Table, Tabs, Select } from './ui'
 import { RaiseModal } from './Casebook'
 
-type L = 'ae' | 'ae-dup' | 'cm-ae' | 'vs-trend' | 'windows' | 'lab' | 'cm'
+type L = 'ae' | 'ae-dup' | 'cm-ae' | 'vs-trend' | 'windows' | 'uns' | 'lab' | 'cm'
 const LISTINGS: { id: L; label: string; sub: string }[] = [
   { id: 'ae', label: 'Adverse events', sub: 'All AEs with seriousness, outcome and causality. Look for missing or inconsistent fields the checks cannot judge.' },
   { id: 'ae-dup', label: 'Possible duplicate AEs', sub: 'AEs of the same subject with the same verbatim term and start date.' },
   { id: 'cm-ae', label: 'CM on treatment vs AE/MH', sub: 'Medications started on or after randomisation whose indication matches no adverse event or medical history: was an AE missed?' },
   { id: 'vs-trend', label: 'Vital-sign trends', sub: 'Blood pressure across visits. Identical readings at three or more visits are unusual and may mean copied values.' },
   { id: 'windows', label: 'Visit windows', sub: 'Study day of each visit against its protocol window.' },
+  { id: 'uns', label: 'Unscheduled visits', sub: 'Visits outside the schedule, with the reason and what happened around them (AEs in the two weeks before).' },
   { id: 'lab', label: 'Local lab with units', sub: 'Values with the unit recorded. A value that is plausible in one unit and not the other is a unit error.' },
   { id: 'cm', label: 'Concomitant medications', sub: 'All medications with indication, dose and dates.' },
 ]
@@ -70,7 +71,7 @@ export default function Listings() {
     head = ['Subject', 'Visit', 'Date', 'Study day', 'Window', 'Status', '']
     rows = data.flatMap(({ forms }) => {
       const rand = forms.find((f) => f.visit === 'D1' && f.form === 'SV')?.values.VISDAT
-      return forms.filter((f) => f.form === 'SV' && f.visit !== 'SCR' && f.visit !== 'D1').map((f) => {
+      return forms.filter((f) => f.form === 'SV' && f.visit !== 'SCR' && f.visit !== 'D1' && f.visit !== 'UNS').map((f) => {
         const v = VISITS.find((x) => x.id === f.visit)!
         const d = f.values.VISDAT
         const day = rand && d ? daysBetween(rand, d) + 1 : NaN
@@ -78,6 +79,15 @@ export default function Listings() {
         return [f.subj, v.name, f.values.VISOCCUR === 'N' ? 'Not done' : d, Number.isNaN(day) ? '–' : day, `${v.lo} to ${v.hi}`, out ? <Pill tone="red">Out of window</Pill> : f.values.VISOCCUR === 'N' ? <Pill tone="amber">Missed</Pill> : <Pill tone="green">OK</Pill>, qBtn(k(f, 'VISDAT'), 'Visit date')]
       })
     })
+  } else if (l === 'uns') {
+    head = ['Subject', 'Date', 'Reason', 'Study day', 'SBP/DBP', 'AEs in the 14 days before', '']
+    rows = data.flatMap(({ forms }) => forms.filter((f) => f.form === 'SV' && f.visit === 'UNS').map((f) => {
+      const rand = forms.find((x) => x.visit === 'D1' && x.form === 'SV')?.values.VISDAT
+      const vs = forms.find((x) => x.visit === 'UNS' && x.form === 'VS' && x.inst === f.inst)
+      const d = f.values.VISDAT
+      const aes = forms.filter((x) => x.form === 'AE' && x.values.AESTDAT && d && x.values.AESTDAT <= d && daysBetween(x.values.AESTDAT, d) <= 14).map((x) => x.values.AETERM)
+      return [f.subj, d, f.values.UNSREAS || <Pill tone="amber">no reason</Pill>, rand && d ? daysBetween(rand, d) + 1 : '–', vs ? `${vs.values.SYSBP}/${vs.values.DIABP}` : '–', aes.join(', ') || '—', qBtn(k(f, 'UNSREAS'), 'Reason for the unscheduled visit')]
+    }))
   } else if (l === 'lab') {
     head = ['Subject', 'Visit', 'Date', 'Glucose', 'Unit', 'K', 'Creatinine', 'ALT', 'Flag', '']
     rows = data.flatMap(({ forms }) => forms.filter((f) => f.form === 'LB').map((f) => {
