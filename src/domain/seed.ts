@@ -237,6 +237,7 @@ export function generateStudy(seed = 204201): SeedStudy {
   }
   const hidden: Entry[] = []
   issueN = phase2(rng(seed + 11), subjects, entries, issues, hidden, issueN)
+  issueN = phase3(subjects, entries, issues, hidden, issueN)
   const kept = entries.filter((e) => !dropped.has(e))
   kept.sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.subj.localeCompare(b.subj))
   return { subjects, entries: kept, issues, hidden }
@@ -246,7 +247,7 @@ let cache: SeedStudy | null = null
 export const seedStudy = () => (cache ??= generateStudy())
 export const STUDY_START = STUDY.start
 
-export const SEED_VERSION = 2
+export const SEED_VERSION = 3
 export const accession = (subj: string, visit: string) => 'NG' + String(parseInt(hashSeed(subj + visit).slice(-8), 16) % 1_000_000).padStart(6, '0')
 
 // Phase 2 additions: verbatim terms for coding, the central lab sample form, the SAEs for
@@ -352,3 +353,32 @@ function phase2(r: Rng, subjects: SeedSubject[], entries: Entry[], issues: Issue
   return n
 }
 const hashSeed = (s: string) => hashFn(s)
+
+// Phase 3 additions: signals for centralised monitoring. Site 106 rounds blood pressure to
+// the nearest 10 (terminal-digit preference); site 104 leaves adverse events out of the EDC
+// until a for-cause monitoring visit finds them in the source.
+export const UNDER_REPORTED = [
+  { subj: '104-001', term: 'Headache', day: 12 }, { subj: '104-003', term: 'Dizziness', day: 20 },
+  { subj: '104-005', term: 'Ankle swelling', day: 33 }, { subj: '104-007', term: 'Fatigue', day: 9 },
+  { subj: '104-009', term: 'Dry cough', day: 26 },
+]
+function phase3(subjects: SeedSubject[], entries: Entry[], issues: Issue[], hidden: Entry[], n: number): number {
+  for (const e of entries) {
+    if (e.form !== 'VS' || e.site !== '106') continue
+    for (const f of ['SYSBP', 'DIABP']) {
+      if (!e.truth[f]) continue
+      const t = String(Math.round(Number(e.truth[f]) / 10) * 10)
+      if (e.values[f] === e.truth[f]) e.values[f] = t
+      e.truth[f] = t
+    }
+  }
+  for (const x of UNDER_REPORTED) {
+    const s = subjects.find((y) => y.id === x.subj)
+    if (!s?.d1) continue
+    const st = addDays(s.d1, x.day)
+    const t = { AETERM: x.term, AESTDAT: st, AEONGO: 'N', AEENDAT: addDays(st, 4), AESEV: 'MILD', AESER: 'N', AESDTH: '', AESLIFE: '', AESHOSP: '', AESDISAB: '', AESCONG: '', AESMIE: '', AEREL: 'UNLIKELY RELATED', AEACN: 'DOSE NOT CHANGED', AEOUT: 'RECOVERED/RESOLVED', AECOM: '' }
+    hidden.push({ subj: x.subj, site: '104', visit: 'LOG', form: 'AE', inst: 60, visitDate: st, entryDate: st, values: { ...t }, truth: { ...t } })
+    issues.push({ id: `PI-${String(++n).padStart(3, '0')}`, subj: x.subj, site: '104', visit: 'LOG', form: 'AE', inst: 60, field: 'AETERM', kind: 'error', find: { listing: 'under-report' }, note: 'An adverse event in the source notes that the site did not enter; found at the for-cause visit.' })
+  }
+  return n
+}

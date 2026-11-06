@@ -61,8 +61,27 @@ system; never enter real patient data.
 - **Missions M5 to M8.** Code the backlog, Reconcile SAEs before the cut-off, Reconcile the
   central lab transfer, Upgrade the dictionary.
 
-Later phases add SDV and protocol deviations, centralised monitoring, database lock,
-unlock and archive, links to the companion apps, and the certificate.
+## What Phase 3 adds
+
+- **Source data verification.** A targeted (risk-based) or full SDV plan with a signature;
+  the CRA compares each EDC value with the source document, verifies or queries; a later
+  change voids the verification.
+- **Protocol deviations.** A DV log fed automatically when a query on a deviation-type check
+  closes with the data confirmed, plus manual entries; each deviation classed important or
+  not against the study's deviation plan, and counted per site.
+- **Centralised monitoring** (ICH E6(R3) 3.11.4.2). Seven key risk indicators per site
+  against the other sites: AE rate, terminal-digit preference, copied values, entry lag,
+  query rate, query response time and missing data. Flags are reviewed and either acted on
+  (for-cause visit, retraining, escalation) or explained. A for-cause visit at the
+  under-reporting site finds the AEs that never reached the EDC.
+- **Quality tolerance limits** (3.10) measured live, with warnings, breaches and a signed
+  breach record of root cause and corrective action.
+- **Study dashboard.** Per-site entry lag, missing pages, active and ageing queries, SDV
+  progress, coding backlog and deviations.
+- **Missions M9 and M10.** Spot the suspicious sites; Keep within the QTLs.
+
+Phase 4 adds database lock, unlock and archive, links to the companion apps, and the
+certificate.
 
 ## Run it
 

@@ -16,7 +16,7 @@ export const CRITERIA = ['AESDTH', 'AESLIFE', 'AESHOSP', 'AESDISAB', 'AESCONG', 
 export const CRIT_LABEL: Record<string, string> = { AESDTH: 'death', AESLIFE: 'life-threatening', AESHOSP: 'hospitalisation', AESDISAB: 'disability', AESCONG: 'congenital anomaly', AESMIE: 'medically important' }
 export interface SafetyCase {
   caseId: string; subj: string; term: string; onset: string; end: string; criteria: string[]
-  outcome: string; causality: string; sponsorCausality: string; action: string; received: string
+  outcome: string; causality: string; sponsorCausality: string; action: string; aware: string; received: string
   edcForm?: string // the seed AE this case was reported from (answer key only)
 }
 export const FIELDS = ['subject', 'term', 'onset', 'end', 'criteria', 'outcome', 'causality', 'action'] as const
@@ -26,7 +26,7 @@ export const FIELD_LABEL: Record<Field, string> = { subject: 'Subject', term: 'E
 const fromEntry = (e: Entry, n: number): SafetyCase => ({
   caseId: `HAL-2026-${String(n).padStart(5, '0')}`, subj: e.subj, term: e.truth.AETERM, onset: e.truth.AESTDAT, end: e.truth.AEENDAT,
   criteria: CRITERIA.filter((c) => e.truth[c] === 'Y'), outcome: e.truth.AEOUT, causality: e.truth.AEREL,
-  sponsorCausality: e.truth.AEREL === 'NOT RELATED' ? 'NOT RELATED' : 'POSSIBLY RELATED', action: e.truth.AEACN, received: addDays(e.truth.AESTDAT, 1), edcForm: `${e.subj}|LOG|AE|${e.inst}`,
+  sponsorCausality: e.truth.AEREL === 'NOT RELATED' ? 'NOT RELATED' : 'POSSIBLY RELATED', action: e.truth.AEACN, aware: e.truth.AESTDAT, received: addDays(e.truth.AESTDAT, ['103-005', '106-007'].includes(e.subj) ? 4 : 1), edcForm: `${e.subj}|LOG|AE|${e.inst}`,
 })
 
 let cache: { cases: SafetyCase[]; truth: Map<string, Entry>; notReported: string[] } | null = null
