@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
 import { SITES, VISITS, FORMS, CODELISTS, LOG_FORMS, sdtmTarget, type Field } from '../domain/study'
+import { fieldGuide } from '../domain/dmp'
 import { value, editValue, enterForm, me, raiseManual, runChecks, nowUtc, VISIT_NAME } from '../domain/project'
 import { isActive, scoreQuery } from '../domain/queries'
 import { ROLE_LABEL } from '../domain/types'
@@ -15,6 +16,7 @@ export default function Casebook() {
   const [subj, setSubj] = useState<string>(nav.arg?.slice(0, 7) ?? subjects[0] ?? '')
   const [fk, setFk] = useState<string | null>(nav.arg && nav.arg.split('|').length >= 4 ? nav.arg.split('|').slice(0, 4).join('|') : null)
   const [annot, setAnnot] = useState(false)
+  const [guide, setGuide] = useState(false)
   if (!subjects.length) return <Panel title="Casebook" sub="No data yet.">{p.live ? <p className="text-sm">Advance the study clock: the first subject is screened on 2 March 2026.</p> : <p className="text-sm">The database is not live. Complete start-up and go live; sites then enter data as the study clock moves.</p>}</Panel>
   return (
     <div className="grid lg:grid-cols-[220px_1fr] gap-4">
@@ -37,7 +39,7 @@ export default function Casebook() {
       </Panel>
       <div className="space-y-4">
         {subj && <SubjectGrid subj={subj} fk={fk} setFk={setFk} />}
-        {fk && <FormPanel fk={fk} annot={annot} setAnnot={setAnnot} />}
+        {fk && <FormPanel fk={fk} annot={annot} setAnnot={setAnnot} guide={guide} setGuide={setGuide} />}
       </div>
     </div>
   )
@@ -82,7 +84,7 @@ function SubjectGrid({ subj, fk, setFk }: { subj: string; fk: string | null; set
 
 const REASONS = ['Transcription error', 'Updated per source document', 'Query response', 'Data entered in the wrong field', 'New information received']
 
-function FormPanel({ fk, annot, setAnnot }: { fk: string; annot: boolean; setAnnot: (b: boolean) => void }) {
+function FormPanel({ fk, annot, setAnnot, guide, setGuide }: { fk: string; annot: boolean; setAnnot: (b: boolean) => void; guide: boolean; setGuide: (b: boolean) => void }) {
   const { p } = useStore()
   const { go } = useNav()
   const [subj, visit, form, inst] = fk.split('|')
@@ -95,7 +97,7 @@ function FormPanel({ fk, annot, setAnnot }: { fk: string; annot: boolean; setAnn
   const vals: Record<string, string> = { ...Object.fromEntries(def.fields.map((f) => [f.id, value(p, `${fk}|${f.id}`)])), __visit: visit }
   return (
     <Panel title={`${def.name}${def.repeating ? ` #${inst}` : ''} · ${VISIT_NAME[visit]}`} sub={`${subj} · CDASH domain ${def.domain} · entered ${fmtUtc(fs?.enteredUtc)} UTC by ${fs?.enteredBy}${fs?.deleted ? ` · DELETED: ${fs.deletedReason}` : ''}`}
-      right={<label className="flex items-center gap-1.5 text-xs text-lab-text-muted"><input type="checkbox" checked={annot} onChange={(e) => setAnnot(e.target.checked)} />Annotated CRF</label>}>
+      right={<div className="flex gap-3"><label className="flex items-center gap-1.5 text-xs text-lab-text-muted"><input type="checkbox" checked={guide} onChange={(e) => setGuide(e.target.checked)} />Completion guidelines</label><label className="flex items-center gap-1.5 text-xs text-lab-text-muted"><input type="checkbox" checked={annot} onChange={(e) => setAnnot(e.target.checked)} />Annotated CRF</label></div>}>
       <div className="divide-y divide-lab-line/60">
         {def.fields.map((f) => {
           if (f.showIf && vals[f.showIf.field] !== f.showIf.equals && !vals[f.id]) return null
@@ -109,6 +111,7 @@ function FormPanel({ fk, annot, setAnnot }: { fk: string; annot: boolean; setAnn
             <div key={f.id} className="py-1.5 grid sm:grid-cols-[1fr_200px_auto] gap-2 items-center">
               <div>
                 <p className="text-sm">{f.label}{f.required && <span className="text-lab-red"> *</span>}{f.unit && <span className="text-lab-text-muted"> ({f.unit})</span>}</p>
+                {guide && (() => { const g = fieldGuide(form, f); return <p className="text-[11px] text-lab-text-muted">{g.text && <>{g.text} </>}<span className="font-mono text-[10px]">[{g.rules.join(' · ')}]</span></p> })()}
                 {annot && <p className="font-mono text-[10px] text-lab-ema">{f.id} → SDTM {sdtmTarget(form, f.id)}{f.codelist ? ` · codelist ${f.codelist}` : ''}{f.ctq ? ' · critical to quality' : ''}</p>}
               </div>
               <div className="font-mono text-sm">{v === '' ? <span className="text-lab-text-muted">blank</span> : label}{f.derived && <Pill className="ml-1">derived</Pill>}</div>
@@ -142,6 +145,7 @@ function EditModal({ fk, f, onClose }: { fk: string; f: Field; onClose: () => vo
   return (
     <Modal title={`Edit: ${f.label}`} onClose={onClose}>
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (act((pp) => editValue(pp, key, v.trim(), reason === 'Other' ? other : reason))) onClose() }}>
+      {(() => { const g = fieldGuide(fk.split('|')[2], f); return <p className="text-xs text-lab-text-muted">{g.text && <>{g.text} </>}<span className="font-mono text-[10px]">[{g.rules.join(' · ')}]</span></p> })()}
       {f.codelist ? <Select aria-label={f.label} value={v} onChange={(e) => setV(e.target.value)} options={[{ value: '', label: '(blank)' }, ...CODELISTS[f.codelist]]} />
         : <input aria-label={f.label} className={inputCls} type={f.type === 'date' ? 'text' : 'text'} inputMode={f.type === 'number' ? 'decimal' : undefined} placeholder={f.type === 'date' ? 'YYYY-MM-DD' : ''} value={v} onChange={(e) => setV(e.target.value)} />}
       {!first && <>
