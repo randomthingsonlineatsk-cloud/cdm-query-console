@@ -5,7 +5,7 @@
 // submission in their own browser, comment, and see a leaderboard.
 
 import type { MissionRun, Project } from './types'
-import { SCORERS, scoreM4, scoreM13, scoreM17 } from './missions'
+import { SCORERS, scoreM4, scoreM13, scoreM17, scoreM18 } from './missions'
 import { applyStudy } from './build'
 import { migrate } from './project'
 
@@ -60,7 +60,7 @@ export async function verifySubmission(file: Submission, restore?: Project): Pro
   if (!run) throw new Error(`The submitted project has no run of ${file.missionId}.`)
   const copy: MissionRun = { ...run, score: undefined, passed: undefined, detail: undefined }
   p.missions.push(copy)
-  const f = SCORERS[file.missionId] ?? ({ M4: scoreM4, M13: scoreM13, M17: scoreM17 } as Record<string, typeof scoreM4>)[file.missionId]
+  const f = SCORERS[file.missionId] ?? ({ M4: scoreM4, M13: scoreM13, M17: scoreM17, M18: scoreM18 } as Record<string, typeof scoreM4>)[file.missionId]
   if (!f) throw new Error(`No scoring for ${file.missionId} in this version of the app.`)
   applyStudy(p)
   try { f(p, copy) } finally { p.missions.pop(); if (restore) applyStudy(restore) }

@@ -11,7 +11,7 @@ export const DMP_VERSION = 'DMP v0.3 draft for review, 16 February 2026'
 export const DMP: DmpSection[] = [
   { id: 's1', title: '1. Purpose, scope and references', statements: [
     { id: '1.1', text: 'This plan describes how data for protocol HLV-204-201 are collected, cleaned, coded, reconciled, locked and archived, from database build to archiving.' },
-    { id: '1.2', text: 'It follows ICH E6(R3) section 4 (data governance) and its computerised-systems expectations, 21 CFR Part 11, EU GMP Annex 11 (2011 text; the 2025 draft revision is tracked but not applied), and the SCDM Good Clinical Data Management Practices.' },
+    { id: '1.2', text: 'It follows ICH E6(R3) section 4 (data governance) and its computerised-systems expectations (with Annex 2 for the decentralised elements of amendment 2), 21 CFR Part 11, EU GMP Annex 11 (2011 text; the 2025 draft revision is tracked but not applied), and the SCDM Good Clinical Data Management Practices.' },
     { id: '1.3', text: 'The eCRF follows CDISC CDASHIG v2.3 with the SAE Supplement v2.0; controlled terminology is frozen at study start.' },
   ] },
   { id: 's2', title: '2. Roles and responsibilities', statements: [

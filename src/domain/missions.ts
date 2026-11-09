@@ -37,6 +37,7 @@ export const MISSIONS: MissionDef[] = [
   { id: 'M13', phase: 4, title: 'Audit the trail', brief: 'Before relying on site 106’s electronic source system, audit an extract of its audit trail. For each of the twenty entries, name the ALCOA+ attribute it breaks, or mark it as fine. Twelve entries break one attribute each.', pass: '70% or more' },
   { id: 'M12', phase: 4, title: 'Unlock correctly', brief: 'After hard lock, the close-out visit finds an adverse event that was never entered. Follow the unlock procedure: a justified request limited to the affected subject, two approvals, the correction through a query, re-coding, re-SDV and a new investigator signature, then re-lock.', pass: '70% or more' },
   ...VAX_MISSIONS,
+  { id: 'M18', phase: 6, title: 'Review decentralised data', brief: 'Protocol amendment 2 added decentralised elements under ICH E6(R3) Annex 2: remote consent, home nursing visits, direct-to-participant shipment, a connected home blood-pressure monitor and an electronic health record extract. Review thirty records from the five new data streams. For each, decide whether it is fine or needs one action: a site query, a clarification to the service provider, escalation to the investigator, a protocol deviation, escalation to the sponsor, or recording that the data are not fit for use.', pass: '70% or more' },
 ]
 
 export const latestRun = (p: Project, id: string): MissionRun | undefined => [...p.missions].reverse().find((m) => m.id === id)
@@ -308,6 +309,12 @@ export function scoreM17(p: Project, run: MissionRun) {
   finish(p, run, r.score - (k(run) - 1) * 5 * r.falseFlags, [`${r.found} of ${r.issues} problems named correctly`, `${r.falseFlags} sound entries flagged`, `${r.unanswered} entries not reviewed`])
 }
 
+export function scoreM18(p: Project, run: MissionRun) {
+  const r = scoreAnnex2(run.answers ?? {})
+  finish(p, run, r.score - (k(run) - 1) * 5 * (r.falseFlags + r.missed), [`${r.right} of ${ROWS.length} records handled correctly`, `${r.found} of ${r.issues} problems given the right action`, `${r.missed} problems marked as fine`, `${r.falseFlags} sound records flagged`, `${r.unanswered} records not reviewed`, ...r.byStream])
+}
+import { scoreAnnex2, ROWS } from './annex2'
+
 export function certificate(runs: MissionRun[], userId: string, name: string) {
   const passed = MISSIONS.map((m) => runs.filter((r) => r.id === m.id && r.passed).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]).filter((r): r is MissionRun => !!r)
   const code = hashStr(`${name.trim().toLowerCase()}|${passed.map((r) => `${r.id}:${r.score}`).join(',')}|${userId}`).slice(-10).toUpperCase()
@@ -329,7 +336,7 @@ Object.assign(SCORERS, { M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6:
 
 // Every mission starts from its own prepared project (a snapshot of the study at the right
 // moment); the learner's other projects are left untouched.
-export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none' }
+export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none', M18: 'none' }
 export function prepareMission(base: Project, id: string, create: (userId: string, classId: string) => Project, prep: { lock: (p: Project) => void; locked: (p: Project) => void }): Project {
   const kind = MISSION_PROJECT[id]
   const np = kind === 'vax' ? createVaxProject(base.userId, base.classId) : create(base.userId, base.classId)

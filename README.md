@@ -167,6 +167,28 @@ Start it from Project → Start a new project → "vaccine trial with e-diary (A
   diary, and review an e-diary audit trail. The certificate counts passes on either study
   (ten of seventeen).
 
+## ICH E6(R3) Annex 2: decentralised elements and real-world data
+
+ICH E6(R3) Annex 2 (additional considerations for decentralised elements, pragmatic elements
+and real-world data) reached Step 4 on 3 June 2026; EMA applies it from 15 January 2027.
+
+- **Mission M18, Review decentralised data:** protocol amendment 2 of HLV-204-201 adds remote
+  consent, Week 8 home nursing visits, direct-to-participant shipment of the investigational
+  product, a connected home blood-pressure monitor (a digital health technology) and, at one
+  site, an electronic health record extract. A data-source map sets out each stream's
+  provider, how its data arrive, how the investigator keeps oversight, and what the protocol
+  requires. The learner reviews 30 records (6 per stream) and chooses one action for each: no
+  issue, a site query, a clarification to the service provider, escalation to the
+  investigator, a protocol deviation, escalation to the sponsor, or recording that the data
+  are not fit for use. Every answer cites the Annex 2 section behind it (for example 2.2.1
+  identity checks for remote consent, 2.4.1 delegation of home nurses, 3.6.2 shipment only
+  after investigator authorisation, 3.9.1 DHT safety alerts, 3.5.1(c) linkage, 3.4.2 consent
+  to use health records).
+- The certificate counts passes across all eighteen missions (ten needed).
+
+Source: ICH E6(R3) Annex 2, Step 4, 3 June 2026,
+https://database.ich.org/sites/default/files/ICH_E6(R3)_Annex%202_Guideline_Step%204_2026_0603_0.pdf
+
 All five phases and the additions are complete.
 
 ## Run it
