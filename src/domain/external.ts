@@ -7,7 +7,7 @@ import { seedStudy, accession } from './seed'
 import { formsOfSubject } from './engine'
 import { audit, me, nowUtc, raiseManual } from './project'
 import { addDays, hash, rng, daysBetween } from './util'
-import { STUDY } from './study'
+import { STUDY, ACTIVE, OST_ID } from './study'
 import { isActive } from './queries'
 
 export type VendorId = 'CL' | 'ECG' | 'IRT'
@@ -32,7 +32,23 @@ export const DTAS: Record<VendorId, Dta> = {
     rules: ['The treatment arm is never transferred to the blinded data management team.', 'Kit numbers as assigned by IRT, K followed by four digits.', 'Pipe-delimited text, header row.'] },
 }
 export const VENDOR_IDS: VendorId[] = ['CL', 'ECG', 'IRT']
-const MONTHLY = ['2026-04-06', '2026-05-04', '2026-06-01', '2026-07-06', '2026-08-03', '2026-09-07', '2026-10-05', '2026-11-02']
+const MONTHLY = ['2026-04-06', '2026-05-04', '2026-06-01', '2026-07-06', '2026-08-03', '2026-09-07', '2026-10-05', '2026-11-02', '2026-12-07']
+
+// The vendors and transfer agreements of the open study. HRP-301 has a central laboratory
+// (safety laboratory and HBV DNA monitoring) and an IRT, and no central ECG reading.
+const HLV_DTAS = structuredClone(DTAS)
+const OST_CL_RULES = ['Results in conventional units as agreed: ALT and AST U/L, neutrophils and lymphocytes 10^9/L, HBV DNA IU/mL.', 'HBV DNA is tested every 4 weeks (Weeks 4, 8, 12 and 16) only for participants anti-HBc positive at screening; below the lower limit of quantification (10 IU/mL) it is reported as UNDETECTABLE.', 'Reference ranges from the central laboratory, sent with each result.', 'Data cut-off: samples received up to 7 days before the transfer date.', 'Pipe-delimited text, header row, one row per test.']
+export const SI_UNITS: Record<string, string> = { GLUC: 'mmol/L', SODIUM: 'mmol/L', HBA1C: '%', ALT: 'U/L', AST: 'U/L', NEUT: '10^9/L', LYMPH: '10^9/L', HBVDNA: 'IU/mL' }
+export function applyVendors(study: string) {
+  const ost = study === OST_ID
+  VENDOR_IDS.splice(0, VENDOR_IDS.length, ...(ost ? ['CL', 'IRT'] as VendorId[] : ['CL', 'ECG', 'IRT'] as VendorId[]))
+  for (const v of ['CL', 'ECG', 'IRT'] as VendorId[]) Object.assign(DTAS[v], structuredClone(HLV_DTAS[v]))
+  if (ost) {
+    DTAS.CL.file = 'HRP301_NGCL_YYYYMMDD.txt'; DTAS.CL.rules = OST_CL_RULES
+    DTAS.IRT.file = 'HRP301_RQIRT_YYYYMMDD.txt'
+    DTAS.IRT.rules = ['The treatment arm is never transferred to the blinded data management team.', 'Kit numbers as assigned by IRT, K followed by four digits; one bottle of 35 tablets per kit.', 'Pipe-delimited text, header row.']
+  }
+}
 
 export interface Transfer { id: string; vendor: VendorId; date: string; file: string; declared: number; resendOf?: string }
 export function transferLog(clock: string): Transfer[] {
@@ -61,6 +77,19 @@ export function transferFile(p: Project, t: Transfer): { text: string; declared:
       if (key === '106-004|W4' && !fixed(p, 'CL:106-004|W4:missing-vendor', t.date)) continue
       const visit = key === '101-008|W4' && !fixed(p, `CL:${key}:visit`, t.date) ? 'W8' : e.visit
       const r = rng(parseInt(hash(e.truth.LBREFID).slice(-8), 16))
+      if (ACTIVE.id === OST_ID) {
+        if (key === '304-007|W8' && !fixed(p, 'CL:304-007|W8:missing-vendor', t.date)) continue
+        const ost = (seed as { ost?: { hbcPositive: string[]; altHigh: { subj: string; visit: string; alt: number }[] } }).ost
+        const hi = ost?.altHigh.find((x) => x.subj === e.subj && x.visit === e.visit)
+        const row = (test: string, val: string, unit: string, lo: string, hiR: string) => rows.push([st, e.site, e.subj, visit, e.truth.LBREFID, e.truth.LBDAT, e.truth.LBTIM, test, val, unit, lo, hiR])
+        const alt = hi ? hi.alt : Math.max(8, r.normal(22, 7))
+        row('ALT', alt.toFixed(0), 'U/L', '7', '40')
+        row('AST', (hi ? hi.alt * 0.7 : Math.max(10, r.normal(23, 6))).toFixed(0), 'U/L', '10', '40')
+        row('NEUT', Math.max(1.6, r.normal(3.9, 1)).toFixed(1), '10^9/L', '1.8', '7.5')
+        row('LYMPH', Math.max(0.8, r.normal(2.0, 0.5)).toFixed(1), '10^9/L', '1.0', '4.0')
+        if (ost?.hbcPositive.includes(e.subj) && ['W4', 'W8', 'W12', 'W16'].includes(e.visit)) row('HBVDNA', 'UNDETECTABLE', 'IU/mL', '', '')
+        continue
+      }
       const mg = e.site === '105' && e.truth.LBDAT >= '2026-06-15' && t.date >= '2026-07-06' && !fixed(p, 'CL:units:105:GLUC', t.date)
       const g = r.normal(5.4, 0.6)
       rows.push([st, e.site, e.subj, visit, e.truth.LBREFID, e.truth.LBDAT, e.truth.LBTIM, 'GLUC', mg ? (g * 18.016).toFixed(0) : g.toFixed(1), mg ? 'mg/dL' : 'mmol/L', mg ? '70' : '3.9', mg ? '100' : '5.5'])
@@ -68,7 +97,7 @@ export function transferFile(p: Project, t: Transfer): { text: string; declared:
       rows.push([st, e.site, e.subj, visit, e.truth.LBREFID, e.truth.LBDAT, e.truth.LBTIM, 'HBA1C', r.normal(5.6, 0.4).toFixed(1), '%', '4.0', '6.0'])
     }
     // An unscheduled repeat for a screen failure, which the DTA says is not in the EDC.
-    if (t.date >= '2026-05-04') { const a = accession('104-008', 'UNS'); rows.push([st, '104', '104-008', 'UNS', a, '2026-04-02', '10:15', 'GLUC', '5.1', 'mmol/L', '3.9', '5.5']) }
+    if (t.date >= '2026-05-04' && ACTIVE.id !== OST_ID) { const a = accession('104-008', 'UNS'); rows.push([st, '104', '104-008', 'UNS', a, '2026-04-02', '10:15', 'GLUC', '5.1', 'mmol/L', '3.9', '5.5']) }
   }
   if (t.vendor === 'ECG') {
     for (const e of seed.entries.filter((x) => x.form === 'EG' && x.truth.EGDAT <= cut)) {
@@ -175,7 +204,7 @@ export function extDiscrepancies(p: Project, v: VendorId): ExtDisc[] {
     // Units and reference ranges, per site and test.
     const groups = new Map<string, Record<string, string>[]>()
     for (const r of rows) { const g = `${r.SITEID}:${r.LBTESTCD}`; groups.set(g, [...(groups.get(g) ?? []), r]) }
-    const SI: Record<string, string> = { GLUC: 'mmol/L', SODIUM: 'mmol/L', HBA1C: '%' }
+    const SI = SI_UNITS
     for (const [g, rs] of groups) {
       const [site, test] = g.split(':')
       const off = rs.filter((r) => r.LBORRESU !== SI[test])
@@ -228,7 +257,7 @@ export function processVendors(p: Project) {
   for (const [id, dec] of Object.entries(p.ext.decisions)) {
     if (dec.cls !== 'vendor' || dec.done || !dec.noteDue || dec.noteDue > p.clock) continue
     dec.done = true
-    const genuine = ['CL:101-008|W4:visit', 'CL:106-004|W4:missing-vendor', 'CL:units:105:GLUC', 'ECG:105-007|SCR:missing-vendor', 'ECG:101-002|W12:date', 'IRT:106-002|W2:kit'].includes(id)
+    const genuine = ['CL:304-007|W8:missing-vendor', 'CL:101-008|W4:visit', 'CL:106-004|W4:missing-vendor', 'CL:units:105:GLUC', 'ECG:105-007|SCR:missing-vendor', 'ECG:101-002|W12:date', 'IRT:106-002|W2:kit'].includes(id)
     if (genuine) { p.ext.vendorFixes[id] = p.clock; audit(p, { id: 'vendor', name: 'Vendor', role: 'system', pin: '', trained: true }, 'vendor.fix', id, undefined, 'corrected', 'Vendor confirmed and will correct in the next transfer', `${p.clock}T12:00:00Z`) }
     else dec.reply = 'Vendor: our record matches the requisition received. Please check the EDC.'
   }

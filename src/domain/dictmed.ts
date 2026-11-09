@@ -70,6 +70,9 @@ Lungs and airways
   Nose conditions
     Nose bleeding
       Nosebleed | Epistaxis; Nose bleed; Bleeding from nose
+  Airway narrowing
+    Asthma conditions
+      Asthma | Asthma, well controlled; Bronchial asthma; Allergic asthma
 Digestive system
   Stomach and gut symptoms
     Nausea and vomiting
@@ -104,7 +107,14 @@ Infections
       Pneumonia | Community-acquired pneumonia; Chest infection with consolidation; Lobar pneumonia
   Skin infections
     Soft tissue infections
-      Cellulitis | Cellulitis left leg; Cellulitis right leg; Skin infection spreading
+      Cellulitis | Cellulitis left leg; Cellulitis right leg; Skin infection spreading; Cellulitis of hand
+    Hair follicle infections
+      Folliculitis | Folliculitis on legs; Infected hair follicles
+  Herpes virus infections
+    Varicella zoster infections
+      Herpes zoster | Shingles; Zoster; Herpes zoster on chest
+    Herpes simplex infections
+      Cold sore | Oral herpes; Cold sore on lip; Herpes labialis
   Gut infections
     Gastroenteritis
       Gastroenteritis | Stomach bug; Viral gastroenteritis; Gastro
@@ -113,6 +123,14 @@ Skin
     Rash types
       Rash | Skin rash; Rash on forearm; Itchy rash; Itchy rash forearm; Red rash
       Itching | Pruritus; Itchy skin
+  Eczema conditions
+    Hand and contact eczema
+      Hand eczema | Chronic hand eczema; Hand eczema flare; Flare of hand eczema; Worsening hand eczema; Hand dermatitis
+    Atopic eczema
+      Atopic dermatitis | Atopic eczema; Atopic dermatitis in childhood; Childhood eczema
+  Sebaceous gland conditions
+    Acne conditions
+      Acne | Acne on face; Spots on chin; Acne vulgaris
   Allergic swelling
     Deep tissue swelling
       Angioedema | Angioedema of lips; Swelling of face and lips; Tongue swelling

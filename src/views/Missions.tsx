@@ -26,7 +26,7 @@ export default function Missions() {
   const passed = MISSIONS.filter((m) => bestOf(runs, m.id)?.passed).length
   return (
     <div className="space-y-4">
-      <Panel title="Missions" sub="Nineteen scored missions on two studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary, M18 on HLV-204-201’s decentralised elements under ICH E6(R3) Annex 2, and M19 on its ICH M11 protocol and the Protocol-to-Database Twin. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
+      <Panel title="Missions" sub="Twenty scored missions on three studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary, M18 on HLV-204-201’s decentralised elements under ICH E6(R3) Annex 2, M19 on its ICH M11 protocol and the Protocol-to-Database Twin, and M20 on the Ostrevia trial HRP-301 (VERDANT-1), which the SDTM Mapping Trainer maps next. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
         <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Missions" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-lab-text-muted">Level for new runs</span>
@@ -40,7 +40,7 @@ export default function Missions() {
           const best = bestOf(runs, m.id)
           const r = latestRun(p, m.id)
           return (
-            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · ${m.phase === 5 ? 'vaccine trial ALV-3-301' : m.phase === 6 ? (m.id === 'M19' ? 'HLV-204-201, ICH M11' : 'HLV-204-201, ICH E6(R3) Annex 2') : 'HLV-204-201'} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
+            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · ${m.phase === 5 ? 'vaccine trial ALV-3-301' : m.phase === 7 ? 'Ostrevia trial HRP-301' : m.phase === 6 ? (m.id === 'M19' ? 'HLV-204-201, ICH M11' : 'HLV-204-201, ICH E6(R3) Annex 2') : 'HLV-204-201'} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
               <p className="text-sm text-lab-text-muted">{m.brief}</p>
               <Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r && r.score === undefined ? 'Continue' : 'Open'}</Btn>
             </Panel>

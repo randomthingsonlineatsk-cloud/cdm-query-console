@@ -40,7 +40,8 @@ const cls = (code: string, name: string) => ATC.push({ code, name, level: code.l
   ['Q03D', 'Other systemic drugs for obstructive airway diseases'], ['Q03DC', 'Leukotriene receptor blockers'], ['Q05', 'Cough and cold preparations'], ['Q05C', 'Expectorants'], ['Q05CB', 'Mucolytics'],
   ['T', 'Systemic hormonal preparations'], ['T03', 'Thyroid therapy'], ['T03A', 'Thyroid preparations'], ['T03AA', 'Thyroid hormones'],
   ['T02', 'Corticosteroids for systemic use'], ['T02A', 'Corticosteroids, plain'], ['T02AB', 'Glucocorticoids'],
-  ['U', 'Dermatologicals'], ['U07', 'Topical corticosteroids'], ['U07A', 'Corticosteroids, plain (skin)'], ['U07AA', 'Weak topical corticosteroids'],
+  ['U', 'Dermatologicals'], ['U07', 'Topical corticosteroids'], ['U07A', 'Corticosteroids, plain (skin)'], ['U07AA', 'Weak topical corticosteroids'], ['U07AD', 'Very potent topical corticosteroids'],
+  ['I05', 'Antivirals for systemic use'], ['I05A', 'Direct acting antivirals'], ['I05AB', 'Nucleoside antivirals (herpes)'],
   ['X', 'Genito-urinary system'], ['X04', 'Urologicals'], ['X04C', 'Prostate drugs'], ['X04CA', 'Alpha-adrenoreceptor blockers (urology)'],
 ].forEach(([c, n]) => cls(c, n))
 
@@ -109,6 +110,8 @@ diazepam|K05BA|Valzepam
 citalopram|K06AB|Citaprex
 montelukast|Q03DC|Montalair
 budesonide|T02AB|Budecort
+clobetasol|U07AD|Clobecort;Dermaclob
+valaciclovir|I05AB|Valzovir
 `
 
 export const ATC_CLASSES = ATC

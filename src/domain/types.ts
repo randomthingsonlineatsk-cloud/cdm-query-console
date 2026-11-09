@@ -104,7 +104,7 @@ export interface Project {
   noAutoAe?: boolean // mission M5: adverse events are not auto-coded
   build?: import('./build').StudyBuild // an imported study build, if any
   // Phase 5: which study this project runs (absent = HLV-204-201) and the e-diary state.
-  study?: 'HLV-204-201' | 'ALV-3-301'
+  study?: 'HLV-204-201' | 'ALV-3-301' | 'HRP-301'
   vax?: VaxState
 }
 
@@ -158,6 +158,9 @@ export interface CodingRecord {
   codedBy?: string; codedUtc?: string; approvedBy?: string; approvedUtc?: string; queryId?: string
   previous?: { code: string; version: string; reason: string }
   review?: boolean // hierarchy changed in a dictionary upgrade; needs review
+  // The coded result as an EDC coding extract carries it: the dictionary path (SOC to LLT) or the drug and its class.
+  terms?: { level: string; code: string; name: string }[]
+  drug?: { name: string; id: string; ingredient: string; atc: string; atcName: string }
   history: { utc: string; userId: string; action: string; detail: string }[]
 }
 

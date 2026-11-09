@@ -20,7 +20,7 @@ export interface Issue {
   kind: 'error' | 'true-value'      // error: the site corrects it; true-value: the site confirms it
   find: IssueFinder; note: string
 }
-export interface SeedSubject { id: string; site: string; scr: string; d1?: string; fate: 'completed' | 'screen-fail' | 'early-ae' | 'early-withdrawal' | 'lost'; lastVisit: string; arm: 'VSC-9' | 'ALV-3' | 'Placebo' }
+export interface SeedSubject { id: string; site: string; scr: string; d1?: string; fate: 'completed' | 'screen-fail' | 'early-ae' | 'early-withdrawal' | 'lost'; lastVisit: string; arm: 'VSC-9' | 'ALV-3' | 'HRP10' | 'HRP25' | 'Placebo' }
 export interface SeedStudy { subjects: SeedSubject[]; entries: Entry[]; issues: Issue[]; hidden: Entry[] } // hidden: records the site enters only when asked
 
 const LAG: Record<Site['profile'], [number, number]> = { clean: [1, 3], slow: [2, 5], 'new-coordinator': [3, 7], 'under-reports': [2, 5], 'other-units': [2, 5], late: [10, 21] }
@@ -249,9 +249,9 @@ export function generateStudy(seed = 204201): SeedStudy {
 
 let cache: SeedStudy | null = null
 export const hlvSeed = () => (cache ??= generateStudy())
-// The open study's seed (the vaccine study registers its own generator).
-export const seedRegistry: { vax?: () => SeedStudy } = {}
-export const seedStudy = (): SeedStudy => (ACTIVE.id === HLV_DEF.study.protocol || !seedRegistry.vax ? hlvSeed() : seedRegistry.vax())
+// The open study's seed (the other studies register their own generators, by protocol).
+export const seedRegistry: Record<string, () => SeedStudy> = {}
+export const seedStudy = (): SeedStudy => (ACTIVE.id === HLV_DEF.study.protocol || !seedRegistry[ACTIVE.id] ? hlvSeed() : seedRegistry[ACTIVE.id]())
 export const STUDY_START = STUDY.start
 
 export const SEED_VERSION = 5
