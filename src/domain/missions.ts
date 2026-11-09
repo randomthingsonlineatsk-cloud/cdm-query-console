@@ -38,6 +38,7 @@ export const MISSIONS: MissionDef[] = [
   { id: 'M12', phase: 4, title: 'Unlock correctly', brief: 'After hard lock, the close-out visit finds an adverse event that was never entered. Follow the unlock procedure: a justified request limited to the affected subject, two approvals, the correction through a query, re-coding, re-SDV and a new investigator signature, then re-lock.', pass: '70% or more' },
   ...VAX_MISSIONS,
   { id: 'M18', phase: 6, title: 'Review decentralised data', brief: 'Protocol amendment 2 added decentralised elements under ICH E6(R3) Annex 2: remote consent, home nursing visits, direct-to-participant shipment, a connected home blood-pressure monitor and an electronic health record extract. Review thirty records from the five new data streams. For each, decide whether it is fine or needs one action: a site query, a clarification to the service provider, escalation to the investigator, a protocol deviation, escalation to the sponsor, or recording that the data are not fit for use.', pass: '70% or more' },
+  { id: 'M19', phase: 6, title: 'Twin the protocol', brief: 'HLV-204-201’s protocol is held in the ICH M11 structure and traced to the database build. The Protocol-to-Database Twin has twelve findings: procedures the build does not collect, data the build collects that no procedure needs, a visit window and an eligibility criterion that disagree, and sections of the protocol that contradict each other. For each, decide: change the build, stop collecting, raise it with the protocol author, or keep it as it is.', pass: '70% or more' },
 ]
 
 export const latestRun = (p: Project, id: string): MissionRun | undefined => [...p.missions].reverse().find((m) => m.id === id)
@@ -314,6 +315,11 @@ export function scoreM18(p: Project, run: MissionRun) {
   finish(p, run, r.score - (k(run) - 1) * 5 * (r.falseFlags + r.missed), [`${r.right} of ${ROWS.length} records handled correctly`, `${r.found} of ${r.issues} problems given the right action`, `${r.missed} problems marked as fine`, `${r.falseFlags} sound records flagged`, `${r.unanswered} records not reviewed`, ...r.byStream])
 }
 import { scoreAnnex2, ROWS } from './annex2'
+import { scoreTwin } from './m11'
+export function scoreM19(p: Project, run: MissionRun) {
+  const r = scoreTwin(run.answers ?? {})
+  finish(p, run, r.score - (k(run) - 1) * 5 * (r.falseFlags + r.missed), [`${r.right} of ${r.total} findings handled correctly`, `${r.missed} real problems kept as they are`, `${r.falseFlags} justified items changed`, `${r.unanswered} findings not reviewed`])
+}
 
 export function certificate(runs: MissionRun[], userId: string, name: string) {
   const passed = MISSIONS.map((m) => runs.filter((r) => r.id === m.id && r.passed).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]).filter((r): r is MissionRun => !!r)
@@ -336,7 +342,7 @@ Object.assign(SCORERS, { M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6:
 
 // Every mission starts from its own prepared project (a snapshot of the study at the right
 // moment); the learner's other projects are left untouched.
-export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none', M18: 'none' }
+export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none', M18: 'none', M19: 'none' }
 export function prepareMission(base: Project, id: string, create: (userId: string, classId: string) => Project, prep: { lock: (p: Project) => void; locked: (p: Project) => void }): Project {
   const kind = MISSION_PROJECT[id]
   const np = kind === 'vax' ? createVaxProject(base.userId, base.classId) : create(base.userId, base.classId)

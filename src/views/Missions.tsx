@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, scoreM18, certificate, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
+import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, scoreM18, scoreM19, certificate, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
 import { listProjects } from '../domain/store'
 import type { MissionRun } from '../domain/types'
 import { scoreQuery } from '../domain/queries'
@@ -20,11 +20,12 @@ export default function Missions() {
   const { p, act } = useStore()
   const runs = useAllRuns()
   const here = MISSIONS.find((m) => { const r = latestRun(p, m.id); return r && r.score === undefined })
-  const [open, setOpen] = useState<string | null>(here?.id ?? null)
+  const { arg } = useNav()
+  const [open, setOpen] = useState<string | null>(here?.id ?? (arg && MISSIONS.some((m) => m.id === arg) ? arg : null))
   const passed = MISSIONS.filter((m) => bestOf(runs, m.id)?.passed).length
   return (
     <div className="space-y-4">
-      <Panel title="Missions" sub="Eighteen scored missions on two studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary, and M18 on HLV-204-201’s decentralised elements under ICH E6(R3) Annex 2. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
+      <Panel title="Missions" sub="Nineteen scored missions on two studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary, M18 on HLV-204-201’s decentralised elements under ICH E6(R3) Annex 2, and M19 on its ICH M11 protocol and the Protocol-to-Database Twin. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
         <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Missions" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-lab-text-muted">Level for new runs</span>
@@ -38,7 +39,7 @@ export default function Missions() {
           const best = bestOf(runs, m.id)
           const r = latestRun(p, m.id)
           return (
-            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · ${m.phase === 5 ? 'vaccine trial ALV-3-301' : m.phase === 6 ? 'HLV-204-201, ICH E6(R3) Annex 2' : 'HLV-204-201'} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
+            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · ${m.phase === 5 ? 'vaccine trial ALV-3-301' : m.phase === 6 ? (m.id === 'M19' ? 'HLV-204-201, ICH M11' : 'HLV-204-201, ICH E6(R3) Annex 2') : 'HLV-204-201'} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
               <p className="text-sm text-lab-text-muted">{m.brief}</p>
               <Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r && r.score === undefined ? 'Continue' : 'Open'}</Btn>
             </Panel>
@@ -58,7 +59,7 @@ function MissionPanel({ id }: { id: string }) {
   const m = MISSIONS.find((x) => x.id === id)!
   const run = latestRun(p, id)
   const active = run && run.score === undefined ? run : undefined
-  if (MISSION_PROJECT[id] === 'none') return id === 'M4' ? <M4 /> : id === 'M17' ? <M17 /> : id === 'M18' ? <M18 /> : <M13 />
+  if (MISSION_PROJECT[id] === 'none') return id === 'M4' ? <M4 /> : id === 'M17' ? <M17 /> : id === 'M18' ? <M18 /> : id === 'M19' ? <M19 /> : <M13 />
   if (!active) {
     const start = () => {
       setBusy(true)
@@ -354,6 +355,30 @@ function M18() {
       {!done && <div className="flex items-center gap-2"><Btn tone="solid" onClick={() => act((pp) => { const r = startMission(pp, 'M18'); r.answers = { ...a }; scoreM18(pp, r) })}>Submit and score</Btn><span className="text-xs text-lab-text-muted">{answered} of {ROWS.length} reviewed</span></div>}
       <Result id="M18" />
       {done && <Table head={['#', 'Answer', 'Annex 2', 'Why']} rows={ROWS.map((r) => [r.id, r.answer === 'none' ? 'No issue' : ACTION_TEXT[r.answer].split(':')[0], r.section, r.why])} />}
+      {done && <Btn tone="grey" onClick={() => setA({})}>Clear my answers to try again</Btn>}
+    </Panel>
+  )
+}
+
+import { allFindings, TWIN_ANSWERS, TWIN_ACTION_TEXT, M11 } from '../domain/m11'
+function M19() {
+  const { p, act } = useStore()
+  const { go } = useNav()
+  const run = latestRun(p, 'M19')
+  const [a, setA] = useState<Record<string, string>>(run?.score === undefined ? run?.answers ?? {} : {})
+  const done = run?.score !== undefined
+  const rows = allFindings()
+  return (
+    <Panel title="M19 · Twin the protocol" sub={`HLV-204-201 protocol version ${M11.title['Version Number']} in the ICH M11 structure, traced to the database build by the Protocol-to-Database Twin. The protocol is the source the build must follow, unless the protocol contradicts itself.`}>
+      <div className="flex gap-2"><Btn tone="grey" onClick={() => go('twin')}>Open the Protocol twin (schedule, sections, burden)</Btn></div>
+      <details className="rounded border border-lab-line p-2 text-xs"><summary className="cursor-pointer">Protocol statements the twin reads with the schedule</summary><ul className="mt-1 space-y-0.5">{M11.statements.map((x) => <li key={x.section}><b>{x.section}:</b> {x.text}</li>)}{M11.procedures.filter((x) => x.note).map((x) => <li key={x.id}><b>1.3, {x.name}:</b> {x.note}</li>)}</ul></details>
+      <Table head={['#', 'Where', 'Finding', 'M11', 'Your decision']} rows={rows.map((r, i) => [i + 1, r.where, r.text, r.section,
+        <select aria-label={`Decision for finding ${i + 1}`} className="rounded border border-lab-line bg-lab-panel-strong px-1 py-0.5 text-xs max-w-56" value={a[r.id] ?? ''} disabled={done} onChange={(e) => setA({ ...a, [r.id]: e.target.value })}>
+          <option value="">Choose…</option><option value="none">Keep as it is (justified)</option>{Object.entries(TWIN_ACTION_TEXT).map(([k, t]) => <option key={k} value={k}>{t.split(':')[0]}</option>)}
+        </select>])} />
+      {!done && <div className="flex items-center gap-2"><Btn tone="solid" onClick={() => act((pp) => { const r = startMission(pp, 'M19'); r.answers = { ...a }; scoreM19(pp, r) })}>Submit and score</Btn><span className="text-xs text-lab-text-muted">{rows.filter((r) => a[r.id]).length} of {rows.length} decided</span></div>}
+      <Result id="M19" />
+      {done && <Table head={['#', 'Answer', 'Why']} rows={rows.map((r, i) => { const t = TWIN_ANSWERS[r.id]; return [i + 1, t.answer === 'none' ? 'Keep as it is' : TWIN_ACTION_TEXT[t.answer].split(':')[0], t.why] })} />}
       {done && <Btn tone="grey" onClick={() => setA({})}>Clear my answers to try again</Btn>}
     </Panel>
   )

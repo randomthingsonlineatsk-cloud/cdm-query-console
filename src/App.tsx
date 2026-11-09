@@ -19,21 +19,22 @@ import Recon from './views/Recon'
 import Oversight from './views/Oversight'
 import Lock from './views/Lock'
 import Classroom from './views/Classroom'
+import Twin from './views/Twin'
 import Diary from './views/vax/Diary'
 import VaxOverview from './views/vax/VaxOverview'
 
-export type View = 'overview' | 'startup' | 'casebook' | 'checks' | 'listings' | 'queries' | 'coding' | 'recon' | 'oversight' | 'lock' | 'missions' | 'audit' | 'project' | 'classroom' | 'diary'
+export type View = 'overview' | 'startup' | 'casebook' | 'checks' | 'listings' | 'queries' | 'coding' | 'recon' | 'oversight' | 'lock' | 'missions' | 'audit' | 'project' | 'classroom' | 'diary' | 'twin'
 interface Nav { view: View; arg?: string; go: (v: View, arg?: string) => void }
 const NavCtx = createContext<Nav>({ view: 'overview', go: () => {} })
 export const useNav = () => useContext(NavCtx)
 
 const VIEWS: { id: View; label: string }[] = [
-  { id: 'overview', label: 'Study' }, { id: 'startup', label: 'Start-up' }, { id: 'casebook', label: 'Casebook' },
+  { id: 'overview', label: 'Study' }, { id: 'twin', label: 'Protocol twin' }, { id: 'startup', label: 'Start-up' }, { id: 'casebook', label: 'Casebook' },
   { id: 'checks', label: 'Edit checks' }, { id: 'listings', label: 'Listings' }, { id: 'queries', label: 'Queries' }, { id: 'coding', label: 'Coding' }, { id: 'recon', label: 'Reconciliation' }, { id: 'oversight', label: 'Oversight' }, { id: 'lock', label: 'Lock' },
   { id: 'diary', label: 'E-diary' }, { id: 'missions', label: 'Missions' }, { id: 'classroom', label: 'Classroom' }, { id: 'audit', label: 'Audit trail' }, { id: 'project', label: 'Project' },
 ]
 
-const VAX_HIDDEN: View[] = ['startup', 'listings', 'coding', 'recon', 'oversight', 'lock']
+const VAX_HIDDEN: View[] = ['twin', 'startup', 'listings', 'coding', 'recon', 'oversight', 'lock']
 
 function Shell() {
   const { p, act, error, setError, saved } = useStore()
@@ -46,7 +47,7 @@ function Shell() {
   // The vaccine study practises the e-diary; start-up, coding, lock and the other areas are practised on HLV-204-201.
   const shown = VIEWS.filter((v) => (vax ? !VAX_HIDDEN.includes(v.id) : v.id !== 'diary'))
   const view = shown.some((v) => v.id === nav.view) ? nav.view : 'overview'
-  const V = { overview: vax ? VaxOverview : Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, lock: Lock, missions: Missions, audit: AuditView, project: ProjectView, classroom: Classroom, diary: Diary }[view]
+  const V = { overview: vax ? VaxOverview : Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, lock: Lock, missions: Missions, audit: AuditView, project: ProjectView, classroom: Classroom, diary: Diary, twin: Twin }[view]
   return (
     <NavCtx.Provider value={{ ...nav, go }}>
       <div className="min-h-screen bg-lab-bg text-lab-text flex flex-col">
