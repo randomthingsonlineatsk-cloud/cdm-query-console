@@ -321,10 +321,12 @@ export function scoreM19(p: Project, run: MissionRun) {
   finish(p, run, r.score - (k(run) - 1) * 5 * (r.falseFlags + r.missed), [`${r.right} of ${r.total} findings handled correctly`, `${r.missed} real problems kept as they are`, `${r.falseFlags} justified items changed`, `${r.unanswered} findings not reviewed`])
 }
 
+export const CERT_NEEDED = 10
 export function certificate(runs: MissionRun[], userId: string, name: string) {
   const passed = MISSIONS.map((m) => runs.filter((r) => r.id === m.id && r.passed).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]).filter((r): r is MissionRun => !!r)
-  const code = hashStr(`${name.trim().toLowerCase()}|${passed.map((r) => `${r.id}:${r.score}`).join(',')}|${userId}`).slice(-10).toUpperCase()
-  return { eligible: passed.length >= 10, passed, code: `CDM-${code.slice(0, 5)}-${code.slice(5)}` }
+  const basis = `${name.trim().toLowerCase()}|${passed.map((r) => `${r.id}:${r.score}`).join(',')}|${userId}`
+  const code = hashStr(basis).slice(-10).toUpperCase()
+  return { eligible: passed.length >= CERT_NEEDED, passed, basis, code: `CDM-${code.slice(0, 5)}-${code.slice(5)}` }
 }
 import { hash as hashStr } from './util'
 import { scoreExtract } from './alcoa'
