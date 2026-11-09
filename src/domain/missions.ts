@@ -19,7 +19,8 @@ import { addDays } from './util'
 import { formKeyOf, type Level } from './types'
 import { VAX_MISSIONS, VAX_MISSION_IDS, startVaxMission, vaxMissionClock, scoreM14 as vM14, scoreM15 as vM15, scoreM16 as vM16, scoreTrail } from './vax/missions'
 import { applyStudy } from './build'
-import { createVaxProject } from './project'
+import { createVaxProject, createOstProject } from './project'
+import { expectedImportant } from './oversight'
 
 export interface MissionDef { id: string; phase: number; title: string; brief: string; pass: string }
 export const MISSIONS: MissionDef[] = [
@@ -39,6 +40,7 @@ export const MISSIONS: MissionDef[] = [
   ...VAX_MISSIONS,
   { id: 'M18', phase: 6, title: 'Review decentralised data', brief: 'Protocol amendment 2 added decentralised elements under ICH E6(R3) Annex 2: remote consent, home nursing visits, direct-to-participant shipment, a connected home blood-pressure monitor and an electronic health record extract. Review thirty records from the five new data streams. For each, decide whether it is fine or needs one action: a site query, a clarification to the service provider, escalation to the investigator, a protocol deviation, escalation to the sponsor, or recording that the data are not fit for use.', pass: '70% or more' },
   { id: 'M19', phase: 6, title: 'Twin the protocol', brief: 'HLV-204-201’s protocol is held in the ICH M11 structure and traced to the database build. The Protocol-to-Database Twin has twelve findings: procedures the build does not collect, data the build collects that no procedure needs, a visit window and an eligibility criterion that disagree, and sections of the protocol that contradict each other. For each, decide: change the build, stop collecting, raise it with the protocol author, or keep it as it is.', pass: '70% or more' },
+  { id: 'M20', phase: 7, title: 'Lock the Ostrevia trial', brief: 'HRP-301 (VERDANT-1) is the phase 3 trial of Ostrevia in chronic hand eczema, the pivotal study of its NDA. The project is prepared to after the last participant’s Week 20 follow-up, with most of the cleaning done. In 30 study days, finish what is left (the last queries, three medications to code, two deviations to classify, SDV for two participants, the investigator’s casebook signatures and the audit trail review), soft-lock, hard-lock with the lead data manager’s and the sponsor’s signatures, then export the project file for the SDTM Mapping Trainer.', pass: '70% or more' },
 ]
 
 export const latestRun = (p: Project, id: string): MissionRun | undefined => [...p.missions].reverse().find((m) => m.id === id)
@@ -79,7 +81,7 @@ export function startMission(p: Project, id: string): MissionRun {
   }
   if (id === 'M9') { jump('2026-08-31'); run.answers = { start: p.clock, flags: JSON.stringify(signals(p).filter((x) => x.flagged).map((x) => x.id)) } }
   if (id === 'M10') { jump('2026-10-05'); run.answers = { start: p.clock, startUtc: nowUtc(p) } }
-  if (id === 'M11') { run.answers = { start: p.clock, deadline: addDays(p.clock, days(p, 30)), startUtc: nowUtc(p) } }
+  if (id === 'M11' || id === 'M20') { run.answers = { start: p.clock, deadline: addDays(p.clock, days(p, 30)), startUtc: nowUtc(p) } }
   if (id === 'M12') { if (p.lock.status !== 'hard') throw new Error('M12 needs a hard-locked study.'); run.answers = { start: p.clock, startUtc: nowUtc(p), report: CLOSE_OUT_REPORT } }
   if (id === 'M3') {
     if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up.')
@@ -280,6 +282,18 @@ export function scoreM11(p: Project, run: MissionRun) {
   finish(p, run, score, [hard ? `Hard-locked on ${hard.utc.slice(0, 10)}${onTime ? ', within 30 study days' : ', after the deadline'}` : 'Not hard-locked', privOk ? 'Personal data removed by the site in answer to a query' : 'Personal data in the comment not removed through a query', review ? 'Audit trail review recorded' : 'No audit trail review by you', pi ? 'Investigator signed the casebooks' : 'No investigator signature'])
 }
 
+export function scoreM20(p: Project, run: MissionRun) {
+  const hard = p.lock.events.find((e) => e.action === 'hard')
+  const onTime = !!hard && hard.utc.slice(0, 10) <= (run.answers?.deadline ?? '')
+  const mine = (id: string) => !id.startsWith('scenario') && id !== 'system'
+  const dv = p.deviations.filter((d) => d.status === 'classified' && d.classifiedBy && mine(d.classifiedBy))
+  const dvOk = dv.length >= 2 && dv.every((d) => expectedImportant(d) === undefined || expectedImportant(d) === d.important)
+  const review = p.lock.auditReview && mine(p.lock.auditReview.userId)
+  const pi = Object.values(p.lock.piSign).some((x) => x.userId === 'emarsh')
+  const score = (onTime ? 60 : hard ? 30 : 0) + (dvOk ? 15 : 0) + (review ? 10 : 0) + (pi ? 15 : 0)
+  finish(p, run, score, [hard ? `Hard-locked on ${hard.utc.slice(0, 10)}${onTime ? ', within 30 study days' : ', after the deadline'}` : 'Not hard-locked', dvOk ? 'The remaining deviations classified correctly' : 'The remaining deviations not classified, or classified wrongly', review ? 'Audit trail review recorded' : 'No audit trail review by you', pi ? 'Investigator signed the casebooks' : 'No investigator signature'])
+}
+
 export function scoreM12(p: Project, run: MissionRun) {
   const since = run.answers?.startUtc ?? ''
   const r = p.lock.unlocks.find((x) => x.utc >= since)
@@ -340,14 +354,14 @@ export function progress(p: Project, run: MissionRun): { score: number; detail: 
   f(c, r)
   return { score: r.score ?? 0, detail: (r.detail ?? []).filter((d) => !d.startsWith('Level:')) }
 }
-Object.assign(SCORERS, { M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6: scoreM6, M7: scoreM7, M8: scoreM8, M9: scoreM9, M10: scoreM10, M11: scoreM11, M12: scoreM12, M14: scoreM14, M15: scoreM15, M16: scoreM16 })
+Object.assign(SCORERS, { M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6: scoreM6, M7: scoreM7, M8: scoreM8, M9: scoreM9, M10: scoreM10, M11: scoreM11, M12: scoreM12, M20: scoreM20, M14: scoreM14, M15: scoreM15, M16: scoreM16 })
 
 // Every mission starts from its own prepared project (a snapshot of the study at the right
 // moment); the learner's other projects are left untouched.
-export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none', M18: 'none', M19: 'none' }
+export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax' | 'ostlock'> = { M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none', M18: 'none', M19: 'none', M20: 'ostlock' }
 export function prepareMission(base: Project, id: string, create: (userId: string, classId: string) => Project, prep: { lock: (p: Project) => void; locked: (p: Project) => void }): Project {
   const kind = MISSION_PROJECT[id]
-  const np = kind === 'vax' ? createVaxProject(base.userId, base.classId) : create(base.userId, base.classId)
+  const np = kind === 'vax' ? createVaxProject(base.userId, base.classId) : kind === 'ostlock' ? createOstProject(base.userId, base.classId) : create(base.userId, base.classId)
   applyStudy(np) // the prepared project's study is put in force before any preparation
   np.name = `${id} ${MISSIONS.find((m) => m.id === id)!.title}`
   np.missionLevel = base.missionLevel
@@ -372,7 +386,7 @@ export function prepareMission(base: Project, id: string, create: (userId: strin
     for (const r of Object.values(np.coding)) if (r.status === 'uncoded') { const e = expectedCode(r.key.split('|')[2], r.verbatim, indicationOf(np, r.key)); if (e?.kind === 'pt') { const llt = [...SMD10.terms.values()].find((t) => t.level === 'LLT' && t.current && t.name.toLowerCase() === r.verbatim.toLowerCase()) ?? [...SMD10.terms.values()].find((t) => t.level === 'LLT' && t.current && ptOf10(t.code) === e.pt); if (llt) codeTermFn(np, r.key, llt.code, undefined, false) } }
     np.currentUserId = 'arao'
   }
-  if (kind === 'lock') prep.lock(np)
+  if (kind === 'lock' || kind === 'ostlock') prep.lock(np)
   if (kind === 'locked') prep.locked(np)
   startMission(np, id)
   return np

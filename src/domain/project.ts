@@ -6,7 +6,9 @@ import { formKeyOf, parseKey } from './types'
 import { freshChecks, SHIPPED_CHECKS } from './checks'
 import { runChecksOnSubject, formsOfSubject } from './engine'
 import { seedStudy, RESPONSE_DAYS, SEED_VERSION, type Entry, type Issue } from './seed'
-import { FORMS, SITES, VISITS, ACTIVE, VAX_ID } from './study'
+import { FORMS, SITES, VISITS, ACTIVE, VAX_ID, OST_ID } from './study'
+import { freshOstChecks } from './ost/checks'
+import { OST_START } from './ost/seed'
 import { freshVaxChecks } from './vax/checks'
 import { processDiary, emptyVax } from './vax/diary'
 import { VAX_START } from './vax/seed'
@@ -61,6 +63,7 @@ export function migrate(p: Project): Project {
   p.lock ??= { status: 'open', events: [], piSign: {}, hardSigs: [], unlocks: [] }
   for (const u of DEFAULT_USERS) if (!p.users.some((x) => x.id === u.id)) p.users.push({ ...u })
   if (p.study === VAX_ID) { p.vax ??= emptyVax(); return p }
+  if (p.study === OST_ID) return p
   for (const c of SHIPPED_CHECKS) if (!p.checks.some((x) => x.id === c.id)) p.checks.push({ ...c, tests: c.tests.map((t) => ({ ...t })) })
   return p
 }
@@ -367,7 +370,7 @@ export function sign(p: Project, userId: string, pin: string, meaning: string, w
 export const VISIT_NAME: Record<string, string> = {}
 export function refreshVisitNames() {
   for (const k of Object.keys(VISIT_NAME)) delete VISIT_NAME[k]
-  Object.assign(VISIT_NAME, Object.fromEntries([...VISITS.map((v) => [v.id, v.name]), ['LOG', ACTIVE.id === VAX_ID ? 'Participant logs' : 'Subject logs']]))
+  Object.assign(VISIT_NAME, Object.fromEntries([...VISITS.map((v) => [v.id, v.name]), ['LOG', ACTIVE.id === VAX_ID || ACTIVE.id === OST_ID ? 'Participant logs' : 'Subject logs']]))
 }
 refreshVisitNames()
 
@@ -386,5 +389,21 @@ export function createVaxProject(userId = 'local-user', classId = 'none'): Proje
   // Outside the blinded team: prepares the syringes and holds the allocation.
   p.users.push({ id: 'lhaas', name: 'Lena Haas', role: 'pharm', pin: '9999', trained: true })
   audit(p, SYSTEM, 'study.go-live', VAX_ID, 'build', 'live', 'Vaccine study opened live: start-up was completed by the training scenario', simUtc(p.clock, 8 * 60))
+  return p
+}
+
+// A project of the Ostrevia trial HRP-301 (VERDANT-1). Start-up is practised on HLV-204-201, so
+// this study opens live on the day before the first screening visit, with its build validated
+// and signed off by the training scenario.
+export function createOstProject(userId = 'local-user', classId = 'none'): Project {
+  const p = createProject(userId, classId)
+  p.study = OST_ID; p.name = 'HRP-301 VERDANT-1 data management (Ostrevia)'
+  p.checks = freshOstChecks()
+  p.clock = addDays(OST_START, -1); p.live = true
+  const sig = (meaning: string, what: string): Signature => ({ meaning, userId: 'system', role: 'system', utc: simUtc(p.clock, 8 * 60), what })
+  p.startup.dmpApproved = sig('Approved', 'Data management plan HRP-301 v1.0'); p.startup.ccgApproved = sig('Approved', 'CRF completion guidelines HRP-301 v1.0')
+  p.startup.uatSigned = sig('Approved', 'UAT summary HRP-301 release 1.0'); p.startup.riskApproved = sig('Approved', 'Risk assessment HRP-301'); p.startup.goLive = sig('Approved', 'Go-live HRP-301')
+  for (const u of p.users) u.trained = true
+  audit(p, SYSTEM, 'study.go-live', OST_ID, 'build', 'live', 'Ostrevia study opened live: start-up was completed by the training scenario', simUtc(p.clock, 8 * 60))
   return p
 }

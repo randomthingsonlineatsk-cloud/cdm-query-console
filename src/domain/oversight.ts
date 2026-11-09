@@ -8,6 +8,7 @@ import { formsOfSubject, runChecksOnSubject } from './engine'
 import { audit, me, nowUtc, seedEntry, enterForm, runChecks, simSiteUser, value, writeValue } from './project'
 import { seedStudy, UNDER_REPORTED } from './seed'
 import { VAX_DEV_CHECKS } from './vax/checks'
+import { OST_DEV_CHECKS } from './ost/checks'
 import { safetyDb } from './safety'
 import { metrics, isActive, ageOf } from './queries'
 import { QTLS } from './dmp'
@@ -81,7 +82,7 @@ export function addDeviation(p: Project, d: { subj: string; category: DvCategory
 }
 // Called when data management closes a query from a deviation-type check with the data confirmed.
 export function deviationFromQuery(p: Project, checkId: string, key: ItemKey, queryId: string) {
-  const cat = (DEV_CHECKS[checkId] ?? VAX_DEV_CHECKS[checkId]) as DvCategory | undefined; if (!cat) return
+  const cat = (DEV_CHECKS[checkId] ?? VAX_DEV_CHECKS[checkId] ?? OST_DEV_CHECKS[checkId]) as DvCategory | undefined; if (!cat) return
   const k = parseKey(key)
   if (!runChecksOnSubject(p, k.subj).some((f) => f.checkId === checkId && f.key === key)) return
   if (p.deviations.some((d) => d.key === key && d.category === cat)) return
@@ -101,7 +102,7 @@ export function classify(p: Project, id: string, important: boolean, rationale: 
 // or the reliability of the primary endpoint).
 export function expectedImportant(d: Deviation): boolean | undefined {
   if (['Eligibility', 'Informed consent', 'Prohibited medication', 'Investigational product', 'Safety reporting'].includes(d.category)) return true
-  if (d.category === 'Visit window') return d.key ? parseKey(d.key).visit === 'W12' : undefined
+  if (d.category === 'Visit window') return d.key ? ['W12', 'W16'].includes(parseKey(d.key).visit) : undefined // the primary endpoint visit
   if (d.category === 'Procedure not done') return false
   return undefined
 }

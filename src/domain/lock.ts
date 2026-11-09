@@ -12,7 +12,7 @@ import { transferLog, shouldAccept, decideTransfer, extDiscrepancies, decideExt,
 import { codeTerm, codingQuery, expected, smd } from './coding'
 import { ptOf } from './dictmed'
 import { DRUGS } from './dictdrug'
-import { FORMS, SITES, STUDY, VISITS } from './study'
+import { FORMS, SITES, STUDY, VISITS, ACTIVE, OST_ID } from './study'
 import { addDays, hash } from './util'
 import { preparedStartup } from './missions'
 
@@ -288,7 +288,7 @@ export function prepareForLock(p: Project) {
       for (const d of discrepancies(p)) if (inScope(p, d) && statusOf(p, d) === 'open' && d.expected !== 'link') decide(p, d, d.expected, d.expected === 'acceptable' ? 'Same event, same preferred term' : '')
       for (const t of transferLog(p.clock)) if (!p.ext.transfers[t.id]) decideTransfer(p, t, shouldAccept(p, t) ? 'accepted' : 'rejected', shouldAccept(p, t) ? '' : 'Fails the DTA checks')
       for (const v of VENDOR_IDS) for (const d of extDiscrepancies(p, v)) if (!p.ext.decisions[d.id]) { try { decideExt(p, d, d.expected, d.expected === 'acceptable' || d.expected === 'no-action' ? 'Per the DTA' : '') } catch { decideExt(p, d, 'vendor', 'Data clarification to the vendor') } }
-      if (!p.ext.rules.length) addRule(p, { vendor: 'CL', test: 'GLUC', from: 'mg/dL', to: 'mmol/L', factor: 18 })
+      if (!p.ext.rules.length && ACTIVE.id !== OST_ID) addRule(p, { vendor: 'CL', test: 'GLUC', from: 'mg/dL', to: 'mmol/L', factor: 18 })
     })
     closeAll()
     advance(p, 8)
@@ -305,11 +305,11 @@ export function prepareForLock(p: Project) {
   for (const q of p.queries) if (q.status === 'closed' && q.checkId) deviationFromQuery(p, q.checkId, q.key, q.id)
   asRole(p, 'dm', () => { p.deviations.filter((d) => d.status !== 'classified').slice(2).forEach((d) => classify(p, d.id, expectedImportant(d) ?? false, 'Per the deviation plan')) })
   // SDV: all but two subjects at site 106.
-  const skip = ['106-008', '106-009']
+  const skip = ACTIVE.id === OST_ID ? ['304-010', '304-011'] : ['106-008', '106-009']
   asRole(p, 'cra', () => { for (const fk of Object.keys(p.forms)) if (!p.forms[fk].deleted && !skip.includes(fk.slice(0, 7))) for (const f of sdvRequired(p, fk)) if (sdvState(p, `${fk}|${f}`) !== 'verified') verify(p, `${fk}|${f}`) })
   // Four fresh queries, as a last listing review might raise.
   asRole(p, 'dm', () => {
-    const picks = ['101-006|W8|VS|1|PULSE', '101-008|W12|VS|1|WEIGHT', '104-010|W4|LB|1|ALT', '105-001|SCR|EG|1|QTCF'].filter((k) => p.items[k])
+    const picks = (ACTIVE.id === OST_ID ? ['301-006|W16|VS|1|WEIGHT', '302-010|W16|HEA|1|IGACHE', '303-011|W12|HEA|1|HECSI', '304-008|SCR|HBV|1|HBVDNA'] : ['101-006|W8|VS|1|PULSE', '101-008|W12|VS|1|WEIGHT', '104-010|W4|LB|1|ALT', '105-001|SCR|EG|1|QTCF']).filter((k) => p.items[k])
     for (const k of picks) raiseManual(p, k, `Final review: the value ${value(p, k)} is recorded here. Please confirm it against the source document?`)
   })
   audit(p, SYSTEM, 'scenario.prepare', 'Lock scenario', undefined, p.clock, 'Study prepared to just before lock by the training scenario')

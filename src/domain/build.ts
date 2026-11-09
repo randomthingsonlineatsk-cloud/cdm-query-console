@@ -8,7 +8,10 @@
 // guideline text) but may not remove a visit, form or field the protocol uses.
 
 import type { Check, Project, Signature } from './types'
-import { FORMS, VISITS, CODELISTS, STUDY, SITES, LOG_FORMS, ACTIVE, HLV_DEF, HLV_ID, VAX_ID, type FormDef, type Visit } from './study'
+import { FORMS, VISITS, CODELISTS, STUDY, SITES, LOG_FORMS, ACTIVE, HLV_DEF, HLV_ID, VAX_ID, OST_ID, type FormDef, type Visit } from './study'
+import { OST_STUDY, OST_SITES, OST_VISITS, OST_LOG_FORMS, OST_FORMS, OST_CODELISTS, OST_CCG_FORM } from './ost/study'
+import { ostSeed } from './ost/seed'
+import { applyVendors } from './external'
 import { VAX_STUDY, VAX_SITES, VAX_VISITS, VAX_LOG_FORMS, VAX_FORMS, VAX_CODELISTS, VAX_CCG_FORM } from './vax/study'
 import { refreshVisitNames, resetSeedIndex } from './project'
 import { CCG_GENERAL, CCG_FORM, CCG_FIELD } from './dmp'
@@ -18,7 +21,8 @@ import { runTest } from './engine'
 import { audit, me, nowUtc } from './project'
 import { hlvSeed, seedRegistry } from './seed'
 import { vaxSeed } from './vax/seed'
-seedRegistry.vax = vaxSeed
+seedRegistry[VAX_ID] = vaxSeed
+seedRegistry[OST_ID] = ostSeed
 
 export const BUILD_FORMAT = 'cdm-study-build'
 export interface StudyBuild {
@@ -114,14 +118,16 @@ export function checkBuild(text: string): BuildReport {
 // shipped hypertension study.
 export function applyStudy(p: Project) {
   hlvSeed() // the hypertension study is always generated from its shipped build
-  const vax = p.study === VAX_ID
-  ACTIVE.id = vax ? VAX_ID : HLV_ID
-  const src = vax ? { visits: VAX_VISITS, forms: VAX_FORMS, codelists: VAX_CODELISTS, ccg: { general: DEFAULT.general, forms: VAX_CCG_FORM, fields: {} as Record<string, string> } }
+  const vax = p.study === VAX_ID, ost = p.study === OST_ID
+  ACTIVE.id = vax ? VAX_ID : ost ? OST_ID : HLV_ID
+  const ccg = (forms: Record<string, string[]>) => ({ general: DEFAULT.general, forms, fields: {} as Record<string, string> })
+  const src = vax ? { visits: VAX_VISITS, forms: VAX_FORMS, codelists: VAX_CODELISTS, ccg: ccg(VAX_CCG_FORM) }
+    : ost ? { visits: OST_VISITS, forms: OST_FORMS, codelists: OST_CODELISTS, ccg: ccg(OST_CCG_FORM) }
     : p.build ?? { visits: DEFAULT.visits, forms: DEFAULT.forms, codelists: DEFAULT.codelists, ccg: { general: DEFAULT.general, forms: DEFAULT.ccgForms, fields: DEFAULT.ccgFields } }
-  Object.assign(STUDY, structuredClone(vax ? VAX_STUDY : HLV_DEF.study))
-  if (!vax) delete STUDY.design
-  SITES.splice(0, SITES.length, ...structuredClone(vax ? VAX_SITES : HLV_DEF.sites))
-  LOG_FORMS.splice(0, LOG_FORMS.length, ...(vax ? VAX_LOG_FORMS : HLV_DEF.logForms))
+  Object.assign(STUDY, structuredClone(vax ? VAX_STUDY : ost ? OST_STUDY : HLV_DEF.study))
+  if (!vax && !ost) delete STUDY.design
+  SITES.splice(0, SITES.length, ...structuredClone(vax ? VAX_SITES : ost ? OST_SITES : HLV_DEF.sites))
+  LOG_FORMS.splice(0, LOG_FORMS.length, ...(vax ? VAX_LOG_FORMS : ost ? OST_LOG_FORMS : HLV_DEF.logForms))
   VISITS.splice(0, VISITS.length, ...structuredClone(src.visits))
   for (const k of Object.keys(FORMS)) delete FORMS[k]
   Object.assign(FORMS, structuredClone(src.forms))
@@ -131,14 +137,16 @@ export function applyStudy(p: Project) {
   for (const k of Object.keys(CCG_FORM)) delete CCG_FORM[k]
   Object.assign(CCG_FORM, structuredClone(src.ccg.forms))
   for (const k of Object.keys(CCG_FIELD)) delete CCG_FIELD[k]
-  Object.assign(CCG_FIELD, vax ? {} : { ...DEFAULT.ccgFields, ...(src.ccg.fields ?? {}) })
+  Object.assign(CCG_FIELD, vax || ost ? {} : { ...DEFAULT.ccgFields, ...(src.ccg.fields ?? {}) })
+  applyVendors(ACTIVE.id)
   refreshVisitNames(); resetSeedIndex()
   if (vax) vaxSeed()
+  if (ost) ostSeed()
 }
 
 export function importBuild(p: Project, b: StudyBuild, s: Signature) {
   const u = me(p)
-  if (p.study === VAX_ID) throw new Error('Study build files are for HLV-204-201. The vaccine study is not built through this file.')
+  if (p.study === VAX_ID || p.study === OST_ID) throw new Error(`Study build files are for HLV-204-201. ${p.study} is not built through this file.`)
   if (p.lock?.status === 'soft' || p.lock?.status === 'hard') throw new Error('The database is locked: a new build cannot go in.')
   p.build = structuredClone(b)
   p.checks = structuredClone(b.checks)

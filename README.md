@@ -12,7 +12,16 @@ A second study, the vaccine trial ALV-3-301, teaches participant-reported data: 
 electronic diary of solicited reactions, compliance, corrections through the diary vendor,
 and reconciliation (Phase 5).
 
-Everything is fictional: the studies HLV-204-201 and ALV-3-301, Vasclarin (VSC-9), Aurelivax
+A third study, HRP-301 (VERDANT-1), is the Ostrevia phase 3 trial in chronic hand eczema that the
+eCTD Dossier Builder's NDA and the Labelling Workbench's label are about. It has hepatitis B
+screening, the IGA-CHE and HECSI severity scales and an itch rating, a central laboratory and an
+IRT by transfer, four SAEs to reconcile, and planted entry errors and protocol deviations.
+Mission M20 takes it to hard lock; its exported project file is what the SDTM Mapping Trainer maps
+next, in the Ostrevia lifecycle journey (https://randomthingsonlineatsk-cloud.github.io/pharmolecule/journey.html).
+Coded terms now travel in the project file with their full dictionary path, as an EDC coding
+extract carries them.
+
+Everything is fictional: the studies HLV-204-201, ALV-3-301 and HRP-301, Ostrevia (lumiravostat), Halcyon Ridge Pharmaceuticals, Vasclarin (VSC-9), Aurelivax
 (ALV-3), Halvern Therapeutics, Aurelis Vaccines, Marrowbridge Clinical, all sites, subjects and
 participants. Training only; not a validated system; never enter real patient data.
 

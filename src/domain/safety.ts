@@ -5,6 +5,8 @@
 
 import type { Project, SaeClass, ReconDecision, Signature } from './types'
 import { seedStudy, SAE_SUBJECTS, type Entry } from './seed'
+import { ACTIVE, OST_ID } from './study'
+import { OST_SAE_SUBJECTS } from './ost/seed'
 import { formsOfSubject } from './engine'
 import { audit, me, nowUtc, raiseManual, value, SYSTEM, seedEntry } from './project'
 import { SMD, exactLlt, ptOf } from './dictmed'
@@ -23,17 +25,22 @@ export const FIELDS = ['subject', 'term', 'onset', 'end', 'criteria', 'outcome',
 export type Field = (typeof FIELDS)[number]
 export const FIELD_LABEL: Record<Field, string> = { subject: 'Subject', term: 'Event term', onset: 'Onset date', end: 'Resolution date', criteria: 'Seriousness criteria', outcome: 'Outcome', causality: 'Causality (investigator)', action: 'Action with study drug' }
 
+const casePrefix = () => (ACTIVE.id === OST_ID ? 'HRP' : 'HAL')
+const LATE_REPORT = ['103-005', '106-007', '303-006']
 const fromEntry = (e: Entry, n: number): SafetyCase => ({
-  caseId: `HAL-2026-${String(n).padStart(5, '0')}`, subj: e.subj, term: e.truth.AETERM, onset: e.truth.AESTDAT, end: e.truth.AEENDAT,
+  caseId: `${casePrefix()}-2026-${String(n).padStart(5, '0')}`, subj: e.subj, term: e.truth.AETERM, onset: e.truth.AESTDAT, end: e.truth.AEENDAT,
   criteria: CRITERIA.filter((c) => e.truth[c] === 'Y'), outcome: e.truth.AEOUT, causality: e.truth.AEREL,
-  sponsorCausality: e.truth.AEREL === 'NOT RELATED' ? 'NOT RELATED' : 'POSSIBLY RELATED', action: e.truth.AEACN, aware: e.truth.AESTDAT, received: addDays(e.truth.AESTDAT, ['103-005', '106-007'].includes(e.subj) ? 4 : 1), edcForm: `${e.subj}|LOG|AE|${e.inst}`,
+  sponsorCausality: e.truth.AEREL === 'NOT RELATED' ? 'NOT RELATED' : 'POSSIBLY RELATED', action: e.truth.AEACN, aware: e.truth.AESTDAT, received: addDays(e.truth.AESTDAT, LATE_REPORT.includes(e.subj) ? 4 : 1), edcForm: `${e.subj}|LOG|AE|${e.inst}`,
 })
 
-let cache: { cases: SafetyCase[]; truth: Map<string, Entry>; notReported: string[] } | null = null
+// The safety database copy of each study's SAEs, with that study's planted differences.
+const caches: Record<string, { cases: SafetyCase[]; truth: Map<string, Entry>; notReported: string[] }> = {}
 export function safetyBase() {
-  if (cache) return cache
+  if (caches[ACTIVE.id]) return caches[ACTIVE.id]
   const s = seedStudy()
-  const saes = [...s.entries, ...s.hidden].filter((e) => e.form === 'AE' && e.truth.AESER === 'Y' && (SAE_SUBJECTS.includes(e.subj) || e.subj === '103-007')).sort((a, b) => a.truth.AESTDAT.localeCompare(b.truth.AESTDAT))
+  const ost = ACTIVE.id === OST_ID
+  const listed = ost ? OST_SAE_SUBJECTS : [...SAE_SUBJECTS, '103-007']
+  const saes = [...s.entries, ...s.hidden].filter((e) => e.form === 'AE' && e.truth.AESER === 'Y' && listed.includes(e.subj)).sort((a, b) => a.truth.AESTDAT.localeCompare(b.truth.AESTDAT))
   const truth = new Map<string, Entry>()
   const cases: SafetyCase[] = []
   const notReported: string[] = []
@@ -41,6 +48,12 @@ export function safetyBase() {
   for (const e of saes) {
     const c = fromEntry(e, ++n)
     truth.set(c.caseId, e)
+    if (ost) {
+      if (e.subj === '304-003') { notReported.push(c.edcForm!); continue } // never reported to safety
+      if (e.subj === '302-002') { c.outcome = 'RECOVERING/RESOLVING'; c.end = '' }
+      if (e.subj === '301-007') c.onset = addDays(c.onset, 3)
+      cases.push(c); continue
+    }
     if (e.subj === '105-008') { notReported.push(c.edcForm!); continue } // never reported to safety
     // Planted safety-database errors.
     if (e.subj === '105-005') { c.outcome = 'RECOVERING/RESOLVING'; c.end = '' }
@@ -50,7 +63,7 @@ export function safetyBase() {
     if (e.subj === '104-006') c.subj = '104-009'
     cases.push(c)
   }
-  return (cache = { cases, truth, notReported })
+  return (caches[ACTIVE.id] = { cases, truth, notReported })
 }
 
 // The safety database as it stands today: received cases, with the safety team's corrections,
@@ -59,7 +72,7 @@ export function safetyDb(p: Project): SafetyCase[] {
   const { cases, notReported } = safetyBase()
   const out = cases.filter((c) => c.received <= p.clock).map((c) => ({ ...c, ...(p.sae.safetyFixes[c.caseId] as Partial<SafetyCase>) }))
   for (const fk of p.sae.createdCases) {
-    const e = [...seedStudy().entries].find((x) => `${x.subj}|LOG|AE|${x.inst}` === fk)
+    const e = [...seedStudy().entries].find((x) => x.form === 'AE' && `${x.subj}|LOG|AE|${x.inst}` === fk)
     if (e && notReported.includes(fk)) out.push({ ...fromEntry(e, 900 + p.sae.createdCases.indexOf(fk)), received: p.clock })
   }
   return out

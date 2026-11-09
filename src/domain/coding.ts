@@ -32,7 +32,7 @@ export function syncCoding(p: Project, subjects: string[], utc = nowUtc(p)) {
       if (r.verbatim !== verb) {
         hist(r, 'system', 'verbatim changed', `${r.verbatim} → ${verb}`, utc)
         if (r.code) r.previous = { code: r.code, version: r.version ?? '', reason: 'Verbatim changed at the site' }
-        Object.assign(r, { verbatim: verb, status: 'uncoded', code: undefined, atc: undefined, method: undefined, approvedBy: undefined, approvedUtc: undefined, queryId: undefined })
+        Object.assign(r, { verbatim: verb, status: 'uncoded', code: undefined, atc: undefined, terms: undefined, drug: undefined, method: undefined, approvedBy: undefined, approvedUtc: undefined, queryId: undefined })
       }
       if (r.status === 'query' && r.queryId && !p.queries.some((q) => q.id === r!.queryId && isActive(q))) { r.status = 'uncoded'; hist(r, 'system', 'query closed', r.queryId, utc); r.queryId = undefined }
       if (r.status === 'uncoded' && !(p.noAutoAe && fd.form === 'AE')) autoCode(p, r, fd.values.CMINDC ?? '', utc)
@@ -53,6 +53,8 @@ function autoCode(p: Project, r: CodingRecord, _indication: string, utc: string)
 }
 function setCode(p: Project, r: CodingRecord, code: string, atc: string | undefined, method: CodingRecord['method'], userId: string, utc: string) {
   Object.assign(r, { code, atc, method, status: 'coded', version: r.dict === 'SMD' ? p.smdVersion : 'SDD', codedBy: userId, codedUtc: utc, approvedBy: undefined, approvedUtc: undefined, review: false })
+  if (r.dict === 'SMD') { r.terms = path(smd(p), code).map((t) => ({ level: t.level, code: t.code, name: t.name })); r.drug = undefined }
+  else { const d = drugById.get(code); const a = atc ? atcPath(atc).at(-1) : undefined; r.drug = d ? { name: d.name, id: d.id, ingredient: d.ingredients.join(' + '), atc: atc ?? '', atcName: a?.name ?? '' } : undefined; r.terms = undefined }
   hist(r, userId, method === 'manual' ? 'coded' : method === 'synonym' ? 'auto-coded from synonym list' : 'auto-coded (exact match)', describe(p, r), utc)
 }
 
@@ -86,7 +88,7 @@ export function codingQuery(p: Project, key: ItemKey, text: string) {
   const u = coderOnly(p)
   const r = p.coding[key]; if (!r) throw new Error('No coding record for this term.')
   const q = raiseManual(p, key, text, u)
-  r.status = 'query'; r.queryId = q.id; r.code = undefined; r.atc = undefined
+  r.status = 'query'; r.queryId = q.id; r.code = undefined; r.atc = undefined; r.terms = undefined; r.drug = undefined
   hist(r, u.id, 'query raised', `${q.id}: ${text}`, nowUtc(p))
 }
 
@@ -126,8 +128,8 @@ export function applyUpgrade(p: Project, s: Signature, note: string) {
   p.smdVersion = '1.1'
   for (const i of impact) {
     const r = p.coding[i.key]
-    if (i.kind === 'recode') { r.previous = { code: r.code!, version: '1.0', reason: 'LLT not current in 1.1' }; Object.assign(r, { status: 'uncoded', code: undefined, method: undefined, approvedBy: undefined, approvedUtc: undefined }); hist(r, s.userId, 'upgrade: needs recoding', i.to, utc) }
-    if (i.kind === 'hierarchy') { r.review = true; r.version = '1.1'; if (r.status === 'approved') r.status = 'coded'; hist(r, s.userId, 'upgrade: hierarchy changed', `${i.from} → ${i.to}`, utc) }
+    if (i.kind === 'recode') { r.previous = { code: r.code!, version: '1.0', reason: 'LLT not current in 1.1' }; Object.assign(r, { status: 'uncoded', code: undefined, terms: undefined, method: undefined, approvedBy: undefined, approvedUtc: undefined }); hist(r, s.userId, 'upgrade: needs recoding', i.to, utc) }
+    if (i.kind === 'hierarchy') { r.review = true; r.version = '1.1'; if (r.code) r.terms = path(SMD['1.1'], r.code).map((t) => ({ level: t.level, code: t.code, name: t.name })); if (r.status === 'approved') r.status = 'coded'; hist(r, s.userId, 'upgrade: hierarchy changed', `${i.from} → ${i.to}`, utc) }
     if (i.kind === 'none') r.version = '1.1'
   }
   // Synonyms that point to retired terms are no longer safe to apply.

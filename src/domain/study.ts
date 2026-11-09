@@ -177,14 +177,17 @@ export const FORMS: Record<string, FormDef> = {
   ] },
 }
 
-// Which study the console is running. Two studies share the same tools: HLV-204-201 (the
-// hypertension trial) and ALV-3-301 (the vaccine trial with an e-diary, Phase 5). The study
+// Which study the console is running. Three studies share the same tools: HLV-204-201 (the
+// hypertension trial), ALV-3-301 (the vaccine trial with an e-diary, Phase 5) and HRP-301
+// (VERDANT-1, the Ostrevia trial in chronic hand eczema that the lifecycle journey follows). The study
 // definition above is swapped in place when a project of the other study is opened
 // (applyStudy in build.ts); HLV_DEF keeps the shipped hypertension study.
 export const HLV_ID = 'HLV-204-201'
 export const VAX_ID = 'ALV-3-301'
+export const OST_ID = 'HRP-301'
 export const ACTIVE = { id: HLV_ID as string }
 export const isVax = () => ACTIVE.id === VAX_ID
+export const isOst = () => ACTIVE.id === OST_ID
 export const HLV_DEF = structuredClone({ study: STUDY, sites: SITES, visits: VISITS, logForms: LOG_FORMS, forms: FORMS, codelists: CODELISTS })
 
 export const visitById = (id: string) => VISITS.find((v) => v.id === id)!

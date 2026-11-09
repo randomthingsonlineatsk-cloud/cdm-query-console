@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../state'
-import { createProject, createVaxProject, audit, me, migrate } from '../domain/project'
+import { createProject, createVaxProject, createOstProject, audit, me, migrate } from '../domain/project'
 import { exportFile, importFile, deleteProject, listProjects, saveProject } from '../domain/store'
 import { formCsvs, zip } from '../domain/lock'
 import type { Project } from '../domain/types'
@@ -57,7 +57,8 @@ export default function ProjectView() {
           <input ref={file} type="file" accept=".json,application/json" className="hidden" aria-label="Project file" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = '' }} />
           {!confirmReset ? <Btn tone="grey" onClick={() => setConfirmReset(true)}>Start a new project</Btn>
             : <><Btn tone="red" onClick={() => { saveProject(p).finally(() => { replace(createProject(p.userId, p.classId)); setConfirmReset(false); setMsg('New HLV-204-201 project started. The previous one is listed under Saved projects.') }) }}>New: hypertension trial (HLV-204-201)</Btn>
-              <Btn tone="red" onClick={() => { saveProject(p).finally(() => { replace(createVaxProject(p.userId, p.classId)); setConfirmReset(false); setMsg('New ALV-3-301 vaccine-trial project started. The previous one is listed under Saved projects.') }) }}>New: vaccine trial with e-diary (ALV-3-301)</Btn><Btn tone="grey" onClick={() => setConfirmReset(false)}>Cancel</Btn></>}
+              <Btn tone="red" onClick={() => { saveProject(p).finally(() => { replace(createVaxProject(p.userId, p.classId)); setConfirmReset(false); setMsg('New ALV-3-301 vaccine-trial project started. The previous one is listed under Saved projects.') }) }}>New: vaccine trial with e-diary (ALV-3-301)</Btn>
+              <Btn tone="red" onClick={() => { saveProject(p).finally(() => { replace(createOstProject(p.userId, p.classId)); setConfirmReset(false); setMsg('New HRP-301 Ostrevia project started. The previous one is listed under Saved projects.') }) }}>New: Ostrevia trial in hand eczema (HRP-301)</Btn><Btn tone="grey" onClick={() => setConfirmReset(false)}>Cancel</Btn></>}
           <Btn tone="grey" onClick={csvZip}>Export CDASH-style CSV (.zip)</Btn>
         </div>
         {msg && <p className="text-xs text-lab-cdsco">{msg}</p>}
