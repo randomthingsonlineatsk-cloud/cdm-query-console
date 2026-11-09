@@ -184,10 +184,35 @@ and real-world data) reached Step 4 on 3 June 2026; EMA applies it from 15 Janua
   identity checks for remote consent, 2.4.1 delegation of home nurses, 3.6.2 shipment only
   after investigator authorisation, 3.9.1 DHT safety alerts, 3.5.1(c) linkage, 3.4.2 consent
   to use health records).
-- The certificate counts passes across all eighteen missions (ten needed).
+- The certificate counts passes across all missions (ten needed).
 
 Source: ICH E6(R3) Annex 2, Step 4, 3 June 2026,
 https://database.ich.org/sites/default/files/ICH_E6(R3)_Annex%202_Guideline_Step%204_2026_0603_0.pdf
+
+## ICH M11 protocol and the Protocol-to-Database Twin
+
+ICH M11 (the Clinical electronic Structured Harmonised Protocol, CeSHarP) reached Step 4 on
+19 November 2025; EMA's Step 5 guideline, template and technical specification apply from 11
+June 2026.
+
+- **Protocol twin tab:** HLV-204-201's protocol held as data in the M11 structure (title page,
+  1.1.2 overall design, section 3 objectives and estimands, 5.2 and 5.3 criteria, the 1.3
+  schedule of activities with windows, and the statements from other sections the build
+  depends on), traced to the database build field by field. The twin lists procedures the
+  build does not collect, forms and fields the build collects that no procedure needs (with
+  the data points each costs), windows and eligibility criteria that disagree, and places
+  where the protocol contradicts itself.
+- **Data burden:** data points per participant and for the study, form instances, edit checks,
+  expected queries and query hours, for the build, for what the protocol asks, and for
+  proposed changes (drop a visit, add PK sampling, ambulatory BP, a questionnaire, more labs).
+  The query rate and time per query are assumptions the user sets.
+- **Core edit checks generated from the protocol** (windows, criteria, ranges, required
+  fields), each traced to its M11 section, and the structured protocol as JSON.
+- **Mission M19, Twin the protocol:** decide for each of the twelve findings whether to change
+  the build, stop collecting, raise it with the protocol author, or keep it as it is.
+
+Source: ICH M11 CeSHarP template, Step 5 (EMA/CHMP/ICH/778801/2022),
+https://www.ema.europa.eu/en/documents/template-form/ich-m11-clinical-electronic-structured-harmonised-protocol-cesharp-template-step-5_en.pdf
 
 All five phases and the additions are complete.
 
