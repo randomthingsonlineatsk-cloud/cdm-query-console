@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, certificate, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
+import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, scoreM18, certificate, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
 import { listProjects } from '../domain/store'
 import type { MissionRun } from '../domain/types'
 import { scoreQuery } from '../domain/queries'
@@ -24,7 +24,7 @@ export default function Missions() {
   const passed = MISSIONS.filter((m) => bestOf(runs, m.id)?.passed).length
   return (
     <div className="space-y-4">
-      <Panel title="Missions" sub="Seventeen scored missions on two studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
+      <Panel title="Missions" sub="Eighteen scored missions on two studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary, and M18 on HLV-204-201’s decentralised elements under ICH E6(R3) Annex 2. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
         <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Missions" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-lab-text-muted">Level for new runs</span>
@@ -38,7 +38,7 @@ export default function Missions() {
           const best = bestOf(runs, m.id)
           const r = latestRun(p, m.id)
           return (
-            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · ${m.phase === 5 ? 'vaccine trial ALV-3-301' : 'HLV-204-201'} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
+            <Panel key={m.id} title={`${m.id} · ${m.title}`} sub={`Phase ${m.phase} · ${m.phase === 5 ? 'vaccine trial ALV-3-301' : m.phase === 6 ? 'HLV-204-201, ICH E6(R3) Annex 2' : 'HLV-204-201'} · Pass: ${m.pass}`} right={r && r.score === undefined ? <Pill tone="blue">In progress here</Pill> : best ? <Pill tone={best.passed ? 'green' : 'red'}>best {best.score}%</Pill> : null}>
               <p className="text-sm text-lab-text-muted">{m.brief}</p>
               <Btn onClick={() => setOpen(open === m.id ? null : m.id)}>{open === m.id ? 'Hide' : r && r.score === undefined ? 'Continue' : 'Open'}</Btn>
             </Panel>
@@ -58,7 +58,7 @@ function MissionPanel({ id }: { id: string }) {
   const m = MISSIONS.find((x) => x.id === id)!
   const run = latestRun(p, id)
   const active = run && run.score === undefined ? run : undefined
-  if (MISSION_PROJECT[id] === 'none') return id === 'M4' ? <M4 /> : id === 'M17' ? <M17 /> : <M13 />
+  if (MISSION_PROJECT[id] === 'none') return id === 'M4' ? <M4 /> : id === 'M17' ? <M17 /> : id === 'M18' ? <M18 /> : <M13 />
   if (!active) {
     const start = () => {
       setBusy(true)
@@ -323,6 +323,37 @@ function M17() {
       {!done && <Btn tone="solid" onClick={() => act((pp) => { const r = startMission(pp, 'M17'); r.answers = { ...a }; scoreM17(pp, r) })}>Submit and score</Btn>}
       <Result id="M17" />
       {done && <Table head={['Seq', 'Answer', 'Why']} rows={TRAIL.map((r) => [r.seq, r.answer === 'none' ? 'No issue' : TRAIL_TEXT[r.answer], r.why])} />}
+      {done && <Btn tone="grey" onClick={() => setA({})}>Clear my answers to try again</Btn>}
+    </Panel>
+  )
+}
+
+import { ANNEX2, SOURCES, ROWS, HEADS, STREAM_NAMES, ACTION_TEXT } from '../domain/annex2'
+function M18() {
+  const { p, act } = useStore()
+  const run = latestRun(p, 'M18')
+  const [a, setA] = useState<Record<string, string>>(run?.score === undefined ? run?.answers ?? {} : {})
+  const done = run?.score !== undefined
+  const answered = ROWS.filter((r) => a[r.id]).length
+  return (
+    <Panel title="M18 · Review decentralised data" sub={ANNEX2.status}>
+      <p className="text-xs">{ANNEX2.amendment}</p>
+      <details className="rounded border border-lab-line p-2 text-xs" open><summary className="cursor-pointer">Data sources added by amendment 2 (from the data management plan)</summary>
+        <div className="mt-2"><Table head={['Stream', 'Provider', 'Data', 'How it arrives', 'Investigator', 'Annex 2', 'What the protocol requires']} rows={SOURCES.map((x) => [x.stream, x.provider, x.what, x.route, x.investigator, x.sections, x.controls])} /></div>
+      </details>
+      <details className="rounded border border-lab-line p-2 text-xs"><summary className="cursor-pointer">The actions</summary><ul className="mt-1 space-y-0.5"><li><b>No issue:</b> the record meets the protocol.</li>{Object.entries(ACTION_TEXT).map(([k, t]) => <li key={k}>{t}.</li>)}</ul><p className="mt-1 text-lab-text-muted">Choose the one action data management takes first. Annex 2 keeps the investigator responsible for activities done by others, and the sponsor responsible for service providers and for data that are fit for purpose.</p></details>
+      {STREAM_NAMES.map((name, i) => (
+        <div key={name} className="space-y-1">
+          <h3 className="text-sm font-semibold">{name}</h3>
+          <Table head={['#', ...HEADS[i], 'Your action']} rows={ROWS.filter((r) => r.stream === i).map((r) => [r.id, ...r.cells.map((c, j) => j === 0 ? <span className="font-mono">{c}</span> : c),
+            <select aria-label={`Action for record ${r.id}`} className="rounded border border-lab-line bg-lab-panel-strong px-1 py-0.5 text-xs max-w-56" value={a[r.id] ?? ''} disabled={done} onChange={(e) => setA({ ...a, [r.id]: e.target.value })}>
+              <option value="">Choose…</option><option value="none">No issue</option>{Object.entries(ACTION_TEXT).map(([k, t]) => <option key={k} value={k}>{t.split(':')[0]}</option>)}
+            </select>])} />
+        </div>
+      ))}
+      {!done && <div className="flex items-center gap-2"><Btn tone="solid" onClick={() => act((pp) => { const r = startMission(pp, 'M18'); r.answers = { ...a }; scoreM18(pp, r) })}>Submit and score</Btn><span className="text-xs text-lab-text-muted">{answered} of {ROWS.length} reviewed</span></div>}
+      <Result id="M18" />
+      {done && <Table head={['#', 'Answer', 'Annex 2', 'Why']} rows={ROWS.map((r) => [r.id, r.answer === 'none' ? 'No issue' : ACTION_TEXT[r.answer].split(':')[0], r.section, r.why])} />}
       {done && <Btn tone="grey" onClick={() => setA({})}>Clear my answers to try again</Btn>}
     </Panel>
   )
