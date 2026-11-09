@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, scoreM18, scoreM19, certificate, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
+import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, scoreM18, scoreM19, certificate, CERT_NEEDED, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
 import { listProjects } from '../domain/store'
 import type { MissionRun } from '../domain/types'
 import { scoreQuery } from '../domain/queries'
 import { Panel, Pill, Btn, TextArea, Table, Stat } from './ui'
 import { QualityMeter } from './Queries'
+import { passportRecord, downloadRecord, PASSPORT_PAGE } from '../domain/passport'
 
 function useAllRuns() {
   const { p, tick } = useStore()
@@ -225,7 +226,7 @@ function Certificate({ runs }: { runs: MissionRun[] }) {
   const [name, setName] = useState('')
   const c = certificate(runs, p.userId, name || 'Learner')
   return (
-    <Panel title="Certificate" sub="Pass ten of the seventeen missions at 70% or more, on either study, in any of your projects in this browser. The certificate shows a verification code made from your name, your scores and your user ID.">
+    <Panel title="Certificate" sub={`Pass ${CERT_NEEDED} of the ${MISSIONS.length} missions at 70% or more, on either study, in any of your projects in this browser. The certificate shows a verification code made from your name, your scores and your user ID.`}>
       <p className="text-sm">{c.passed.length} of {MISSIONS.length} missions passed.</p>
       {c.eligible ? (
         <div className="space-y-2">
@@ -238,9 +239,10 @@ function Certificate({ runs }: { runs: MissionRun[] }) {
             <p className="font-mono text-sm">Verification code {c.code}</p>
             <p className="text-[11px] text-lab-text-muted">Issued {new Date().toISOString().slice(0, 10)}. A practice certificate from a training simulator; not an accredited qualification. Built by Khan Gulrez Shagufa Fazal Ahmed.</p>
           </div>}
-          {name.trim() && <Btn tone="grey" onClick={() => window.print()}>Print or save as PDF</Btn>}
+          {name.trim() && <div className="flex flex-wrap gap-2"><Btn tone="grey" onClick={() => window.print()}>Print or save as PDF</Btn><Btn tone="grey" onClick={() => { const date = new Date().toISOString().slice(0, 10); downloadRecord(`cdm-query-console-passport-${date}.json`, passportRecord({ app: 'cdm-query-console', appName: 'CDM Query & Edit-Check Console', certificate: 'Certificate of completion', appUrl: 'https://randomthingsonlineatsk-cloud.github.io/cdm-query-console/', name: name.trim(), userId: p.userId, issued: date, basis: c.basis, code: c.code, criteria: [{ label: `${CERT_NEEDED} of the ${MISSIONS.length} missions passed at 70% or more: ${c.passed.length} passed (${c.passed.map((r) => `${r.id} ${r.score}%`).join(', ')})`, met: c.eligible }], distinction: false })) }}>Passport record (JSON)</Btn></div>}
+          {name.trim() && <p className="text-xs text-lab-text-muted">The passport record carries this certificate to the <a className="underline" href={PASSPORT_PAGE} target="_blank" rel="noopener">Regulatory Skills Passport</a>, which checks it and puts it on one page with your certificates from the other apps.</p>}
         </div>
-      ) : <p className="text-xs text-lab-text-muted">{10 - c.passed.length} more to go.</p>}
+      ) : <p className="text-xs text-lab-text-muted">{CERT_NEEDED - c.passed.length} more to go.</p>}
     </Panel>
   )
 }
