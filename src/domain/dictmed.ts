@@ -52,7 +52,7 @@ Blood vessels and circulation
     Low blood pressure
       Low blood pressure | Hypotension; Blood pressure low; Orthostatic hypotension; Postural hypotension
     High blood pressure
-      Raised blood pressure | Hypertension; Essential hypertension; High blood pressure; Blood pressure increased
+      Raised blood pressure | Hypertension; Essential hypertension; High blood pressure; Blood pressure increased; Hypertension aggravated; Worsening of hypertension
   Swelling and fluid
     Limb swelling
       Swelling of the legs | Ankle swelling; Swollen ankles; Swelling both ankles; Oedema of legs; Peripheral oedema; Leg swelling
@@ -72,7 +72,11 @@ Lungs and airways
       Nosebleed | Epistaxis; Nose bleed; Bleeding from nose
   Airway narrowing
     Asthma conditions
-      Asthma | Asthma, well controlled; Bronchial asthma; Allergic asthma
+      Asthma | Asthma, well controlled; Bronchial asthma; Allergic asthma; Asthma aggravated; Worsening of asthma; Asthma exacerbation
+      Wheezing | Wheeze; Wheezy chest
+  Voice disorders
+    Voice changes
+      Hoarseness | Dysphonia; Hoarse voice; Loss of voice
 Digestive system
   Stomach and gut symptoms
     Nausea and vomiting
@@ -110,6 +114,9 @@ Infections
       Cellulitis | Cellulitis left leg; Cellulitis right leg; Skin infection spreading; Cellulitis of hand
     Hair follicle infections
       Folliculitis | Folliculitis on legs; Infected hair follicles
+  Fungal infections
+    Oral fungal infections
+      Oral thrush | Oral candidiasis; Thrush in mouth; Candida of mouth
   Herpes virus infections
     Varicella zoster infections
       Herpes zoster | Shingles; Zoster; Herpes zoster on chest
@@ -127,13 +134,16 @@ Skin
     Hand and contact eczema
       Hand eczema | Chronic hand eczema; Hand eczema flare; Flare of hand eczema; Worsening hand eczema; Hand dermatitis
     Atopic eczema
-      Atopic dermatitis | Atopic eczema; Atopic dermatitis in childhood; Childhood eczema
+      Atopic dermatitis | Atopic eczema; Atopic dermatitis in childhood; Childhood eczema; Worsening of atopic dermatitis; Atopic dermatitis flare
   Sebaceous gland conditions
     Acne conditions
       Acne | Acne on face; Spots on chin; Acne vulgaris
   Allergic swelling
     Deep tissue swelling
       Angioedema | Angioedema of lips; Swelling of face and lips; Tongue swelling
+  Hives
+    Urticaria conditions
+      Urticaria | Hives; Nettle rash; Wheals
 Muscles, bones and joints
   Muscle symptoms
     Muscle spasm and cramp
@@ -174,7 +184,18 @@ Mental health and sleep
       Low mood | Depressed mood; Feeling low
     Anxiety
       Anxiety | Anxious; Nervousness
+Eyes
+  Eye surface conditions
+    Conjunctival conditions
+      Conjunctivitis | Pink eye; Sticky eye; Conjunctival inflammation
+    Tear film conditions
+      Dry eye | Dry eyes; Eye dryness
 General and site of use
+  Application and injection site reactions
+    Application site reactions
+      Application site irritation | Application site burning; Stinging at application site; Application site redness; Burning where cream applied
+    Injection site reactions
+      Injection site reaction | Injection site pain; Injection site redness; Injection site swelling
   General body symptoms
     Tiredness and weakness
       Fatigue | Tiredness; Feeling tired; Tired; Lethargy; Exhaustion
@@ -196,12 +217,18 @@ Injuries and accidents
   Road accidents
     Road accidents
       Road traffic accident | Car accident; RTA; Motor vehicle accident
+  Medication errors
+    Dosing errors
+      Extra dose taken | Accidental overdose; Took extra tablet; Double dose taken
+      Missed dose | Dose missed; Forgot to take dose
 Test results
   Blood chemistry results
     Liver enzymes
       Liver enzymes raised | ALT increased; Transaminases increased; Raised liver enzymes
     Kidney function results
       Creatinine raised | Blood creatinine increased; Raised creatinine
+    Electrolyte results
+      Blood potassium raised | Serum potassium increased; Blood potassium increased; Potassium raised on blood test
 Operations and procedures
   Abdominal operations
     Appendix removal
@@ -250,7 +277,7 @@ function index(d: MedDict): MedDict {
 }
 
 function upgrade(v1: MedDict): MedDict {
-  const terms = new Map([...v1.terms].map(([k, t]) => [k, { ...t }]))
+  const terms = new Map<string, Term>([...v1.terms].map(([k, t]) => [k, { ...t, secondary: undefined }]))
   const d: MedDict = { version: '1.1', released: '2026-09-01', terms, byName: new Map() }
   const find = (level: Level, name: string) => [...terms.values()].find((t) => t.level === level && t.name === name)!
   for (const c of V11_CHANGES) {
@@ -272,8 +299,22 @@ function upgrade(v1: MedDict): MedDict {
   return index(d)
 }
 
-export const SMD_10 = build('1.0', '2026-03-01', V1)
-export const SMD_11 = upgrade(SMD_10)
+// Multiaxiality: a preferred term sits in one primary system class and may be linked to others.
+// Counts and tables use the primary class; searches and safety reviews can use all of them.
+export const SECONDARY: Record<string, string[]> = {
+  'Pneumonia': ['Lungs and airways'], 'Upper respiratory tract infection': ['Lungs and airways'], 'Cellulitis': ['Skin'], 'Folliculitis': ['Skin'],
+  'Herpes zoster': ['Skin', 'Brain and nerves'], 'Cold sore': ['Skin'], 'Gastroenteritis': ['Digestive system'], 'Oral thrush': ['Digestive system'],
+  'Angioedema': ['Immune and allergy'], 'Urticaria': ['Immune and allergy'], 'Allergic nose inflammation': ['Lungs and airways'], 'Asthma': ['Immune and allergy'],
+  'Fainting': ['Blood vessels and circulation'], 'Heart-related chest pain': ['Blood vessels and circulation'], 'Brain infarction': ['Blood vessels and circulation'], 'Transient brain ischaemia': ['Blood vessels and circulation'],
+  'Conjunctivitis': ['Infections'], 'Type 2 diabetes': ['Hormones and glands'],
+}
+function linkSecondary(d: MedDict): MedDict {
+  const socs = [...d.terms.values()].filter((t) => t.level === 'SOC')
+  for (const t of d.terms.values()) if (t.level === 'PT' && SECONDARY[t.name]) t.secondary = SECONDARY[t.name].map((n) => socs.find((x) => x.name === n)?.code).filter(Boolean) as string[]
+  return d
+}
+export const SMD_10 = linkSecondary(build('1.0', '2026-03-01', V1))
+export const SMD_11 = linkSecondary(upgrade(SMD_10))
 export const SMD: Record<string, MedDict> = { '1.0': SMD_10, '1.1': SMD_11 }
 
 export function path(d: MedDict, code: string): Term[] {
@@ -296,3 +337,6 @@ export const medStats = (d: MedDict) => {
   for (const t of d.terms.values()) c[t.level]++
   return c
 }
+
+export const socOf = (d: MedDict, code: string) => path(d, code)[0]
+export const secondarySocs = (d: MedDict, ptCode: string) => (d.terms.get(ptCode)?.secondary ?? []).map((c) => d.terms.get(c)!).filter(Boolean)

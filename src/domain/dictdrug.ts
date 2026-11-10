@@ -43,6 +43,12 @@ const cls = (code: string, name: string) => ATC.push({ code, name, level: code.l
   ['U', 'Dermatologicals'], ['U07', 'Topical corticosteroids'], ['U07A', 'Corticosteroids, plain (skin)'], ['U07AA', 'Weak topical corticosteroids'], ['U07AD', 'Very potent topical corticosteroids'],
   ['I05', 'Antivirals for systemic use'], ['I05A', 'Direct acting antivirals'], ['I05AB', 'Nucleoside antivirals (herpes)'],
   ['X', 'Genito-urinary system'], ['X04', 'Urologicals'], ['X04C', 'Prostate drugs'], ['X04CA', 'Alpha-adrenoreceptor blockers (urology)'],
+  ['Q03B', 'Other inhaled drugs for obstructive airway diseases'], ['Q03BA', 'Inhaled glucocorticoids'], ['Q03BB', 'Inhaled anticholinergics'],
+  ['Q01', 'Nasal preparations'], ['Q01A', 'Decongestants and other nasal preparations'], ['Q01AD', 'Nasal corticosteroids'],
+  ['U02', 'Emollients and protectives'], ['U02A', 'Emollients and protectives'], ['U02AC', 'Soft paraffin and fat products'],
+  ['U07AC', 'Potent topical corticosteroids'], ['U11', 'Other dermatological preparations'], ['U11A', 'Other dermatological preparations'], ['U11AH', 'Agents for dermatitis, excluding corticosteroids'],
+  ['E01', 'Stomatological preparations'], ['E01A', 'Stomatological preparations'], ['E01AB', 'Anti-infectives for local oral treatment'],
+  ['K02BX', 'Other analgesics in combination (non-opioid)'],
 ].forEach(([c, n]) => cls(c, n))
 
 // ingredient | ATC codes | trade names (fictional)
@@ -109,9 +115,17 @@ codeine|K02AA|Codeinol
 diazepam|K05BA|Valzepam
 citalopram|K06AB|Citaprex
 montelukast|Q03DC|Montalair
-budesonide|T02AB|Budecort
+budesonide|T02AB;Q03BA|Budecort;Pulmibud
 clobetasol|U07AD|Clobecort;Dermaclob
 valaciclovir|I05AB|Valzovir
+fluticasone|Q03BA;Q01AD|Flutavent;Nasoflute
+tiotropium|Q03BB|Tiovent
+mometasone|U07AC;Q01AD|Mometa;Nasomet
+white soft paraffin|U02AC|Emolla;Paraderm
+tacrolimus|U11AH|Tacroderm
+dupilumab|U11AH|Dermabla
+nystatin|E01AB|Nystan
+paracetamol+caffeine|K02BX|Calmadol Extra
 `
 
 export const ATC_CLASSES = ATC
@@ -136,3 +150,25 @@ export function searchDrug(q: string, limit = 30) {
   return DRUGS.filter((d) => d.name.toLowerCase().includes(s) || d.ingredients.some((x) => x.includes(s))).slice(0, limit)
 }
 export const SDD_VERSION = 'SDD 2026 Q1 (B3-style, fictional)'
+
+// SDD 2026 Q3: the changes a learner meets when the drug dictionary is upgraded.
+export const SDD_Q3_CHANGES = [
+  { kind: 'reclass', ingredient: 'fexofenadine', from: 'Q06AX', to: 'Q06AE', note: 'Fexofenadine moved to the piperazine-class group: every coded record keeps its drug code but its class (CMCLAS) changes.' },
+  { kind: 'rename', from: 'Calmadol', toIngredients: 'paracetamol+caffeine', note: 'The trade name Calmadol is now a paracetamol and caffeine combination in the markets the dictionary covers; records coded to "Calmadol" as paracetamol need review against the product the participant took.' },
+  { kind: 'new-name', ingredient: 'ibuprofen', name: 'Ibufen Rapid', note: 'New trade name record.' },
+] as const
+export const SDD_Q3_VERSION = 'SDD 2026 Q3 (B3-style, fictional)'
+// The class of a drug record in a dictionary version.
+export function atcIn(version: 'Q1' | 'Q3', d: DrugRecord): string[] {
+  if (version === 'Q3' && d.ingredients.join('+') === 'fexofenadine') return d.atc.map((a) => (a === 'Q06AX' ? 'Q06AE' : a))
+  return d.atc
+}
+export function drugsIn(version: 'Q1' | 'Q3'): DrugRecord[] {
+  if (version === 'Q1') return DRUGS
+  const combo = DRUGS.find((d) => d.ingredients.join('+') === 'paracetamol+caffeine' && d.generic)!
+  const out = DRUGS.map((d) => (d.name === 'Calmadol' ? { ...d, id: `${combo.drn}-01-003`, drn: combo.drn, seq2: '003', ingredients: combo.ingredients, atc: combo.atc } : { ...d, atc: atcIn('Q3', d) }))
+  const ibu = DRUGS.find((d) => d.ingredients.join('+') === 'ibuprofen' && d.generic)!
+  const n = DRUGS.filter((d) => d.drn === ibu.drn).length + 1
+  out.push({ ...ibu, id: `${ibu.drn}-01-${String(n).padStart(3, '0')}`, seq2: String(n).padStart(3, '0'), name: 'Ibufen Rapid', generic: false })
+  return out
+}
