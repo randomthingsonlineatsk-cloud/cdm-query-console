@@ -116,6 +116,15 @@ describe('study build files', () => {
     expect(r.changes.join(' ')).toMatch(/W4 window.*New field VS.VSPOS.*VS-07 changed/s)
     const bad = structuredClone(b); bad.forms.VS.fields = bad.forms.VS.fields.filter((f) => f.id !== 'SYSBP')
     expect(checkBuild(JSON.stringify(bad)).errors[0]).toMatch(/SYSBP is missing/)
+    const preg = structuredClone(b)
+    preg.forms.PREG = { id: 'PREG', name: 'Pregnancy test', domain: 'LB', fields: [{ id: 'PREGRES', label: 'Result', type: 'text' }] }
+    preg.visits.find((v) => v.id === 'SCR')!.forms.push('PREG')
+    const rp = checkBuild(JSON.stringify(preg))
+    expect(rp.errors).toEqual([])
+    expect(rp.changes.join(' ')).toMatch(/New form PREG \(Pregnancy test\) at SCR/)
+    expect(rp.warnings.join(' ')).toMatch(/simulated sites do not enter it/)
+    preg.forms.PREG.fields = []
+    expect(checkBuild(JSON.stringify(preg)).errors[0]).toMatch(/at least one field/)
     p.currentUserId = 'jweber'
     importBuild(p, r.build!, { meaning: 'x', userId: 'jweber', role: 'dmlead', utc: '', what: '' })
     expect(V.find((v) => v.id === 'W4')!.hi).toBe(34)

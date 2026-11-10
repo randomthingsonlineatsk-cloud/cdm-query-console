@@ -1,6 +1,6 @@
 # Study build file format (`cdm-study-build`, version 1)
 
-The hand-over between a study build tool (the planned EDC Study Build Lab, or any other tool)
+The hand-over between a study build tool (the EDC Study Build Lab, or any other tool)
 and the CDM Query & Edit-Check Console. One JSON file describes the study's data collection:
 the visit schedule, the eCRF forms, the codelists, the edit checks and the CRF completion
 guidelines. Export the current build from the console (Project → Study build) to get a
@@ -52,10 +52,10 @@ complete, valid example.
 The console's simulated sites follow protocol HLV-204-201, so an import amends that study:
 
 - **Allowed:** labels, required and critical-to-quality flags, visit windows, new fields on
-  existing forms, new codelist values, new, changed, deactivated or removed edit checks, and
+  existing forms, new forms (the simulated sites do not enter them), new codelist values, new, changed, deactivated or removed edit checks, and
   new guideline text.
 - **Refused:** a different protocol, removing a visit, form, field or codelist value, changing a
-  field's type, or adding a new form.
+  field's type.
 
 An import is approved with the lead data manager's signature, written to the audit trail, and
 clears the UAT signature, because changed checks need new user acceptance testing.
