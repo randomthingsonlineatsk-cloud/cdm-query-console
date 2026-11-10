@@ -80,7 +80,13 @@ export function checkBuild(text: string): BuildReport {
     }
     for (const m of n.fields ?? []) if (!f.fields.some((x) => x.id === m.id)) { changes.push(`New field ${id}.${m.id} (${m.label})`); if (m.required) warnings.push(`${id}.${m.id} is new and required: forms already entered will have it blank.`) }
   }
-  for (const id of Object.keys(b.forms)) if (!DEFAULT.forms[id]) { errors.push(`New form ${id}: add new forms in a later build version of the console; this one only amends HLV-204-201.`) }
+  for (const id of Object.keys(b.forms)) if (!DEFAULT.forms[id]) {
+    const f = b.forms[id]
+    if (!f?.id || f.id !== id || !Array.isArray(f.fields) || !f.fields.length) { errors.push(`New form ${id} needs an id that matches its key and at least one field.`); continue }
+    const at = b.visits.filter((v) => v.forms.includes(id)).map((v) => v.id)
+    changes.push(`New form ${id} (${f.name})${at.length ? ` at ${at.join(', ')}` : ''}`)
+    warnings.push(`${id} is a new form: the simulated sites do not enter it, so its pages show as not yet entered. Enter them yourself to practise.`)
+  }
   // Codelists: values may be added, not removed (entered data would no longer be valid).
   for (const [id, list] of Object.entries(DEFAULT.codelists)) {
     const n = b.codelists[id]; if (!n) { errors.push(`Codelist ${id} is missing.`); continue }
