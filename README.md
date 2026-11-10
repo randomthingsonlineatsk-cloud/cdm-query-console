@@ -111,8 +111,8 @@ participants. Training only; not a validated system; never enter real patient da
   its own, and a **certificate** for ten missions passed at 70% or more, with a
   verification code.
 - **Links** to the companion apps (Clinical Trial Simulator, eCTD Dossier Builder, the PV
-  apps, the [EDC Study Build Lab](https://randomthingsonlineatsk-cloud.github.io/edc-study-build-lab/) (whose released study build file this console imports), the [Medical Coding Trainer](https://randomthingsonlineatsk-cloud.github.io/medical-coding-trainer/) (same training dictionaries), and the planned, SDTM Mapping Trainer
-  and TLF Programming Lab).
+  apps, the [EDC Study Build Lab](https://randomthingsonlineatsk-cloud.github.io/edc-study-build-lab/) (whose released study build file this console imports), the [Medical Coding Trainer](https://randomthingsonlineatsk-cloud.github.io/medical-coding-trainer/) (same training dictionaries), the SDTM Mapping Trainer
+  and the planned TLF Programming Lab).
 - **Several projects** in one browser, with a switcher on the Project tab.
 
 ## Added after Phase 4
