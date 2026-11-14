@@ -8,6 +8,6 @@ export const LINKS: Record<string, AppLink> = {
   pvd: { name: 'Pharmacovigilance Detective', url: 'https://pharmacovigilance-detective.randomthingsonlineatsk.workers.dev', status: 'live', why: 'Seriousness, expectedness, causality and reporting timelines of the same kind of cases.' },
   edc: { name: 'EDC Study Build Lab', url: `${GH}/edc-study-build-lab/`, status: 'live', why: 'The build side: build the eCRF and edit checks from the ICH M11 protocol, run UAT and release the study build file this console imports.' },
   coding: { name: 'Medical Coding Trainer', url: `${GH}/medical-coding-trainer/`, status: 'live', why: 'Deeper practice with the same training dictionaries: coding conventions, synonym lists, review and upversioning across three studies.' },
-  sdtm: { name: 'SDTM Mapping Trainer', status: 'planned', why: 'The annotated CRF shows SDTM targets; the locked CDASH export becomes its input.' },
-  tlf: { name: 'TLF Programming Lab', status: 'planned', why: 'Receives the locked, archived dataset export.' },
+  sdtm: { name: 'SDTM Mapping Trainer', url: `${GH}/sdtm-mapping-trainer/`, status: 'live', why: 'The annotated CRF shows SDTM targets; the locked CDASH export becomes its input.' },
+  tlf: { name: 'TLF Programming Lab', url: `${GH}/tlf-programming-lab/`, status: 'live', why: 'After SDTM, the analysis: ADaM datasets, tables, listings and figures programmed in R and checked by double programming.' },
 }
