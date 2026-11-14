@@ -130,6 +130,9 @@ Skin
     Rash types
       Rash | Skin rash; Rash on forearm; Itchy rash; Itchy rash forearm; Red rash
       Itching | Pruritus; Itchy skin
+  Dry skin conditions
+    Skin dryness
+      Dry skin | Skin dryness; Xerosis
   Eczema conditions
     Hand and contact eczema
       Hand eczema | Chronic hand eczema; Hand eczema flare; Flare of hand eczema; Worsening hand eczema; Hand dermatitis
@@ -230,6 +233,9 @@ Test results
     Electrolyte results
       Blood potassium raised | Serum potassium increased; Blood potassium increased; Potassium raised on blood test
 Operations and procedures
+  Preventive treatment
+    Prophylaxis
+      Prevention of heart disease | Prevention of heart attack; Cardiovascular prophylaxis; Prevention of stroke
   Abdominal operations
     Appendix removal
       Appendix removal | Appendicectomy; Appendectomy
@@ -340,3 +346,36 @@ export const medStats = (d: MedDict) => {
 
 export const socOf = (d: MedDict, code: string) => path(d, code)[0]
 export const secondarySocs = (d: MedDict, ptCode: string) => (d.terms.get(ptCode)?.secondary ?? []).map((c) => d.terms.get(c)!).filter(Boolean)
+
+// Language versions: the same LLT in other languages, with the same code (as MedDRA's language
+// versions share codes with English). Training translations for the commonest terms only.
+export type Lang = 'de' | 'es' | 'ja' | 'zh' | 'hi'
+export const LANG_NAME: Record<Lang, string> = { de: 'German', es: 'Spanish', ja: 'Japanese', zh: 'Chinese', hi: 'Hindi' }
+export const TRANSLATIONS: Record<string, Partial<Record<Lang, string>>> = {
+  Headache: { de: 'Kopfschmerzen', es: 'Cefalea', ja: '頭痛', zh: '头痛', hi: 'सिरदर्द' },
+  Dizziness: { de: 'Schwindelgefühl', es: 'Mareo', ja: '浮動性めまい', zh: '头晕', hi: 'चक्कर आना' },
+  Vertigo: { de: 'Drehschwindel', es: 'Vértigo', ja: '回転性めまい', zh: '眩晕' },
+  Nausea: { de: 'Übelkeit', es: 'Náuseas', ja: '悪心', zh: '恶心', hi: 'जी मिचलाना' },
+  Cough: { de: 'Husten', es: 'Tos', ja: '咳嗽', zh: '咳嗽', hi: 'खांसी' },
+  'Dry cough': { de: 'Trockener Husten', es: 'Tos seca', ja: '空咳', zh: '干咳', hi: 'सूखी खांसी' },
+  Fatigue: { de: 'Ermüdung', es: 'Fatiga', ja: '疲労', zh: '疲劳', hi: 'थकान' },
+  Rash: { de: 'Ausschlag', es: 'Erupción', ja: '発疹', zh: '皮疹' },
+  Diarrhoea: { de: 'Diarrhoe', es: 'Diarrea', ja: '下痢', zh: '腹泻', hi: 'दस्त' },
+  'Back pain': { de: 'Rückenschmerzen', es: 'Dolor de espalda', ja: '背部痛', zh: '背痛', hi: 'पीठ दर्द' },
+  Insomnia: { de: 'Schlaflosigkeit', es: 'Insomnio', ja: '不眠症', zh: '失眠', hi: 'अनिद्रा' },
+  Pruritus: { de: 'Juckreiz', es: 'Prurito', ja: 'そう痒症', zh: '瘙痒', hi: 'खुजली' },
+  Hypertension: { de: 'Hypertonie', es: 'Hipertensión', ja: '高血圧', zh: '高血压', hi: 'उच्च रक्तचाप' },
+  Nasopharyngitis: { de: 'Nasopharyngitis', es: 'Nasofaringitis', ja: '鼻咽頭炎', zh: '鼻咽炎' },
+}
+const byLang = new Map<string, { english: string; lang: Lang }>()
+for (const [en, tr] of Object.entries(TRANSLATIONS)) for (const [l, w] of Object.entries(tr)) byLang.set(w!.toLowerCase(), { english: en, lang: l as Lang })
+// An exact match in English or in a language version: the LLT and the language it matched in.
+export function exactLltAny(d: MedDict, verbatim: string): { term: Term; lang?: Lang } | undefined {
+  const en = exactLlt(d, verbatim)
+  if (en) return { term: en }
+  const hit = byLang.get(verbatim.trim().toLowerCase())
+  if (!hit) return undefined
+  const t = exactLlt(d, hit.english)
+  return t ? { term: t, lang: hit.lang } : undefined
+}
+export const translationsOf = (name: string) => TRANSLATIONS[name] ?? {}
