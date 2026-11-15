@@ -67,7 +67,7 @@ export default function Overview() {
         </ul>
       </Panel>
       <Panel title="Companion apps" sub="Other apps in the same portfolio. Links open in a new tab; each app keeps its own data.">
-        <AppLinks ids={['trial', 'edc', 'coding', 'sdtm', 'tlf', 'pvi', 'pvd', 'ectd']} />
+        <AppLinks ids={['trial', 'protocol', 'edc', 'coding', 'sdtm', 'tlf', 'pvi', 'pvd', 'ectd']} />
       </Panel>
     </div>
   )
