@@ -803,7 +803,7 @@
             "8.3": "IGA-CHE treatment success (0 or 1 with at least a 2-grade improvement from baseline) at Week 16. HECSI-75 (at least 75% improvement from baseline in HECSI) at Week 16. At least a 4-point improvement from baseline in worst itch at Week 16, in participants with a baseline of 4 or more.",
             "8.4": "Vital signs (8.4.2), clinical laboratory tests (8.4.4, listed in 12.1) and, for participants of childbearing potential, pregnancy tests (8.4.5) are done at the visits in 1.3.",
             "9.1": "An adverse event is any untoward medical occurrence in a participant, whether or not related to the trial intervention. A serious adverse event results in death, is life-threatening, requires or prolongs hospitalisation, results in persistent disability, is a congenital anomaly, or is another important medical event.",
-            "9.2": "9.2.1 Timing: adverse events are collected from the signing of informed consent until the Week 20 follow-up visit. Serious adverse events are reported to the sponsor within 24 hours of the site becoming aware. The sponsor reports suspected unexpected serious adverse reactions to the regulators and ethics committees within the regulatory timelines. The following are reported within 24 hours as if serious, as adverse events of special interest: ALT above 3 × ULN with total bilirubin above 2 × ULN, and hepatitis B reactivation. No serious adverse event is exempt from immediate reporting. In the EU the sponsor reports SUSARs to EudraVigilance (Article 42); in the US as IND safety reports (21 CFR 312.32); in India to CDSCO and the ethics committee. Adverse events are followed up until they resolve or stabilise, or to the end of follow-up for non-serious events.",
+            "9.2": "9.2.1 Timing: adverse events are collected from the signing of informed consent until the Week 20 follow-up visit. Serious adverse events are reported to the sponsor within 24 hours of the site becoming aware. The sponsor reports suspected unexpected serious adverse reactions to the regulators and ethics committees within the regulatory timelines. The reference safety information for assessing expectedness is section 7 of the Investigator’s Brochure, edition 3. The following are reported within 24 hours as if serious, as adverse events of special interest: ALT above 3 × ULN with total bilirubin above 2 × ULN, and hepatitis B reactivation. No serious adverse event is exempt from immediate reporting. In the EU the sponsor reports SUSARs to EudraVigilance (Article 42); in the US as IND safety reports (21 CFR 312.32); in India to CDSCO and the ethics committee. Adverse events are followed up until they resolve or stabilise, or to the end of follow-up for non-serious events.",
             "10.1": "Tests are two-sided at a significance level of 0.05. The statistical analysis plan, finalised before unblinding, gives the details.",
             "10.2": "Intent-to-treat set: All randomised participants, analysed as randomised. Safety set: All randomised participants who took at least one dose, analysed as treated. Per-protocol set: Intent-to-treat participants without an important deviation affecting the primary endpoint.",
             "10.3": "Demographics and baseline characteristics are summarised by arm with descriptive statistics.",
@@ -842,6 +842,50 @@
         }
       }
     ],
-    "marks": {}
+    "marks": {},
+    "ib": {
+      "productId": "lumiravostat",
+      "edition": 3,
+      "date": "2025-11-15",
+      "sections": {
+        "physchem": "Lumiravostat (HRP-4417) is a small molecule (fictional structure), a white crystalline powder, slightly soluble in water. Film-coated tablets of 5, 10 and 25 mg with microcrystalline cellulose, lactose monohydrate, croscarmellose sodium and magnesium stearate; matching placebo tablets. Store at 20 to 25 °C.",
+        "pharm": "Reversible inhibitor of STRK1 (IC50 4 nM), a kinase in the cytokine signalling of keratinocytes and T cells (fictional target), with more than 100-fold selectivity over related kinases. Reduced inflammation and scratching in two mouse models of contact dermatitis from 3 mg/kg. Safety pharmacology: no effect on the hERG current at 30 times the human Cmax at 25 mg; no respiratory or central nervous system effects.",
+        "animalpk": "Oral bioavailability 60% in rats and 75% in dogs; half-life 6 hours in rats and 14 hours in dogs. Metabolised mainly by CYP3A; excreted in faeces.",
+        "tox": "Repeated-dose studies up to 26 weeks in rats and 39 weeks in dogs: reversible decreases in lymphocytes at high doses; no target organ toxicity at exposures 12 times the human exposure at 25 mg. Not genotoxic. Embryo-fetal toxicity (skeletal variations and fetal loss) in rats at 8 times the human exposure; no effect in rabbits. Carcinogenicity studies are ongoing.",
+        "humanpk": "Tmax 1 to 2 hours; half-life about 18 hours, so steady state within 4 days; linear pharmacokinetics from 2 to 50 mg. Metabolised by CYP3A: a strong CYP3A inhibitor raised exposure 3-fold (HRP-103). No food effect of clinical relevance.",
+        "humansafety": "Four phase 1 studies (HRP-101 to HRP-104; 148 healthy participants, single doses up to 100 mg and multiple doses up to 50 mg for 14 days) and the phase 2 dose-ranging study HRP-201 (240 participants with chronic hand eczema, 5, 10 or 25 mg or placebo for 12 weeks). In HRP-201, IGA-CHE success at Week 12 was 31% and 38% on 10 and 25 mg against 14% on placebo. Adverse reactions more frequent than placebo: upper respiratory tract infection (12% vs 7%) and ALT increased above 3 × ULN (3% vs 1%), all reversible. No hepatitis B reactivation has been seen; it is a potential risk of the class.",
+        "marketing": "None: the product is not authorised in any country.",
+        "summary": "Lumiravostat (HRP-4417, Ostrevia) is an oral, reversible inhibitor of the STRK1 kinase (a fictional target) developed for moderate to severe chronic hand eczema. Nonclinical studies showed anti-inflammatory activity in models of contact dermatitis, no genotoxicity, and embryo-fetal toxicity in rats. In 148 healthy participants and 240 patients with chronic hand eczema, it was well tolerated at doses up to 50 mg a day; upper respiratory tract infections and reversible ALT increases were more frequent than with placebo. In HRP-201, 10 and 25 mg once daily improved IGA-CHE success at Week 12.",
+        "intro": "Lumiravostat is the nonproprietary name of HRP-4417; Ostrevia is the proposed trade name. It is the first STRK1 inhibitor in clinical development. Chronic hand eczema that does not respond to topical corticosteroids has few oral options; blocking STRK1 interrupts the cytokine signalling that drives the inflammation and itch. The anticipated indication is adults with moderate to severe chronic hand eczema inadequately controlled with topical corticosteroids.",
+        "guidance": "Expected adverse reactions are upper respiratory tract infection and increased ALT (section 7). Investigators should monitor liver tests and stop the drug for ALT above 5 × ULN or above 3 × ULN with bilirubin above 2 × ULN. Hepatitis B reactivation is a potential risk of the class: screen for HBsAg and anti-HBc, exclude HBsAg-positive patients and monitor HBV DNA in anti-HBc-positive ones. Because of embryo-fetal toxicity in rats, participants of childbearing potential must use highly effective contraception until 4 weeks after the last dose. Avoid strong CYP3A inhibitors. There is no antidote; manage overdose symptomatically.",
+        "rsiIntro": "The expected adverse reactions below are the reference safety information for assessing the expectedness of suspected serious adverse reactions in trials of lumiravostat. Frequencies are from HRP-201 (lumiravostat 5 to 25 mg, 160 participants)."
+      },
+      "rsi": [
+        {
+          "term": "Upper respiratory tract infection",
+          "soc": "Infections and infestations",
+          "frequency": "Very common (12%)",
+          "aka": [
+            "upper respiratory tract infections",
+            "URTI"
+          ]
+        },
+        {
+          "term": "Alanine aminotransferase increased",
+          "soc": "Investigations",
+          "frequency": "Common (3%)",
+          "aka": [
+            "raised ALT",
+            "ALT increased",
+            "ALT above"
+          ]
+        }
+      ],
+      "maxHumanDose": {
+        "value": 50,
+        "unit": "mg",
+        "text": "50 mg once daily for 14 days (single doses up to 100 mg)"
+      }
+    }
   }
 }
