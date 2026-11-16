@@ -14,7 +14,8 @@ and reconciliation (Phase 5).
 
 A third study, HRP-301 (VERDANT-1), is the Ostrevia phase 3 trial in chronic hand eczema that the
 eCTD Dossier Builder's NDA and the Labelling Workbench's label are about. It has hepatitis B
-screening, the IGA-CHE and HECSI severity scales and an itch rating, a central laboratory and an
+screening, pregnancy tests for participants of childbearing potential (criterion IN04, as in
+the Protocol Builder's VERDANT-1 protocol), the IGA-CHE and HECSI severity scales and an itch rating, a central laboratory and an
 IRT by transfer, four SAEs to reconcile, and planted entry errors and protocol deviations.
 Mission M20 takes it to hard lock; its exported project file is what the SDTM Mapping Trainer maps
 next, in the Ostrevia lifecycle journey (https://randomthingsonlineatsk-cloud.github.io/pharmolecule/journey.html).
