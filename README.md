@@ -212,6 +212,10 @@ June 2026.
   build does not collect, forms and fields the build collects that no procedure needs (with
   the data points each costs), windows and eligibility criteria that disagree, and places
   where the protocol contradicts itself.
+- **A protocol from the Protocol Builder:** the twin also opens a project file from the
+  [Protocol Builder](https://randomthingsonlineatsk-cloud.github.io/protocol-builder/) for the study the
+  project runs (for example HRP-301 in an Ostrevia project) and traces it to that build form by
+  form, visit by visit, with its windows and criteria.
 - **Data burden:** data points per participant and for the study, form instances, edit checks,
   expected queries and query hours, for the build, for what the protocol asks, and for
   proposed changes (drop a visit, add PK sampling, ambulatory BP, a questionnaire, more labs).

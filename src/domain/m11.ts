@@ -14,7 +14,15 @@ export interface SoaVisit { id: string; name: string; lo: number; hi: number }
 export interface Procedure { id: string; name: string; section: string; form: string; fields: string[]; visits: string[] | 'continuous'; note?: string }
 export interface Criterion { code: string; text: string }
 
-export const M11 = {
+export interface TwinProtocol {
+  version: string; source?: string
+  title: Record<string, string>; design: Record<string, string>
+  objectives: { section: string; kind: string; objective: string; endpoint: string; estimand: string }[]
+  inclusion: Criterion[]; exclusion: Criterion[]; visits: SoaVisit[]; procedures: Procedure[]
+  statements: { section: string; text: string }[]
+}
+
+export const M11: TwinProtocol = {
   version: 'ICH M11 CeSHarP template (Step 4, 19 November 2025; EMA Step 5, effective 11 June 2026)',
   title: {
     'Full Title': 'A randomised, double-blind, placebo-controlled phase 2 study of Vasclarin (VSC-9) in adults with stage 1 or 2 hypertension',
@@ -106,15 +114,15 @@ export type TwinKind = 'not-collected' | 'form-missing' | 'not-needed' | 'window
 export interface TwinFinding { id: string; kind: TwinKind; where: string; text: string; section: string; points: number }
 
 type Def = typeof HLV_DEF
-const visitIds = M11.visits.map((v) => v.id)
 
-export function twin(def: Def = HLV_DEF): TwinFinding[] {
+export function twin(def: Def = HLV_DEF, proto: TwinProtocol = M11): TwinFinding[] {
   const out: TwinFinding[] = []
+  const visitIds = proto.visits.map((v) => v.id)
   const buildVisits = new Map(def.visits.map((v) => [v.id, v]))
   const formsAt = (form: string) => def.visits.filter((v) => visitIds.includes(v.id) && v.forms.includes(form)).map((v) => v.id)
   const logForm = (form: string) => def.logForms.includes(form)
   // Procedures the build does not collect where the protocol asks.
-  for (const pr of M11.procedures) {
+  for (const pr of proto.procedures) {
     const f = def.forms[pr.form as keyof typeof def.forms]
     if (!f) { out.push({ id: `T-form-${pr.form}`, kind: 'form-missing', where: pr.name, text: `${pr.name} is in the schedule at ${(pr.visits as string[]).join(', ')}, but the build has no ${pr.form} form.`, section: pr.section, points: (pr.visits as string[]).length * pr.fields.length }); continue }
     if (pr.visits === 'continuous') continue
@@ -123,7 +131,7 @@ export function twin(def: Def = HLV_DEF): TwinFinding[] {
   }
   // Fields and forms the build collects that no procedure needs.
   for (const [fid, f] of Object.entries(def.forms)) {
-    const procs = M11.procedures.filter((p) => p.form === fid)
+    const procs = proto.procedures.filter((p) => p.form === fid)
     const at = logForm(fid) ? [] : formsAt(fid)
     if (!procs.length) {
       if (fid === 'SV') continue
@@ -142,13 +150,13 @@ export function twin(def: Def = HLV_DEF): TwinFinding[] {
     }
   }
   // Windows.
-  for (const v of M11.visits) {
+  for (const v of proto.visits) {
     const b = buildVisits.get(v.id)
     if (b && (b.lo !== v.lo || b.hi !== v.hi)) out.push({ id: `T-window-${v.id}`, kind: 'window', where: v.name, text: `The protocol window for ${v.name} is study day ${v.lo} to ${v.hi}; the build (and edit check SV-04) uses day ${b.lo} to ${b.hi}.`, section: '1.3', points: 0 })
   }
   // Eligibility criteria the eCRF cannot record.
   const codes = new Set((def.codelists.IETEST ?? []).map((c) => c.value))
-  for (const c of [...M11.inclusion, ...M11.exclusion]) if (!codes.has(c.code)) out.push({ id: `T-crit-${c.code}`, kind: 'criterion', where: c.code, text: `${c.code} “${c.text}” is not in the eCRF’s list of criteria not met, so a participant who fails it cannot be recorded correctly.`, section: c.code.startsWith('IN') ? '5.2' : '5.3', points: 0 })
+  for (const c of [...proto.inclusion, ...proto.exclusion]) if (!codes.has(c.code)) out.push({ id: `T-crit-${c.code}`, kind: 'criterion', where: c.code, text: `${c.code} “${c.text}” is not in the eCRF’s list of criteria not met, so a participant who fails it cannot be recorded correctly.`, section: c.code.startsWith('IN') ? '5.2' : '5.3', points: 0 })
   return out
 }
 
@@ -159,7 +167,8 @@ export const PROTOCOL_FINDINGS: TwinFinding[] = [
   { id: 'P-n', kind: 'protocol', where: '1.1.2 and 10.11', text: 'The synopsis says 120 participants; the sample size section says 132.', section: '1.1.2, 10.11', points: 0 },
 ]
 
-export const allFindings = (def: Def = HLV_DEF) => [...twin(def), ...PROTOCOL_FINDINGS]
+// The planted protocol conflicts belong to the shipped HLV-204-201 protocol only.
+export const allFindings = (def: Def = HLV_DEF, proto: TwinProtocol = M11) => [...twin(def, proto), ...(proto === M11 ? PROTOCOL_FINDINGS : [])]
 
 // ---------- data burden ----------
 
@@ -175,8 +184,9 @@ function fieldsCounted(def: Def, form: string, only?: string[]) {
   return f.fields.filter((x) => !x.derived && (!only || only.includes(x.id) || STRUCTURAL.has(x.id))).reduce((n, x) => n + (x.showIf ? 0.5 : 1), 0)
 }
 // The build as it is.
-export function buildBurden(def: Def = HLV_DEF, a: Assumptions = DEFAULT_ASSUMPTIONS, extra: { points: number; forms: number; checks: number } = { points: 0, forms: 0, checks: 0 }): Burden {
+export function buildBurden(def: Def = HLV_DEF, a: Assumptions = DEFAULT_ASSUMPTIONS, extra: { points: number; forms: number; checks: number } = { points: 0, forms: 0, checks: 0 }, proto: TwinProtocol = M11): Burden {
   let pts = 0, forms = 0
+  const visitIds = proto.visits.map((v) => v.id)
   for (const v of def.visits.filter((x) => visitIds.includes(x.id))) for (const f of v.forms) { pts += fieldsCounted(def, f); forms++ }
   for (const f of def.logForms) { pts += fieldsCounted(def, f) * (LOG_RECORDS[f] ?? 1); forms++ }
   pts += extra.points; forms += extra.forms
@@ -184,7 +194,7 @@ export function buildBurden(def: Def = HLV_DEF, a: Assumptions = DEFAULT_ASSUMPT
   return finishBurden(pts, forms, checks, a)
 }
 // What the protocol asks for: only the fields its procedures name, only at their visits.
-export function protocolBurden(def: Def = HLV_DEF, a: Assumptions = DEFAULT_ASSUMPTIONS, procs: Procedure[] = M11.procedures): Burden {
+export function protocolBurden(def: Def = HLV_DEF, a: Assumptions = DEFAULT_ASSUMPTIONS, procs: Procedure[] = M11.procedures, proto: TwinProtocol = M11): Burden {
   let pts = 0
   const formVisits = new Set<string>()
   for (const p of procs) {
@@ -193,9 +203,9 @@ export function protocolBurden(def: Def = HLV_DEF, a: Assumptions = DEFAULT_ASSU
     if (p.visits === 'continuous') { pts += n * (LOG_RECORDS[p.form] ?? 1); formVisits.add(p.form) }
     else for (const v of p.visits) { pts += n; formVisits.add(`${p.form}|${v}`) }
   }
-  for (const v of M11.visits) { pts += 2; formVisits.add(`SV|${v.id}`) }
+  for (const v of proto.visits) { pts += 2; formVisits.add(`SV|${v.id}`) }
   pts += fieldsCounted(def, 'DV') * LOG_RECORDS.DV
-  const checks = generatedChecks(procs).length
+  const checks = generatedChecks(procs, proto, def).length
   return finishBurden(pts, formVisits.size + 1, checks, a)
 }
 function finishBurden(pts: number, forms: number, checks: number, a: Assumptions): Burden {
@@ -217,13 +227,12 @@ export const WHAT_IFS: WhatIf[] = [
 
 // ---------- generated core edit checks ----------
 export interface GenCheck { id: string; source: string; text: string }
-export function generatedChecks(procs: Procedure[] = M11.procedures): GenCheck[] {
+export function generatedChecks(procs: Procedure[] = M11.procedures, proto: TwinProtocol = M11, def: Def = HLV_DEF): GenCheck[] {
   const out: GenCheck[] = []
-  for (const v of M11.visits) if (v.id !== 'D1') out.push({ id: `W-${v.id}`, source: '1.3', text: `${v.name} on study day ${v.lo} to ${v.hi}` })
-  for (const c of M11.inclusion) out.push({ id: `E-${c.code}`, source: '5.2', text: `Eligible but ${c.code} not met: ${c.text}` })
-  for (const c of M11.exclusion) out.push({ id: `E-${c.code}`, source: '5.3', text: `Eligible but ${c.code} applies: ${c.text}` })
-  out.push({ id: 'R-SYSBP', source: '8.4.2', text: 'Systolic BP 80 to 220 mmHg' }, { id: 'R-DIABP', source: '8.4.2', text: 'Diastolic BP 40 to 130 mmHg' }, { id: 'R-K', source: '8.4.4, 12.1', text: 'Potassium above 5.5 mmol/L after Day 1 (safety follow-up)' })
-  const def = HLV_DEF
+  for (const v of proto.visits) if (v.id !== 'D1') out.push({ id: `W-${v.id}`, source: '1.3', text: `${v.name} on study day ${v.lo} to ${v.hi}` })
+  for (const c of proto.inclusion) out.push({ id: `E-${c.code}`, source: '5.2', text: `Eligible but ${c.code} not met: ${c.text}` })
+  for (const c of proto.exclusion) out.push({ id: `E-${c.code}`, source: '5.3', text: `Eligible but ${c.code} applies: ${c.text}` })
+  if (proto === M11) out.push({ id: 'R-SYSBP', source: '8.4.2', text: 'Systolic BP 80 to 220 mmHg' }, { id: 'R-DIABP', source: '8.4.2', text: 'Diastolic BP 40 to 130 mmHg' }, { id: 'R-K', source: '8.4.4, 12.1', text: 'Potassium above 5.5 mmol/L after Day 1 (safety follow-up)' })
   for (const p of procs) for (const fid of p.fields) {
     const f = def.forms[p.form as keyof typeof def.forms]?.fields.find((x) => x.id === fid)
     const isNew = !def.forms[p.form as keyof typeof def.forms]
