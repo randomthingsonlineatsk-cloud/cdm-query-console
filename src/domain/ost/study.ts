@@ -63,6 +63,7 @@ export const OST_CODELISTS: Record<string, { value: string; label: string }[]> =
     opt('IN01', 'IN01 Age 18 to 75 years'),
     opt('IN02', 'IN02 Chronic hand eczema for at least 6 months, inadequately controlled with topical corticosteroids'),
     opt('IN03', 'IN03 IGA-CHE 3 (moderate) or 4 (severe) at screening and Day 1'),
+    opt('IN04', 'IN04 Participants of childbearing potential agree to use highly effective contraception until 4 weeks after the last dose and have a negative pregnancy test'),
     opt('EX01', 'EX01 HBsAg positive, or anti-HBc positive with HBV DNA detectable'),
     opt('EX02', 'EX02 Systemic immunosuppressant or phototherapy in the last 4 weeks'),
     opt('EX03', 'EX03 ALT above 2 × ULN at screening'),
