@@ -124,6 +124,11 @@ export function generateOstStudy(seed = 3011): OstSeed {
       const hbc = OST_HBC_POSITIVE.includes(id)
       add('SCR', 'HBV', 1, scr, { HBVDAT: scr, HBSAG: sf === 'EX01' ? 'POSITIVE' : 'NEGATIVE', HBCAB: hbc || sf === 'EX01' ? 'POSITIVE' : 'NEGATIVE', HBVDNA: hbc ? 'UNDETECTABLE' : sf === 'EX01' ? '1850' : '' }, ic.entryDate)
       add('SCR', 'LBC', 1, scr, { LBPERF: 'Y', LBREFID: accession(id, 'SCR'), LBDAT: scr, LBTIM: tm(r, 8, 12) }, ic.entryDate)
+      // Pregnancy test (IN04): women aged 50 or under are of childbearing potential. No random draws, so
+      // the rest of the seeded data is unchanged.
+      const cbp = sex === 'F' && 2026 - birth <= 50
+      const preg = (visit: string, vd: string, entryDate: string) => add(visit, 'PREG', 1, vd, cbp ? { PREGCBP: 'Y', PREGDAT: vd, PREGTYP: visit === 'SCR' ? 'SERUM' : 'URINE', PREGRES: 'NEGATIVE' } : { PREGCBP: 'N', PREGDAT: '', PREGTYP: '', PREGRES: '' }, entryDate)
+      preg('SCR', scr, ic.entryDate)
       if (sf === 'EX03') altHigh.push({ subj: id, visit: 'SCR', alt: 104 })
       const iga0 = sf === 'IN03' ? 2 : id === '302-003' ? 4 : r.chance(0.68) ? 3 : 4
       const hecsi0 = iga0 === 4 ? r.int(95, 190) : iga0 === 3 ? r.int(42, 110) : r.int(14, 30)
@@ -156,6 +161,7 @@ export function generateOstStudy(seed = 3011): OstSeed {
         subj.lastVisit = v.id
         const sv = add(v.id, 'SV', 1, vd, { VISOCCUR: 'Y', VISDAT: vd, UNSREAS: '' })
         if (v.forms.includes('VS')) add(v.id, 'VS', 1, vd, { VSDAT: vd, SYSBP: f0(r.normal(124, 11)), DIABP: f0(r.normal(78, 7)), PULSE: f0(r.normal(72, 8)), WEIGHT: f1(weight0 + r.normal(0, 0.9)) }, sv.entryDate)
+        if (v.forms.includes('PREG')) preg(v.id, vd, sv.entryDate)
         if (v.forms.includes('LBC')) add(v.id, 'LBC', 1, vd, { LBPERF: 'Y', LBREFID: accession(id, v.id), LBDAT: vd, LBTIM: tm(r, 8, 12) }, sv.entryDate)
         if (v.forms.includes('HEA')) {
           const k = v.id === 'D1' ? 0 : course(v.day) * finalPct

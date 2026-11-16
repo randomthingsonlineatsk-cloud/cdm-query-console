@@ -34,13 +34,13 @@ export const OST_SITES: Site[] = [
 // Day 1 = randomisation. Bottles are dispensed every 4 weeks; tablets are counted back at the
 // next visit. The central laboratory sample is taken at every visit from screening to follow-up.
 export const OST_VISITS: Visit[] = [
-  { id: 'SCR', name: 'Screening', day: -14, lo: -28, hi: -1, forms: ['SV', 'IC', 'DM', 'IE', 'MH', 'VS', 'HBV', 'LBC', 'HEA'] },
-  { id: 'D1', name: 'Day 1 (randomisation)', day: 1, lo: 1, hi: 1, forms: ['SV', 'VS', 'HEA', 'EX'] },
+  { id: 'SCR', name: 'Screening', day: -14, lo: -28, hi: -1, forms: ['SV', 'IC', 'DM', 'IE', 'MH', 'VS', 'HBV', 'LBC', 'PREG', 'HEA'] },
+  { id: 'D1', name: 'Day 1 (randomisation)', day: 1, lo: 1, hi: 1, forms: ['SV', 'VS', 'PREG', 'HEA', 'EX'] },
   { id: 'W2', name: 'Week 2', day: 15, lo: 12, hi: 18, forms: ['SV', 'LBC', 'HEA'] },
-  { id: 'W4', name: 'Week 4', day: 29, lo: 26, hi: 32, forms: ['SV', 'VS', 'LBC', 'HEA', 'EX'] },
-  { id: 'W8', name: 'Week 8', day: 57, lo: 53, hi: 61, forms: ['SV', 'VS', 'LBC', 'HEA', 'EX'] },
-  { id: 'W12', name: 'Week 12', day: 85, lo: 81, hi: 89, forms: ['SV', 'LBC', 'HEA', 'EX'] },
-  { id: 'W16', name: 'Week 16 (end of treatment)', day: 113, lo: 109, hi: 117, forms: ['SV', 'VS', 'LBC', 'HEA', 'EX'] },
+  { id: 'W4', name: 'Week 4', day: 29, lo: 26, hi: 32, forms: ['SV', 'VS', 'LBC', 'PREG', 'HEA', 'EX'] },
+  { id: 'W8', name: 'Week 8', day: 57, lo: 53, hi: 61, forms: ['SV', 'VS', 'LBC', 'PREG', 'HEA', 'EX'] },
+  { id: 'W12', name: 'Week 12', day: 85, lo: 81, hi: 89, forms: ['SV', 'LBC', 'PREG', 'HEA', 'EX'] },
+  { id: 'W16', name: 'Week 16 (end of treatment)', day: 113, lo: 109, hi: 117, forms: ['SV', 'VS', 'LBC', 'PREG', 'HEA', 'EX'] },
   { id: 'FU', name: 'Week 20 follow-up', day: 141, lo: 134, hi: 148, forms: ['SV', 'LBC', 'EOS'] },
   { id: 'UNS', name: 'Unscheduled', day: 0, lo: -9999, hi: 9999, forms: ['SV', 'VS'] },
 ]
@@ -69,6 +69,8 @@ export const OST_CODELISTS: Record<string, { value: string; label: string }[]> =
     opt('EX03', 'EX03 ALT above 2 × ULN at screening'),
   ],
   POSNEG: [opt('NEGATIVE', 'Negative'), opt('POSITIVE', 'Positive')],
+  PREGRES: [opt('NEGATIVE', 'Negative'), opt('POSITIVE', 'Positive')],
+  PREGTYP: [opt('SERUM', 'Serum'), opt('URINE', 'Urine')],
   IGA: [opt('0', '0 Clear'), opt('1', '1 Almost clear'), opt('2', '2 Mild'), opt('3', '3 Moderate'), opt('4', '4 Severe')],
 }
 
@@ -115,6 +117,12 @@ export const OST_FORMS: Record<string, FormDef> = {
     { id: 'LBREFID', label: 'Accession number (from the requisition)', type: 'text', showIf: { field: 'LBPERF', equals: 'Y' } },
     { id: 'LBDAT', label: 'Collection date', type: 'date', showIf: { field: 'LBPERF', equals: 'Y' } },
     { id: 'LBTIM', label: 'Collection time (24-hour HH:MM)', type: 'text', showIf: { field: 'LBPERF', equals: 'Y' } },
+  ] },
+  PREG: { id: 'PREG', name: 'Pregnancy test', domain: 'LB', fields: [
+    { id: 'PREGCBP', label: 'Is the participant of childbearing potential?', type: 'yn', codelist: 'NY', required: true },
+    { id: 'PREGDAT', label: 'Date of the pregnancy test', type: 'date', showIf: { field: 'PREGCBP', equals: 'Y' } },
+    { id: 'PREGTYP', label: 'Test type', type: 'select', codelist: 'PREGTYP', showIf: { field: 'PREGCBP', equals: 'Y' } },
+    { id: 'PREGRES', label: 'Result', type: 'select', codelist: 'PREGRES', showIf: { field: 'PREGCBP', equals: 'Y' }, ctq: true },
   ] },
   HEA: { id: 'HEA', name: 'Hand eczema assessments', domain: 'QS', fields: [
     { id: 'HEADAT', label: 'Date of assessment', type: 'date', required: true, ctq: true },
@@ -179,6 +187,7 @@ export const OST_CCG_FORM: Record<string, string[]> = {
   VS: ['Seated, after 5 minutes of rest. Weight in kg with one decimal.'],
   HBV: ['Copy from the central laboratory screening report. HBV DNA is only reported for participants who are anti-HBc positive: enter the value in IU/mL, or UNDETECTABLE.'],
   LBC: ['Copy the accession number from the requisition label (NG followed by six digits). Results come from the central laboratory by transfer: do not enter results here.'],
+  PREG: ['For participants of childbearing potential (IN04): serum test at screening, urine test at Day 1 and Weeks 4, 8, 12 and 16, before dosing. A positive test stops dosing; report it as a pregnancy within 24 hours. For others, answer No.'],
   HEA: ['IGA-CHE and HECSI are scored by the trained assessor, the same assessor for a participant at every visit where possible. The participant rates their worst itch over the last 24 hours (0 no itch to 10 worst imaginable) before the examination. Score both hands; HECSI is 0 to 360.'],
   EX: ['Bottles hold 35 tablets: one tablet a day for 4 weeks plus 7 spare. Count the tablets returned from the previous bottle at every visit after Day 1. Compliance is calculated by the system.'],
   AE: ['Record every untoward medical event from consent to the Week 20 follow-up. A flare of hand eczema is an adverse event only if it is worse than the participant’s usual fluctuation. Serious events are also reported to safety within 24 hours.'],
