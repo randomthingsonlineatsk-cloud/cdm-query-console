@@ -1,0 +1,847 @@
+{
+  "format": "protocol-builder-project",
+  "schema": 1,
+  "exportedUtc": "2026-11-16T00:00:00.000Z",
+  "project": {
+    "format": "protocol-builder-project",
+    "schema": 1,
+    "id": "P-fixture",
+    "name": "VERDANT-1 (HRP-301): lumiravostat in chronic hand eczema",
+    "userId": "L-fixture",
+    "classId": "",
+    "type": "drug",
+    "phase": "Phase 3",
+    "regions": [
+      "US",
+      "EU",
+      "IN"
+    ],
+    "source": "example",
+    "createdUtc": "2026-11-16T00:00:00.000Z",
+    "updatedUtc": "2026-11-16T00:00:00.000Z",
+    "versions": [
+      {
+        "number": "1.0",
+        "date": "2026-11-16",
+        "status": "draft",
+        "data": {
+          "title": {
+            "Full Title": "VERDANT-1: a randomised, double-blind, placebo-controlled phase 3 study of lumiravostat (Ostrevia) 10 mg and 25 mg once daily for 16 weeks in adults with moderate to severe chronic hand eczema",
+            "Trial Acronym": "VERDANT-1",
+            "Sponsor Protocol Identifier": "HRP-301",
+            "Original Protocol Indicator": "Yes",
+            "Version Number": "1.0",
+            "Version Date": "2026-01-20",
+            "Sponsor's Investigational Product Code(s)": "HRP-4417",
+            "Investigational Product Name(s)": "lumiravostat (Ostrevia)",
+            "Trial Phase": "Phase 3",
+            "Short Title": "Lumiravostat in moderate to severe chronic hand eczema",
+            "Sponsor Name and Address": "Halcyon Ridge Pharmaceuticals (fictional), 1 Harbour Row, Dublin, Ireland",
+            "FDA IND Number": "000000 (fictional)",
+            "NCT Number": "NCT99930101 (fictional)",
+            "EU CT Number": "2026-500000-00-00 (fictional)",
+            "CTRI Number": "CTRI/2026/00/000000 (fictional)",
+            "Sponsor Approval": "2026-01-20, electronic signature in the sponsor’s document system",
+            "Sponsor Signatory": "Medical Director, Dermatology (fictional)",
+            "Medical Expert Contact": "Medical monitor, Halcyon Ridge Pharmaceuticals (fictional); 24-hour safety line in 12.2"
+          },
+          "design": {
+            "Intervention Model": "Parallel Group",
+            "Population Type": "With Disease",
+            "Population Diagnosis or Condition": "Moderate to severe chronic hand eczema inadequately controlled with topical corticosteroids",
+            "Population Age (Minimum and Maximum)": "18 to 75",
+            "Units of Age": "Years",
+            "Control Type": "Placebo",
+            "Control Description": "Matching placebo tablets once daily",
+            "Intervention Assignment Method": "Randomisation",
+            "Randomisation Type": "Stratified block randomisation 1:1:1 by IGA-CHE at baseline (3 or 4) and region, through an interactive response technology system.",
+            "Stratification Indicator": "Yes",
+            "Site Distribution": "About 60 sites",
+            "Site Geographic Scope": "Canada, Germany, India and the United States",
+            "Master Protocol Indicator": "No",
+            "Drug/Device Combination Product Indicator": "No",
+            "Adaptive Trial Design Indicator": "No",
+            "Number of Arms": "3",
+            "Trial Blind Schema": "Double Blind",
+            "Blinded Roles": "Participant, investigator, outcomes assessor, sponsor study team",
+            "Target/Maximum Number of Participants": "324",
+            "Number of Participants Randomly Assigned": "324",
+            "Total Planned Duration of Trial Intervention": "16 weeks",
+            "Total Planned Duration of Trial Participation": "Up to 25 weeks (screening up to 4 weeks, 16 weeks of treatment, follow-up at Week 20)",
+            "Independent Committees": "Independent data monitoring committee"
+          },
+          "facts": {
+            "participants": 324,
+            "perArm": 108,
+            "dropoutPct": 10,
+            "treatmentWeeks": 16,
+            "followUpWeeks": 4,
+            "participationWeeks": 25,
+            "ageMin": 18,
+            "ageMax": 75,
+            "power": 0.9,
+            "alpha": 0.05,
+            "sided": 2,
+            "assumption": {
+              "kind": "proportions",
+              "p0": 0.15,
+              "p1": 0.35
+            }
+          },
+          "arms": [
+            {
+              "id": "ARM1",
+              "code": "HRP25",
+              "name": "Lumiravostat 25 mg",
+              "type": "Investigational",
+              "intervention": "Lumiravostat 25 mg orally once daily for 16 weeks",
+              "ratio": 1
+            },
+            {
+              "id": "ARM2",
+              "code": "HRP10",
+              "name": "Lumiravostat 10 mg",
+              "type": "Investigational",
+              "intervention": "Lumiravostat 10 mg orally once daily for 16 weeks",
+              "ratio": 1
+            },
+            {
+              "id": "ARM3",
+              "code": "PBO",
+              "name": "Placebo",
+              "type": "Placebo",
+              "intervention": "Matching placebo orally once daily for 16 weeks",
+              "ratio": 1
+            }
+          ],
+          "epochs": [
+            {
+              "id": "EP_SCR",
+              "name": "Screening",
+              "type": "Screening"
+            },
+            {
+              "id": "EP_TRT",
+              "name": "Treatment",
+              "type": "Treatment"
+            },
+            {
+              "id": "EP_FU",
+              "name": "Follow-up",
+              "type": "Follow-up"
+            }
+          ],
+          "interventions": [
+            {
+              "id": "INT1",
+              "name": "Lumiravostat 25 mg",
+              "role": "Investigational",
+              "dose": "25 mg film-coated tablet",
+              "doseValue": 25,
+              "doseUnit": "mg",
+              "route": "Oral",
+              "frequency": "once daily",
+              "durationWeeks": 16
+            },
+            {
+              "id": "INT2",
+              "name": "Lumiravostat 10 mg",
+              "role": "Investigational",
+              "dose": "10 mg film-coated tablet",
+              "doseValue": 10,
+              "doseUnit": "mg",
+              "route": "Oral",
+              "frequency": "once daily",
+              "durationWeeks": 16
+            },
+            {
+              "id": "INT3",
+              "name": "Placebo",
+              "role": "Placebo",
+              "dose": "matching placebo tablet",
+              "doseValue": 0,
+              "doseUnit": "tablet",
+              "route": "Oral",
+              "frequency": "once daily",
+              "durationWeeks": 16
+            },
+            {
+              "id": "INT4",
+              "name": "Topical corticosteroid (rescue)",
+              "role": "Rescue",
+              "dose": "class III topical corticosteroid, thin layer",
+              "doseValue": 0,
+              "doseUnit": "application",
+              "route": "Topical",
+              "frequency": "as needed",
+              "durationWeeks": 0
+            }
+          ],
+          "objectives": [
+            {
+              "id": "OBJ1",
+              "level": "Primary",
+              "kind": "Efficacy",
+              "text": "To compare the efficacy of lumiravostat 25 mg and 10 mg with placebo in achieving clear or almost clear hands",
+              "endpointIds": [
+                "END1"
+              ]
+            },
+            {
+              "id": "OBJ2",
+              "level": "Secondary",
+              "kind": "Efficacy",
+              "text": "To compare the effect on the extent and severity of hand eczema",
+              "endpointIds": [
+                "END2"
+              ]
+            },
+            {
+              "id": "OBJ3",
+              "level": "Secondary",
+              "kind": "Efficacy",
+              "text": "To compare the effect on itch",
+              "endpointIds": [
+                "END3"
+              ]
+            },
+            {
+              "id": "OBJ4",
+              "level": "Secondary",
+              "kind": "Safety",
+              "text": "To assess the safety and tolerability of lumiravostat",
+              "endpointIds": [
+                "END4"
+              ]
+            }
+          ],
+          "endpoints": [
+            {
+              "id": "END1",
+              "level": "Primary",
+              "text": "IGA-CHE treatment success (0 or 1 with at least a 2-grade improvement from baseline) at Week 16",
+              "variableType": "binary",
+              "procedureIds": [
+                "P09"
+              ],
+              "visitIds": [
+                "W16"
+              ],
+              "purpose": "Efficacy"
+            },
+            {
+              "id": "END2",
+              "level": "Secondary",
+              "text": "HECSI-75 (at least 75% improvement from baseline in HECSI) at Week 16",
+              "variableType": "binary",
+              "procedureIds": [
+                "P10"
+              ],
+              "visitIds": [
+                "W16"
+              ],
+              "purpose": "Efficacy"
+            },
+            {
+              "id": "END3",
+              "level": "Secondary",
+              "text": "At least a 4-point improvement from baseline in worst itch at Week 16, in participants with a baseline of 4 or more",
+              "variableType": "binary",
+              "procedureIds": [
+                "P11"
+              ],
+              "visitIds": [
+                "W16"
+              ],
+              "purpose": "Efficacy"
+            },
+            {
+              "id": "END4",
+              "level": "Secondary",
+              "text": "Treatment-emergent adverse events, laboratory abnormalities and vital signs to Week 20",
+              "variableType": "binary",
+              "procedureIds": [
+                "P13",
+                "P07",
+                "P05"
+              ],
+              "visitIds": [],
+              "purpose": "Safety"
+            }
+          ],
+          "estimands": [
+            {
+              "id": "EST1",
+              "objectiveId": "OBJ1",
+              "endpointId": "END1",
+              "population": "Adults aged 18 to 75 with moderate to severe chronic hand eczema inadequately controlled with topical corticosteroids",
+              "analysisSetId": "ITT",
+              "treatment": "Lumiravostat 25 mg or 10 mg once daily, each compared with placebo, for 16 weeks",
+              "intercurrentEvents": [
+                {
+                  "id": "EST1-IE1",
+                  "name": "Use of rescue therapy",
+                  "strategy": "Composite variable",
+                  "description": "A participant who uses rescue therapy before Week 16 is a non-responder."
+                },
+                {
+                  "id": "EST1-IE2",
+                  "name": "Permanent discontinuation of trial intervention",
+                  "strategy": "Composite variable",
+                  "description": "A participant who stops the trial intervention before Week 16 is a non-responder."
+                }
+              ],
+              "summary": "Difference in proportions",
+              "estimator": "The difference in response rates between each dose and placebo with a 95% Wald confidence interval; Fisher’s exact test.",
+              "missing": "Participants without a Week 16 assessment are non-responders.",
+              "sensitivity": "A Cochran-Mantel-Haenszel analysis stratified by baseline IGA-CHE and region; and a hypothetical strategy for discontinuation with multiple imputation."
+            },
+            {
+              "id": "EST2",
+              "objectiveId": "OBJ2",
+              "endpointId": "END2",
+              "population": "As the primary estimand",
+              "analysisSetId": "ITT",
+              "treatment": "Lumiravostat 25 mg or 10 mg once daily, each compared with placebo, for 16 weeks",
+              "intercurrentEvents": [
+                {
+                  "id": "EST2-IE1",
+                  "name": "Use of rescue therapy",
+                  "strategy": "Composite variable",
+                  "description": "A participant who uses rescue therapy before Week 16 is a non-responder."
+                },
+                {
+                  "id": "EST2-IE2",
+                  "name": "Permanent discontinuation of trial intervention",
+                  "strategy": "Composite variable",
+                  "description": "A participant who stops the trial intervention before Week 16 is a non-responder."
+                }
+              ],
+              "summary": "Difference in proportions",
+              "estimator": "The difference in response rates between each dose and placebo with a 95% Wald confidence interval; Fisher’s exact test.",
+              "missing": "Participants without a Week 16 assessment are non-responders.",
+              "sensitivity": "As the primary estimand."
+            },
+            {
+              "id": "EST3",
+              "objectiveId": "OBJ3",
+              "endpointId": "END3",
+              "population": "Participants of the primary estimand population with a baseline worst itch of 4 or more",
+              "analysisSetId": "ITT",
+              "treatment": "Lumiravostat 25 mg or 10 mg once daily, each compared with placebo, for 16 weeks",
+              "intercurrentEvents": [
+                {
+                  "id": "EST3-IE1",
+                  "name": "Use of rescue therapy",
+                  "strategy": "Composite variable",
+                  "description": "A participant who uses rescue therapy before Week 16 is a non-responder."
+                },
+                {
+                  "id": "EST3-IE2",
+                  "name": "Permanent discontinuation of trial intervention",
+                  "strategy": "Composite variable",
+                  "description": "A participant who stops the trial intervention before Week 16 is a non-responder."
+                }
+              ],
+              "summary": "Difference in proportions",
+              "estimator": "The difference in response rates between each dose and placebo with a 95% Wald confidence interval; Fisher’s exact test.",
+              "missing": "Participants without a Week 16 assessment are non-responders.",
+              "sensitivity": "As the primary estimand."
+            }
+          ],
+          "analysisSets": [
+            {
+              "id": "ITT",
+              "name": "Intent-to-treat set",
+              "text": "All randomised participants, analysed as randomised."
+            },
+            {
+              "id": "SAF",
+              "name": "Safety set",
+              "text": "All randomised participants who took at least one dose, analysed as treated."
+            },
+            {
+              "id": "PP",
+              "name": "Per-protocol set",
+              "text": "Intent-to-treat participants without an important deviation affecting the primary endpoint."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IN01",
+              "category": "Inclusion",
+              "text": "Aged 18 to 75 years when consent is signed",
+              "procedureIds": [
+                "P02"
+              ]
+            },
+            {
+              "code": "IN02",
+              "category": "Inclusion",
+              "text": "Chronic hand eczema for at least 6 months, inadequately controlled with topical corticosteroids",
+              "procedureIds": [
+                "P04"
+              ]
+            },
+            {
+              "code": "IN03",
+              "category": "Inclusion",
+              "text": "IGA-CHE 3 (moderate) or 4 (severe) at screening and Day 1",
+              "procedureIds": [
+                "P09"
+              ]
+            },
+            {
+              "code": "IN04",
+              "category": "Inclusion",
+              "text": "Participants of childbearing potential agree to use highly effective contraception until 4 weeks after the last dose and have a negative pregnancy test",
+              "procedureIds": [
+                "P08"
+              ]
+            },
+            {
+              "code": "EX01",
+              "category": "Exclusion",
+              "text": "HBsAg positive, or anti-HBc positive with HBV DNA detectable",
+              "procedureIds": [
+                "P06"
+              ]
+            },
+            {
+              "code": "EX02",
+              "category": "Exclusion",
+              "text": "Systemic immunosuppressant or phototherapy in the 4 weeks before Day 1",
+              "procedureIds": [
+                "P14"
+              ]
+            },
+            {
+              "code": "EX03",
+              "category": "Exclusion",
+              "text": "ALT above 2 × ULN at screening",
+              "procedureIds": [
+                "P07"
+              ]
+            }
+          ],
+          "visits": [
+            {
+              "id": "SCR",
+              "name": "Screening",
+              "day": -14,
+              "lo": -28,
+              "hi": -1,
+              "epoch": "Screening",
+              "type": "On site"
+            },
+            {
+              "id": "D1",
+              "name": "Day 1 (randomisation)",
+              "day": 1,
+              "lo": 1,
+              "hi": 1,
+              "epoch": "Treatment",
+              "type": "On site"
+            },
+            {
+              "id": "W2",
+              "name": "Week 2",
+              "day": 15,
+              "lo": 12,
+              "hi": 18,
+              "epoch": "Treatment",
+              "type": "On site"
+            },
+            {
+              "id": "W4",
+              "name": "Week 4",
+              "day": 29,
+              "lo": 26,
+              "hi": 32,
+              "epoch": "Treatment",
+              "type": "On site"
+            },
+            {
+              "id": "W8",
+              "name": "Week 8",
+              "day": 57,
+              "lo": 53,
+              "hi": 61,
+              "epoch": "Treatment",
+              "type": "On site"
+            },
+            {
+              "id": "W12",
+              "name": "Week 12",
+              "day": 85,
+              "lo": 81,
+              "hi": 89,
+              "epoch": "Treatment",
+              "type": "On site"
+            },
+            {
+              "id": "W16",
+              "name": "Week 16 (end of treatment)",
+              "day": 113,
+              "lo": 109,
+              "hi": 117,
+              "epoch": "Treatment",
+              "type": "On site"
+            },
+            {
+              "id": "FU",
+              "name": "Week 20 follow-up",
+              "day": 141,
+              "lo": 134,
+              "hi": 148,
+              "epoch": "Follow-up",
+              "type": "On site"
+            }
+          ],
+          "procedures": [
+            {
+              "id": "P01",
+              "name": "Informed consent",
+              "section": "11.3",
+              "concept": "Informed Consent Obtained",
+              "form": "IC",
+              "visits": [
+                "SCR"
+              ],
+              "purpose": [
+                "conduct"
+              ],
+              "minutes": 30
+            },
+            {
+              "id": "P02",
+              "name": "Demographics",
+              "section": "8.2",
+              "concept": "Demographics",
+              "form": "DM",
+              "visits": [
+                "SCR"
+              ],
+              "purpose": [
+                "conduct"
+              ],
+              "minutes": 5
+            },
+            {
+              "id": "P03",
+              "name": "Eligibility criteria",
+              "section": "5.2, 5.3",
+              "concept": "Eligibility Criteria Not Met",
+              "form": "IE",
+              "visits": [
+                "SCR"
+              ],
+              "purpose": [
+                "conduct"
+              ],
+              "minutes": 10
+            },
+            {
+              "id": "P04",
+              "name": "Medical history, including hand eczema history",
+              "section": "8.2",
+              "concept": "Medical History",
+              "form": "MH",
+              "visits": [
+                "SCR"
+              ],
+              "purpose": [
+                "conduct"
+              ],
+              "minutes": 15
+            },
+            {
+              "id": "P05",
+              "name": "Vital signs (blood pressure, pulse) and weight",
+              "section": "8.4.2",
+              "concept": "Vital Signs (Blood Pressure, Pulse)",
+              "form": "VS",
+              "visits": [
+                "SCR",
+                "D1",
+                "W4",
+                "W8",
+                "W16"
+              ],
+              "purpose": [
+                "safety"
+              ],
+              "minutes": 10,
+              "bcs": [
+                "SYSTOLIC BLOOD PRESSURE",
+                "DIASTOLIC BLOOD PRESSURE",
+                "PULSE",
+                "WEIGHT"
+              ]
+            },
+            {
+              "id": "P06",
+              "name": "Hepatitis B screening (HBsAg, anti-HBc; HBV DNA if anti-HBc positive)",
+              "section": "8.2, 12.1",
+              "concept": "Hepatitis B Screening Panel",
+              "form": "LB",
+              "visits": [
+                "SCR"
+              ],
+              "purpose": [
+                "eligibility"
+              ],
+              "bloodMl": 5,
+              "minutes": 5
+            },
+            {
+              "id": "P07",
+              "name": "Central safety laboratory (haematology, chemistry including ALT and AST)",
+              "section": "8.4.4, 12.1",
+              "concept": "Central Laboratory Sample",
+              "form": "LB",
+              "visits": [
+                "SCR",
+                "W2",
+                "W4",
+                "W8",
+                "W12",
+                "W16",
+                "FU"
+              ],
+              "purpose": [
+                "safety"
+              ],
+              "bloodMl": 10,
+              "minutes": 5,
+              "bcs": [
+                "HEMOGLOBIN CONCENTRATION IN BLOOD",
+                "LEUKOCYTE COUNT IN BLOOD",
+                "ABSOLUTE NEUTROPHIL COUNT IN BLOOD",
+                "LYMPHOCYTE COUNT IN BLOOD",
+                "PLATELET COUNT IN BLOOD",
+                "ALANINE AMINOTRANSFERASE CONCENTRATION IN SERUM OR PLASMA",
+                "ASPARTATE AMINOTRANSFERASE IN SERUM OR PLASMA",
+                "BILIRUBIN CONCENTRATION IN SERUM OR PLASMA",
+                "ALKALINE PHOSPHATASE CONCENTRATION IN SERUM OR PLASMA",
+                "CREATININE CONCENTRATION IN SERUM OR PLASMA",
+                "HEPATITIS B VIRUS DNA CONCENTRATION IN SERUM OR PLASMA"
+              ],
+              "footnote": "a: participants positive for anti-HBc with undetectable HBV DNA also have HBV DNA measured at every visit from Week 4."
+            },
+            {
+              "id": "P08",
+              "name": "Pregnancy test (participants of childbearing potential)",
+              "section": "8.4.5",
+              "concept": "Pregnancy Test (Choriogonadotropin Beta)",
+              "form": "PREG",
+              "visits": [
+                "SCR",
+                "D1",
+                "W4",
+                "W8",
+                "W12",
+                "W16"
+              ],
+              "purpose": [
+                "safety"
+              ],
+              "minutes": 5,
+              "footnote": "b: serum at screening, urine at the other visits."
+            },
+            {
+              "id": "P09",
+              "name": "IGA-CHE (Investigator Global Assessment, chronic hand eczema)",
+              "section": "8.3",
+              "concept": "Investigator Global Assessment for Chronic Hand Eczema",
+              "form": "QS",
+              "visits": [
+                "SCR",
+                "D1",
+                "W2",
+                "W4",
+                "W8",
+                "W12",
+                "W16"
+              ],
+              "purpose": [
+                "endpoint"
+              ],
+              "minutes": 5
+            },
+            {
+              "id": "P10",
+              "name": "HECSI (Hand Eczema Severity Index)",
+              "section": "8.3",
+              "concept": "Hand Eczema Severity Index",
+              "form": "QS",
+              "visits": [
+                "SCR",
+                "D1",
+                "W2",
+                "W4",
+                "W8",
+                "W12",
+                "W16"
+              ],
+              "purpose": [
+                "endpoint"
+              ],
+              "minutes": 10
+            },
+            {
+              "id": "P11",
+              "name": "Worst itch over the last 24 hours (0 to 10 numeric rating scale)",
+              "section": "8.3",
+              "concept": "Itch Numeric Rating Scale",
+              "form": "QS",
+              "visits": [
+                "SCR",
+                "D1",
+                "W2",
+                "W4",
+                "W8",
+                "W12",
+                "W16"
+              ],
+              "purpose": [
+                "endpoint"
+              ],
+              "minutes": 2,
+              "footnote": "c: completed by the participant before any other procedure."
+            },
+            {
+              "id": "P12",
+              "name": "Dispense trial intervention; tablet count and adherence",
+              "section": "6.6.3, 6.8",
+              "concept": "Study Drug Dispensing and Accountability",
+              "form": "EX",
+              "visits": [
+                "D1",
+                "W4",
+                "W8",
+                "W12",
+                "W16"
+              ],
+              "purpose": [
+                "conduct"
+              ],
+              "minutes": 10,
+              "footnote": "d: dispensing on Day 1 to Week 12; tablets returned are counted at every visit after Day 1, including Week 16."
+            },
+            {
+              "id": "P13",
+              "name": "Adverse events",
+              "section": "9.2",
+              "concept": "Adverse Event",
+              "form": "AE",
+              "visits": "continuous",
+              "purpose": [
+                "safety"
+              ],
+              "from": "SCR",
+              "footnote": "e: collected from the signing of informed consent until the Week 20 follow-up visit."
+            },
+            {
+              "id": "P14",
+              "name": "Concomitant therapy and rescue therapy",
+              "section": "6.9, 6.10",
+              "concept": "Concomitant Medication",
+              "form": "CM",
+              "visits": "continuous",
+              "purpose": [
+                "safety",
+                "conduct"
+              ],
+              "from": "SCR"
+            },
+            {
+              "id": "P15",
+              "name": "End of trial status",
+              "section": "7.2",
+              "concept": "Disposition",
+              "form": "DS",
+              "visits": [
+                "FU"
+              ],
+              "purpose": [
+                "conduct"
+              ],
+              "minutes": 5
+            }
+          ],
+          "narrative": {
+            "13": "ALT: alanine aminotransferase. anti-HBc: antibody to hepatitis B core antigen. HBsAg: hepatitis B surface antigen. HBV: hepatitis B virus. HECSI: Hand Eczema Severity Index. IGA-CHE: Investigator Global Assessment for chronic hand eczema. ITT: intent-to-treat. NRS: numeric rating scale. ULN: upper limit of normal.",
+            "14": "ICH E6(R3) Guideline for good clinical practice. ICH E9(R1) Addendum on estimands and sensitivity analysis. ICH M11 Clinical electronic Structured Harmonised Protocol.",
+            "2.1": "Lumiravostat is a reversible inhibitor of the STRK1 kinase (a fictional target), which mediates cytokine signalling in skin inflammation. This trial asks whether Lumiravostat is more effective than placebo in chronic hand eczema, and how safe it is, over 16 weeks.",
+            "2.2.1": "Identified risks of lumiravostat from the phase 2 trial HRP-201 and the nonclinical programme: upper respiratory tract infections, raised ALT, and a potential risk of hepatitis B virus reactivation (a class effect of kinase inhibitors that modulate immunity). Mitigations: exclusion of HBsAg-positive participants and of those with detectable HBV DNA (EX01); HBV DNA monitoring every 4 weeks in anti-HBc-positive participants; liver tests at every visit (P07); discontinuation for ALT above 5 × ULN (7.1). Embryo-fetal toxicity was seen in animals: contraception and pregnancy tests (5.4, 8.4.5).",
+            "2.2.2": "Participants may benefit from improvement in their chronic hand eczema. All participants receive standard care for their condition, and rescue therapy is available.",
+            "2.2.3": "With the mitigations described, the sponsor considers the expected benefits to justify the risks.",
+            "4.1": "This is a double blind, parallel group, placebo-controlled trial with 3 arms (Lumiravostat 25 mg, Lumiravostat 10 mg, Placebo), allocated 1:1:1. It has a screening period of up to 28 days, 16 weeks of treatment and 4 weeks of follow-up. 324 participants are randomised. Each dose is tested for superiority over placebo.",
+            "4.2.1": "The primary estimand uses a composite variable strategy for use of rescue therapy and a composite variable strategy for permanent discontinuation of trial intervention: the question is whether participants achieve the endpoint (iga-che treatment success (0 or 1 with at least a 2-grade improvement from baseline) at week 16) under the treatment as it is used, counting those who needed rescue or stopped treatment as not having benefited where the strategy says so.",
+            "4.2.2": "A parallel group design is used because the condition can change over the treatment period and the effect is not expected to wash out quickly, so a cross-over design would not be reliable.",
+            "4.2.3": "Placebo control is needed to distinguish the effect of the intervention from the natural course of the condition and from expectation. Participants may use rescue therapy, so no one is left without treatment.",
+            "4.2.4": "16 weeks of treatment is long enough to reach the maximal effect seen in earlier trials; 4 weeks of follow-up covers about five half-lives after the last dose.",
+            "4.3": "The sponsor may stop the trial, or an arm, on the recommendation of the independent committee, for unacceptable risk, or if new information changes the benefit-risk balance. A site may be closed as described in 11.11.",
+            "4.4": "The trial starts when the first participant signs informed consent. A participant has completed the trial at the Week 20 follow-up visit. The end of the trial is the last visit of the last participant.",
+            "4.5": "Participants who complete the trial may enter the open-label extension study if it is open at their site. Otherwise the investigator arranges standard care.",
+            "5.1": "Adults aged 18 to 75 years with moderate to severe chronic hand eczema inadequately controlled with topical corticosteroids. Women and men are included; the age range covers the population that will use the product.",
+            "5.6": "A participant who does not meet the criteria is a screen failure; the reason is recorded. A participant may be rescreened once, after at least 4 weeks, with a new participant number and new consent.",
+            "6.1": "Lumiravostat 25 mg: 25 mg film-coated tablet, oral, once daily, for 16 weeks. Lumiravostat 10 mg: 10 mg film-coated tablet, oral, once daily, for 16 weeks. Placebo tablets match the active tablets in appearance. Lumiravostat is not authorised in any country. The rescue topical corticosteroid (6.9) is an auxiliary medicinal product authorised in the EU, the US and India and used within its authorisation. Tablets are supplied in child-resistant bottles of 35.",
+            "6.2": "The doses were chosen from the exposure-response analysis of the earlier trial, which showed a plateau of effect at the higher dose and acceptable safety at both.",
+            "6.3": "One tablet is taken by mouth each morning with water, with or without food. A missed dose is skipped if more than 12 hours late.",
+            "6.5": "There is no antidote. In case of overdose the participant is monitored and treated symptomatically; the overdose is recorded as a special safety situation (9.4).",
+            "6.6": "Trial intervention is stored at 20 to 25 °C in a locked area with access limited to authorised staff. The site records every bottle received, dispensed, returned and destroyed (6.6.3 Accountability). Bottles are labelled as Annex VI of Regulation (EU) No 536/2014 and the local rules require, without showing the treatment. Unused tablets and empty bottles are returned to the depot for destruction.",
+            "6.7": "Participants are randomised through the interactive response technology system on Day 1. Stratified block randomisation 1:1:1 by IGA-CHE at baseline (3 or 4) and region, through an interactive response technology system. The participant, investigator, assessors and sponsor study team are blinded. The investigator can unblind a participant through the system in an emergency. An independent statistician generates the randomisation list; it is held in the system, and site staff who enrol participants cannot see it, which conceals the allocation.",
+            "6.8": "Adherence is checked by counting tablets returned at each visit; less than 80% or more than 120% of expected tablets is a deviation.",
+            "6.10": "Prohibited: systemic immunosuppressants, systemic corticosteroids and phototherapy. Permitted: emollients, and medicines for other conditions at a stable dose. All concomitant therapy is recorded.",
+            "7.1": "The trial intervention is stopped permanently for: ALT above 5 × ULN; ALT above 3 × ULN with total bilirubin above 2 × ULN; HBV DNA above the lower limit of quantification; pregnancy; a serious adverse reaction; or if the investigator judges it in the participant’s interest. Participants who stop the intervention stay in the trial and attend every visit to Week 20, so their data can be used.",
+            "7.2": "A participant may withdraw at any time. Data collected until withdrawal are kept. The site asks, but cannot require, a final safety visit. Participants who withdraw are not replaced.",
+            "7.3": "Before a participant is called lost to follow-up, the site makes at least three attempts by telephone and one by letter, and records them.",
+            "8.1": "Procedures follow the schedule of activities (1.3). Participant-reported scales are completed before any other procedure; the same trained assessor scores a participant at each visit where possible.",
+            "8.2": "At screening: consent, demographics, medical history, eligibility, vital signs and laboratory tests. Day 1 assessments before the first dose are the baseline.",
+            "8.3": "IGA-CHE treatment success (0 or 1 with at least a 2-grade improvement from baseline) at Week 16. HECSI-75 (at least 75% improvement from baseline in HECSI) at Week 16. At least a 4-point improvement from baseline in worst itch at Week 16, in participants with a baseline of 4 or more.",
+            "8.4": "Vital signs (8.4.2), clinical laboratory tests (8.4.4, listed in 12.1) and, for participants of childbearing potential, pregnancy tests (8.4.5) are done at the visits in 1.3.",
+            "9.1": "An adverse event is any untoward medical occurrence in a participant, whether or not related to the trial intervention. A serious adverse event results in death, is life-threatening, requires or prolongs hospitalisation, results in persistent disability, is a congenital anomaly, or is another important medical event.",
+            "9.2": "9.2.1 Timing: adverse events are collected from the signing of informed consent until the Week 20 follow-up visit. Serious adverse events are reported to the sponsor within 24 hours of the site becoming aware. The sponsor reports suspected unexpected serious adverse reactions to the regulators and ethics committees within the regulatory timelines. The following are reported within 24 hours as if serious, as adverse events of special interest: ALT above 3 × ULN with total bilirubin above 2 × ULN, and hepatitis B reactivation. No serious adverse event is exempt from immediate reporting. In the EU the sponsor reports SUSARs to EudraVigilance (Article 42); in the US as IND safety reports (21 CFR 312.32); in India to CDSCO and the ethics committee. Adverse events are followed up until they resolve or stabilise, or to the end of follow-up for non-serious events.",
+            "10.1": "Tests are two-sided at a significance level of 0.05. The statistical analysis plan, finalised before unblinding, gives the details.",
+            "10.2": "Intent-to-treat set: All randomised participants, analysed as randomised. Safety set: All randomised participants who took at least one dose, analysed as treated. Per-protocol set: Intent-to-treat participants without an important deviation affecting the primary endpoint.",
+            "10.3": "Demographics and baseline characteristics are summarised by arm with descriptive statistics.",
+            "10.4": "IGA-CHE treatment success (0 or 1 with at least a 2-grade improvement from baseline) at Week 16 is analysed in the Intent-to-treat set. The difference in response rates between each dose and placebo with a 95% Wald confidence interval; Fisher’s exact test. Participants without a Week 16 assessment are non-responders. Sensitivity: A Cochran-Mantel-Haenszel analysis stratified by baseline IGA-CHE and region; and a hypothetical strategy for discontinuation with multiple imputation.",
+            "10.5": "HECSI-75 (at least 75% improvement from baseline in HECSI) at Week 16: The difference in response rates between each dose and placebo with a 95% Wald confidence interval; Fisher’s exact test. At least a 4-point improvement from baseline in worst itch at Week 16, in participants with a baseline of 4 or more: The difference in response rates between each dose and placebo with a 95% Wald confidence interval; Fisher’s exact test. Treatment-emergent adverse events, laboratory abnormalities and vital signs to Week 20: summarised descriptively by arm (see 10.7).",
+            "10.7": "Adverse events are coded with MedDRA and summarised by arm in the Safety set. Laboratory values and vital signs are summarised by visit, with shifts from baseline.",
+            "10.10": "The familywise type I error rate is controlled at a two-sided 0.05 by a fixed-sequence procedure: IGA-CHE success for 25 mg, then 10 mg; then HECSI-75 for 25 mg, then 10 mg; then itch for 25 mg, then 10 mg. Testing stops at the first non-significant result.",
+            "10.11": "A sample size of 324 randomised participants (108 per arm) gives 90% power to detect a difference in IGA-CHE treatment success of 35% against 15% for each dose against placebo (two-sided alpha 0.05; two-proportion normal approximation, 97 evaluable per arm), allowing for 10% of participants without a Week 16 assessment.",
+            "11.1": "The trial follows the protocol, ICH E6(R3) good clinical practice, the Declaration of Helsinki and the applicable regulations, including Regulation (EU) No 536/2014, 21 CFR parts 50, 56 and 312, and the New Drugs and Clinical Trials Rules, 2019. Each site starts only after its ethics committee approves. Amendments are approved before they are made, except to remove an immediate hazard, and are communicated to the investigators, the ethics committees and the registries.",
+            "11.2": "The investigator conducts the trial at the site and supervises delegated staff. The sponsor monitors the trial and ensures direct access to source records for monitoring, audits and inspections. Halcyon Ridge Pharmaceuticals funds the trial and is responsible for its design, conduct, analysis and publication. Investigators and committee members declare conflicts of interest before the trial and each year.",
+            "11.3": "The investigator or a delegate explains the trial and gives the participant time to ask questions before consent is signed. Consent is renewed when new information may affect willingness to continue.",
+            "11.4": "An independent data monitoring committee of two clinicians and a statistician reviews unblinded safety data every 6 months, under a charter that accompanies the protocol. It recommends to the sponsor whether to continue, change or stop the trial.",
+            "11.5": "The sponsor holds insurance that covers participants for harm caused by taking part, as the law of each country requires.",
+            "11.6": "Critical-to-quality factors are the primary endpoint assessment, eligibility and safety reporting. Centralised monitoring of key risk indicators and targeted on-site review focus on them.",
+            "11.7": "Data are entered in a validated electronic data capture system with an audit trail; laboratory and randomisation data are transferred electronically and reconciled.",
+            "11.8": "Participants are identified by number only. Personal data are processed under the applicable data protection laws; a breach is reported to the sponsor within 24 hours and handled under its procedure. In the EU the GDPR (Regulation (EU) 2016/679) applies, and in India the Digital Personal Data Protection Act 2023. Data are pseudonymised: records leave the site coded by participant number, and the key stays at the site. After a breach the sponsor contains it, assesses the risk to participants and notifies the authorities and participants as the law requires.",
+            "11.9": "Source records are the medical records and the worksheets defined in the monitoring plan; data entered directly in the eCRF are identified in advance.",
+            "11.10": "Protocol deviations are recorded in the eCRF and classified as important or not, following the deviation plan.",
+            "11.11": "The sponsor or the investigator may close a site for poor recruitment, poor compliance with the protocol or good clinical practice, or safety reasons.",
+            "11.12": "A summary of results is posted in CTIS, ClinicalTrials.gov and CTRI within one year of the end of the trial, with a lay summary sent to participants. The results are submitted for publication whatever the outcome, under the sponsor’s publication policy. The protocol and statistical analysis plan are posted with the results. De-identified participant-level data are shared with qualified researchers on request, once the product is approved or development has stopped.",
+            "5.4": "5.4.1 A participant of childbearing potential is anyone who is not permanently sterile and not postmenopausal (12 months without menses with no other cause). 5.4.2 They use a highly effective method of contraception from screening until 4 weeks after the last dose; pregnancy tests are done as in the schedule.",
+            "6.9": "6.9.2 Rescue therapy: A class III topical corticosteroid may be used as rescue therapy for intolerable symptoms after Week 4, at the investigator’s discretion. Use is recorded on the concomitant therapy form.",
+            "9.3": "A pregnancy is reported to the sponsor within 24 hours and followed to its outcome. The trial intervention is stopped.",
+            "12.1": "Samples are analysed at the central laboratory (Northgate Central Laboratory, fictional) and destroyed within 12 months after the end of the trial; none are kept for future research. Haematology: haemoglobin, white cells with differential (including neutrophils and lymphocytes), platelets. Chemistry: ALT, AST, alkaline phosphatase, bilirubin, creatinine, potassium. Hepatitis B: HBsAg, anti-HBc and, if anti-HBc positive, HBV DNA. Pregnancy: serum β-hCG at screening, urine at other visits.",
+            "4.1.1": "A panel of six adults living with chronic hand eczema, recruited through a patient organisation (fictional), reviewed the draft protocol. Their advice made itch a key secondary endpoint, cut two on-site visits to telephone calls and simplified the consent form. The panel will review the lay summary of results.",
+            "6.4": "No dose reduction is allowed. The investigator may interrupt the trial intervention for up to 14 days for an adverse event; it is restarted only if the event has resolved and no criterion in 7.1 is met.",
+            "12.2": "India: sites and investigators (fictional): Dr A. Rao, Department of Dermatology, Western Coast Medical College, Mumbai; Dr S. Iyer, Lakeside Skin Institute, Bengaluru. Each investigator signs the undertaking in Table 4 of the Third Schedule of the NDCT Rules 2019, kept with this protocol. Serious adverse events are reported to CDSCO, the sponsor and the ethics committee within 24 hours. Consent is recorded on audio-video where the Rules require it.\n\nUnited States: the investigators, their research facilities and the reviewing IRB at each site are listed on each investigator’s Form FDA 1572 in the IND.\n\n24-hour safety line (fictional): +353 1 000 0000."
+          },
+          "statements": {
+            "10.11": "A sample size of 324 randomised participants (108 per arm) gives 90% power to detect a difference in IGA-CHE treatment success of 35% against 15% for each dose against placebo (two-sided alpha 0.05; two-proportion normal approximation, 97 evaluable per arm), allowing for 10% of participants without a Week 16 assessment."
+          },
+          "multiplicity": "The familywise type I error rate is controlled at a two-sided 0.05 by a fixed-sequence procedure: IGA-CHE success for 25 mg, then 10 mg; then HECSI-75 for 25 mg, then 10 mg; then itch for 25 mg, then 10 mg. Testing stops at the first non-significant result.",
+          "rescue": "A class III topical corticosteroid may be used as rescue therapy for intolerable symptoms after Week 4, at the investigator’s discretion. Use is recorded on the concomitant therapy form.",
+          "aeFrom": "consent",
+          "aeTo": "FU"
+        }
+      }
+    ],
+    "marks": {}
+  }
+}
