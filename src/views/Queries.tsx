@@ -42,7 +42,7 @@ function QueryList() {
   ).sort((a, b) => b.raisedUtc.localeCompare(a.raisedUtc)), [tick, status, site, source, bucket])
   const q = p.queries.find((x) => x.id === sel)
   return (
-    <div className="grid xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-4 items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-4 items-start">
       <Panel title={`${list.length} queries`} sub="Open: waiting for the site. Answered: waiting for data management to close or re-query.">
         <div className="flex flex-wrap gap-2">
           <Select aria-label="Status" className="w-36" value={status} onChange={(e) => setStatus(e.target.value)} options={[{ value: 'active', label: 'Active' }, { value: 'open', label: 'Open' }, { value: 'answered', label: 'Answered' }, { value: 'closed', label: 'Closed' }, { value: 'cancelled', label: 'Cancelled' }, { value: 'all', label: 'All' }]} />

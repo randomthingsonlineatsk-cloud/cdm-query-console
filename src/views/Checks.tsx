@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import ConsentVersions from './ConsentVersions'
 import { useStore } from '../state'
 import { CATEGORY_LABEL, SHIPPED_CHECKS, CTX_FNS } from '../domain/checks'
 import { VAX_CHECKS } from '../domain/vax/checks'
@@ -45,7 +46,7 @@ export default function Checks() {
           <Select aria-label="Category" className="w-56" value={cat} onChange={(e) => setCat(e.target.value as CheckCategory | 'all' | 'release')} options={[...(scope ? [{ value: 'release', label: 'Release under test (12)' }] : []), { value: 'all', label: 'All categories' }, ...Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }))]} />
         </div>
       </Panel>
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4 items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4 items-start">
         <Panel title="Checks" className="lg:max-h-[70vh] lg:overflow-y-auto">
           <Table head={['ID', 'Check', 'Form', 'Action', 'UAT']} rows={list.map((x) => {
             const rs = x.tests.map((t) => results.get(`${x.id}#${t.name}`))
@@ -62,6 +63,7 @@ export default function Checks() {
             : <p className="text-xs text-lab-amber">{run < total ? `${total - run} test cases not executed yet.` : `${failing} test cases fail. Correct the logic and re-run.`}</p>}
         </Panel>
       )}
+      <ConsentVersions />
     </div>
   )
 }

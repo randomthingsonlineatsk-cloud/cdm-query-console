@@ -106,6 +106,7 @@ export interface Project {
   // Phase 5: which study this project runs (absent = HLV-204-201) and the e-diary state.
   study?: 'HLV-204-201' | 'ALV-3-301' | 'HRP-301'
   vax?: VaxState
+  consentVersions?: import('./consentVersions').ConsentVersionsFile // imported from the Plain Language Lab
 }
 
 export interface DiaryDay {

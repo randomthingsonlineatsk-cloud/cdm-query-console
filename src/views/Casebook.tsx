@@ -19,7 +19,7 @@ export default function Casebook() {
   const [guide, setGuide] = useState(false)
   if (!subjects.length) return <Panel title="Casebook" sub="No data yet.">{p.live ? <p className="text-sm">Advance the study clock: the first {STUDY.protocol === 'ALV-3-301' ? 'participant is vaccinated' : 'subject is screened'} on {STUDY.start}.</p> : <p className="text-sm">The database is not live. Complete start-up and go live; sites then enter data as the study clock moves.</p>}</Panel>
   return (
-    <div className="grid lg:grid-cols-[220px_1fr] gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[220px_1fr] gap-4">
       <Panel title="Subjects" className="lg:max-h-[75vh] lg:overflow-y-auto">
         {SITES.map((s) => {
           const list = subjects.filter((x) => x.startsWith(s.id))

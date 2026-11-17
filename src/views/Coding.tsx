@@ -48,7 +48,7 @@ function Worklist() {
   const coded = Object.values(p.coding).filter((r) => r.status === 'coded' && !r.review)
   const r = sel ? p.coding[sel] : undefined
   return (
-    <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 items-start">
       <Panel title={`${list.length} terms`} right={<div className="flex gap-2"><Select aria-label="Status" className="w-40" value={status} onChange={(e) => setStatus(e.target.value)} options={[{ value: 'todo', label: 'To code' }, { value: 'review', label: 'Hierarchy review' }, { value: 'query', label: 'In query' }, { value: 'coded', label: 'Coded' }, { value: 'approved', label: 'Approved' }, { value: 'all', label: 'All' }]} /><Select aria-label="Form" className="w-36" value={form} onChange={(e) => setForm(e.target.value)} options={[{ value: 'all', label: 'All forms' }, { value: 'AE', label: 'Adverse events' }, { value: 'MH', label: 'Medical history' }, { value: 'CM', label: 'Medications' }]} /></div>}>
         <div className="max-h-[60vh] overflow-y-auto">
           <Table head={['Verbatim', 'Form', 'Subject', 'Status', 'Coded as', 'How']} rows={list.slice(0, 300).map((x) => {

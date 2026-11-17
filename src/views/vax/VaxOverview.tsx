@@ -30,7 +30,7 @@ export default function VaxOverview() {
         </div>
         <p className="text-xs text-lab-text-muted">{STUDY.design}. The study is observer-blind: you see no treatment allocation, and an unblinded pharmacist outside the data management team prepares the syringes. Solicited reactions come from the participants’ e-diary, an external electronic source held by the diary vendor; everything else is on the eCRF ({STUDY.cdash}). Controlled terminology is {STUDY.ctVersion}.</p>
       </Panel>
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-2 gap-4">
         <Panel title="What this study teaches" sub="Start-up, coding, SAE and lab reconciliation, oversight and lock are practised on HLV-204-201; here the focus is participant-reported data.">
           <ol className="space-y-1.5 text-sm list-decimal pl-5">
             <li><button className="text-left hover:text-lab-fda" onClick={() => go('diary', 'compliance')}>Watch diary compliance and alert sites while a day is still open</button></li>
