@@ -74,7 +74,7 @@ function Sae() {
       <Panel title="Sign-off" sub="When every discrepancy in scope is resolved or accepted, data management and drug safety sign.">
         <p className="text-xs">Data management: <SigLine s={p.sae.signoffDm} /> · Drug safety: <SigLine s={p.sae.signoffSafety} /></p>
         {reconReady(p) ? (
-          <div className="grid md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 gap-3">
             {!p.sae.signoffDm && <SignBox meaning={`SAE reconciliation complete at cut-off ${p.sae.cutoff ?? p.clock}`} what="SAE reconciliation (data management)" roles={['dm', 'dmlead']} label="Sign for data management" onSigned={(s) => act((pp) => signoff(pp, s))} />}
             {!p.sae.signoffSafety && <SignBox meaning={`SAE reconciliation complete at cut-off ${p.sae.cutoff ?? p.clock}`} what="SAE reconciliation (drug safety)" roles={['safety']} label="Sign for drug safety" onSigned={(s) => act((pp) => signoff(pp, s))} />}
           </div>
@@ -125,7 +125,7 @@ function Transfers() {
   const t = log.find((x) => x.id === sel)
   const dm = ['dm', 'dmlead'].includes(me(p).role)
   return (
-    <div className="grid xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4 items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4 items-start">
       <Panel title="Transfer log" sub="Files arrive on the secure transfer server on the first Monday of each month. Check each against its data transfer agreement before loading.">
         <Table head={['Date', 'Vendor', 'File', 'Records (log)', 'Status']} rows={log.map((x) => {
           const s = p.ext.transfers[x.id]
@@ -240,7 +240,7 @@ function ExtRow({ d, dm }: { d: ReturnType<typeof extDiscrepancies>[number]; dm:
 
 function Dtas() {
   return (
-    <div className="grid lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-3 gap-4">
       {VENDOR_IDS.map((v) => { const d = DTAS[v]; return (
         <Panel key={v} title={d.name} sub={`Data transfer agreement v1.0 · ${d.system}`}>
           <dl className="text-xs space-y-1">

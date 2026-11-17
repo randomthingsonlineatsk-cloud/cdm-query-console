@@ -1,0 +1,49 @@
+{
+  "format": "plain-language-lab/consent-versions",
+  "schema": 1,
+  "exportedUtc": "2026-07-20T09:00:00.000Z",
+  "study": "HRP-301",
+  "versions": [
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v2.0",
+      "committee": "Institutional Ethics Committee, Pune site",
+      "sites": [
+        "Site 301 Pune"
+      ],
+      "approved": "2025-11-20"
+    },
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v2.0",
+      "committee": "Central IRB (US sites)",
+      "sites": [
+        "Site 101 Boston",
+        "Site 102 Denver"
+      ],
+      "approved": "2025-11-24"
+    },
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v3.0",
+      "committee": "Central IRB (US sites)",
+      "sites": [
+        "Site 101 Boston",
+        "Site 102 Denver"
+      ],
+      "approved": "2026-07-08"
+    }
+  ],
+  "inUse": [
+    {
+      "site": "Site 101 Boston",
+      "document": "consent",
+      "language": "en",
+      "version": "v3.0",
+      "from": "2026-07-15"
+    }
+  ]
+}

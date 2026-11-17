@@ -79,7 +79,7 @@ function CcgView() {
       <Panel title="CRF completion guidelines" sub="Instructions for site staff, form by form. Approved before go-live; every site user is trained on them." right={<SigLine s={p.startup.ccgApproved} />}>
         <ul className="list-disc pl-5 space-y-1 text-sm">{CCG_GENERAL.map((g) => <li key={g}>{g}</li>)}</ul>
       </Panel>
-      <div className="grid md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 gap-3">
         {Object.entries(CCG_FORM).map(([f, lines]) => (
           <Panel key={f} title={`${FORMS[f].name} (${FORMS[f].domain})`}>
             <ul className="list-disc pl-5 space-y-1 text-sm">{lines.map((l) => <li key={l}>{l}</li>)}</ul>

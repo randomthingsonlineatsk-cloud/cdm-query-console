@@ -34,7 +34,7 @@ export default function Overview() {
         </div>
         <p className="text-xs text-lab-text-muted">You are the data management team at the CRO for this study, from start-up to the cleaning of live data. Switch roles at the top to act as the site, the CRA, the coder or the investigator. The eCRF follows {STUDY.cdash}; controlled terminology is {STUDY.ctVersion}.</p>
       </Panel>
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-2 gap-4">
         <Panel title="Where to start" sub="The study moves through the same steps as a real one.">
           <ol className="space-y-1.5">
             {steps.map((s, i) => (

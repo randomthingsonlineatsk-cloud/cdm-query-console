@@ -32,7 +32,7 @@ export default function Lock() {
       <Panel title="Lock checklist">
         <Table head={['', 'Item', 'Evidence', '']} rows={items.map((i) => [<span className={i.ok ? 'text-lab-cdsco' : 'text-lab-red'}>{i.ok ? '✓' : '✗'}</span>, i.label, <span className="text-[11px] text-lab-text-muted">{i.evidence}</span>, i.view !== 'lock' ? <Btn tone="grey" className="py-0.5" onClick={() => go(i.view as never)}>Open</Btn> : ''])} />
       </Panel>
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-2 gap-4">
         <CasebookSign />
         <AuditReview />
         <Privacy />
@@ -165,7 +165,7 @@ function Unlock() {
         </div>
       )}
       {pending && (
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 gap-3">
           {!pending.approvals.some((a) => a.role === 'dmlead') && <SignBox meaning={`Unlock ${pending.id} approved`} what={`Unlock ${pending.id}`} roles={['dmlead']} label="Approve as lead data manager" onSigned={(s) => act((pp) => approveUnlock(pp, s))} />}
           {!pending.approvals.some((a) => a.role === 'sponsor') && <SignBox meaning={`Unlock ${pending.id} approved`} what={`Unlock ${pending.id}`} roles={['sponsor']} label="Approve as sponsor" onSigned={(s) => act((pp) => approveUnlock(pp, s))} />}
         </div>

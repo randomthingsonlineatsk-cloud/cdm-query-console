@@ -35,7 +35,7 @@ export default function Missions() {
         </div>
         {here && <p className="text-xs text-lab-amber">This project is the prepared project for {here.id} {here.title}.</p>}
       </Panel>
-      <div className="grid md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 gap-3">
         {MISSIONS.map((m) => {
           const best = bestOf(runs, m.id)
           const r = latestRun(p, m.id)

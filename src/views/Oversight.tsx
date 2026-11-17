@@ -79,12 +79,12 @@ function Sdv() {
     <div className="space-y-4">
       <Panel title="SDV plan" sub="Targeted SDV verifies the critical-to-quality fields from the risk assessment, every field of an SAE and the eligibility form. Full SDV verifies every field." right={<SigLine s={p.sdvPlan.signature} />}>
         <p className="text-sm">Current plan: <b>{p.sdvPlan.mode === 'targeted' ? 'Targeted (risk-based)' : 'Full (100%)'}</b> · {Math.round(sdvProgress(p).pct * 100)}% of required fields verified{sdvProgress(p).changed ? ` · ${sdvProgress(p).changed} changed after SDV and need re-verifying` : ''}</p>
-        {!p.sdvPlan.signature && <div className="grid md:grid-cols-2 gap-3">
+        {!p.sdvPlan.signature && <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 gap-3">
           <SignBox meaning="Targeted SDV plan approved" what="SDV plan (targeted)" roles={['dmlead']} label="Approve targeted SDV" onSigned={(s) => act((pp) => setSdvPlan(pp, 'targeted', s))} />
           <SignBox meaning="Full SDV plan approved" what="SDV plan (full)" roles={['dmlead']} label="Approve full SDV" onSigned={(s) => act((pp) => setSdvPlan(pp, 'full', s))} />
         </div>}
       </Panel>
-      <div className="grid lg:grid-cols-[260px_1fr] gap-4 items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[260px_1fr] gap-4 items-start">
         <Panel title="Subject">
           <Select aria-label="Subject" value={subj} onChange={(e) => { setSubj(e.target.value); setFk(null) }} options={subjects.map((s) => ({ value: s, label: s }))} />
           <ul className="space-y-1">{forms.map((k) => { const req = sdvRequired(p, k); const done = req.filter((f) => sdvState(p, `${k}|${f}`) === 'verified').length; return (

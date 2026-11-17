@@ -53,7 +53,7 @@ function JoinOrCreate({ session, onIn, run }: { session: Session; onIn: (s: Sess
   const [c, setC] = useState({ name: '', instructorName: '', instructorEmail: '' })
   const [key, setKey] = useState<string | null>(null)
   return (
-    <div className="grid md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 gap-4">
       <Panel title="Join a class (student)" sub="Your instructor gives you the six-letter code. The email address is optional; it is used only for deadline reminders.">
         <input aria-label="Join code" className={ic('font-mono uppercase')} value={j.code} onChange={(e) => setJ({ ...j, code: e.target.value })} placeholder="Join code" />
         <input aria-label="Your name" className={ic('')} value={j.name} onChange={(e) => setJ({ ...j, name: e.target.value })} placeholder="Your name" />
