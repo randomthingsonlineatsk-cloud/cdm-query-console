@@ -1,0 +1,125 @@
+{
+  "format": "plain-language-lab/consent-versions",
+  "schema": 1,
+  "exportedUtc": "2026-06-30T09:00:00.000Z",
+  "study": "HRP-301",
+  "committees": [
+    {
+      "id": "CA-REB",
+      "name": "Research Ethics Board, Canada",
+      "country": "Canada",
+      "sites": [
+        "Site 401 Toronto"
+      ]
+    },
+    {
+      "id": "DE-EC",
+      "name": "Ethics committee, Germany (CTR Part II)",
+      "country": "Germany",
+      "sites": [
+        "Site 201 Hamburg"
+      ]
+    },
+    {
+      "id": "IN-IEC-PUNE",
+      "name": "Institutional Ethics Committee, Pune site",
+      "country": "India",
+      "sites": [
+        "Site 301 Pune"
+      ]
+    },
+    {
+      "id": "IN-IEC-MUM",
+      "name": "Institutional Ethics Committee, Mumbai site",
+      "country": "India",
+      "sites": [
+        "Site 302 Mumbai"
+      ]
+    },
+    {
+      "id": "US-IRB",
+      "name": "Central IRB (US sites)",
+      "country": "United States",
+      "sites": [
+        "Site 101 Boston",
+        "Site 102 Denver"
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v2.0",
+      "committeeId": "DE-EC",
+      "committee": "Ethics committee, Germany (CTR Part II)",
+      "country": "Germany",
+      "sites": [
+        "Site 201 Hamburg"
+      ],
+      "approved": "2026-03-25"
+    },
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v2.0",
+      "committeeId": "IN-IEC-PUNE",
+      "committee": "Institutional Ethics Committee, Pune site",
+      "country": "India",
+      "sites": [
+        "Site 301 Pune"
+      ],
+      "approved": "2026-04-01"
+    },
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v2.0",
+      "committeeId": "IN-IEC-MUM",
+      "committee": "Institutional Ethics Committee, Mumbai site",
+      "country": "India",
+      "sites": [
+        "Site 302 Mumbai"
+      ],
+      "approved": "2026-04-01"
+    },
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v2.0",
+      "committeeId": "US-IRB",
+      "committee": "Central IRB (US sites)",
+      "country": "United States",
+      "sites": [
+        "Site 101 Boston",
+        "Site 102 Denver"
+      ],
+      "approved": "2026-04-10"
+    },
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v3.0",
+      "committeeId": "IN-IEC-PUNE",
+      "committee": "Institutional Ethics Committee, Pune site",
+      "country": "India",
+      "sites": [
+        "Site 301 Pune"
+      ],
+      "approved": "2026-04-15"
+    },
+    {
+      "document": "consent",
+      "language": "en",
+      "version": "v2.0",
+      "committeeId": "CA-REB",
+      "committee": "Research Ethics Board, Canada",
+      "country": "Canada",
+      "sites": [
+        "Site 401 Toronto"
+      ],
+      "approved": "2026-05-01"
+    }
+  ],
+  "inUse": []
+}
