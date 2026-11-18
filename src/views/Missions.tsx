@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state'
 import { useNav } from '../App'
-import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, scoreM18, scoreM19, certificate, CERT_NEEDED, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
+import { MISSIONS, LEVEL_TEXT, progress, M4_SCENARIOS, latestRun, startMission, scoreM1, scoreM2, scoreM3, scoreM4, scoreM5, scoreM6, scoreM7, scoreM8, scoreM9, scoreM10, scoreM11, scoreM12, scoreM21, scoreM13, scoreM14, scoreM15, scoreM16, scoreM17, scoreM18, scoreM19, certificate, CERT_NEEDED, siteIssueStatus, prepareMission, MISSION_PROJECT } from '../domain/missions'
 import { listProjects } from '../domain/store'
 import type { MissionRun } from '../domain/types'
 import { scoreQuery } from '../domain/queries'
@@ -26,7 +26,7 @@ export default function Missions() {
   const passed = MISSIONS.filter((m) => bestOf(runs, m.id)?.passed).length
   return (
     <div className="space-y-4">
-      <Panel title="Missions" sub="Twenty scored missions on three studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary, M18 on HLV-204-201’s decentralised elements under ICH E6(R3) Annex 2, M19 on its ICH M11 protocol and the Protocol-to-Database Twin, and M20 on the Ostrevia trial HRP-301 (VERDANT-1), which the SDTM Mapping Trainer maps next. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
+      <Panel title="Missions" sub="Twenty-one scored missions on three studies: M1 to M13 on the hypertension trial HLV-204-201, M14 to M17 on the vaccine trial ALV-3-301 with its e-diary, M18 on HLV-204-201’s decentralised elements under ICH E6(R3) Annex 2, M19 on its ICH M11 protocol and the Protocol-to-Database Twin, M20 on the Ostrevia trial HRP-301 (VERDANT-1), which the SDTM Mapping Trainer maps next, and M21 on its consent versions by site. Each starts from a prepared project of its own, so your work elsewhere is never disturbed. Passing ten at 70% or more, on either study, earns the course certificate.">
         <div className="grid grid-cols-3 gap-2 max-w-md"><Stat label="Passed" value={passed} tone="green" /><Stat label="Missions" value={MISSIONS.length} tone="blue" /><Stat label="For certificate" value={`10 of ${MISSIONS.length}`} /></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-lab-text-muted">Level for new runs</span>
@@ -171,7 +171,8 @@ function M4() {
   )
 }
 
-const P2: Record<string, { view: 'coding' | 'recon' | 'oversight'; label: string; score: typeof scoreM5; tips: string[] }> = {
+const P2: Record<string, { view: 'coding' | 'recon' | 'oversight' | 'checks'; label: string; score: typeof scoreM5; tips: string[] }> = {
+  M21: { view: 'checks', label: 'Open the consent versions (Edit checks)', score: scoreM21, tips: ['The site is the first three digits of the participant number; each site’s committee is in the mapping above the listing.', 'Three things are wrong: a version the site’s committee never approved, a form signed before that committee approved it, and an old version still signed more than 30 days after the newer one was approved there.', 'Raise the query on the consent page (form IC) with the dates and versions you compared; ask, do not tell the site what to write.'] },
   M5: { view: 'coding', label: 'Open coding', score: scoreM5, tips: ['Code as Tomás Ibarra (medical coder); approve as Jonas Weber (lead data manager).', 'A trade name codes to its own record; a drug with two classes needs the class that matches the indication.', 'Query combined or ambiguous terms instead of coding them; they come back once the site answers.'] },
   M6: { view: 'recon', label: 'Open reconciliation', score: scoreM6, tips: ['Work as Asha Rao (data manager); sign off as Asha or Jonas and as Dr Ravi Menon (drug safety).', 'Check the SAE report in your head: which side moved away from it?', 'An unmatched pair on both sides may be one event with a mistyped key: link it.', 'Advance the clock so sites and drug safety can answer.'] },
   M7: { view: 'recon', label: 'Open reconciliation', score: scoreM7, tips: ['Load or reject every central-lab transfer on the Vendor transfers tab, then reconcile on Vendor reconciliation.', 'Read the DTA before classing a sample the EDC does not have.', 'A unit problem needs a vendor clarification and a conversion rule.'] },

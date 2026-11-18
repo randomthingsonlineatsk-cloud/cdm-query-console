@@ -107,6 +107,7 @@ export interface Project {
   study?: 'HLV-204-201' | 'ALV-3-301' | 'HRP-301'
   vax?: VaxState
   consentVersions?: import('./consentVersions').ConsentVersionsFile // imported from the Plain Language Lab
+  consentSiteMap?: Record<string, string> // console site → ethics committee in that file
 }
 
 export interface DiaryDay {
