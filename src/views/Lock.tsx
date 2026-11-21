@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { csrExport } from '../domain/csrExport'
 import { useStore } from '../state'
 import { useNav } from '../App'
 import { interimChecklist, interimLock, checklist, randomised, piCurrent, privacyFindings, signCasebooks, recordAuditReview, confirmPrivacy, softLock, addHardSignature, requestUnlock, approveUnlock, createArchive, archiveFiles, retentionDate, LPLV, CLOSE_OUT_REPORT } from '../domain/lock'
@@ -145,6 +146,8 @@ function Archive() {
       <p className="text-sm text-lab-cdsco">The database is hard-locked and read-only.</p>
       <p className="text-xs text-lab-text-muted">The archive holds the data (one CDASH-style CSV per form), the audit trail with every item version, the metadata (edit checks, forms, coding, queries) and the documents (deviations, signatures, lock record), in open formats, to be kept until {retentionDate(p)} (ICH E6(R3) 4.2.7; 25 years under the EU CTR). {archiveFiles(p).length} files.</p>
       <Btn tone="solid" onClick={download}>Create and download the archive (.zip)</Btn>
+      <p className="text-xs text-lab-text-muted">For the medical writer: important protocol deviations by category, the reconciled safety case of each SAE and the reconciliation status, for the CSR & Narrative Studio (sections 10.2 and 12.3.2).</p>
+      <Btn tone="grey" onClick={() => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(csrExport(p), null, 1)], { type: 'application/json' })); a.download = `${STUDY.protocol}-for-the-csr.json`; a.click(); URL.revokeObjectURL(a.href) }}>Export for the CSR (.json)</Btn>
       {p.lock.archive && <p className="text-[11px] text-lab-text-muted">Archived {fmtUtc(p.lock.archive.utc)} UTC · {p.lock.archive.files} files · checksum {p.lock.archive.checksum} · retain until {p.lock.archive.retention}</p>}
     </div>
   )
