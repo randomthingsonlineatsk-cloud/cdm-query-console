@@ -37,8 +37,8 @@ const MONTHLY = ['2026-04-06', '2026-05-04', '2026-06-01', '2026-07-06', '2026-0
 // The vendors and transfer agreements of the open study. HRP-301 has a central laboratory
 // (safety laboratory and HBV DNA monitoring) and an IRT, and no central ECG reading.
 const HLV_DTAS = structuredClone(DTAS)
-const OST_CL_RULES = ['Results in conventional units as agreed: ALT and AST U/L, neutrophils and lymphocytes 10^9/L, HBV DNA IU/mL.', 'HBV DNA is tested every 4 weeks (Weeks 4, 8, 12 and 16) only for participants anti-HBc positive at screening; below the lower limit of quantification (10 IU/mL) it is reported as UNDETECTABLE.', 'Reference ranges from the central laboratory, sent with each result.', 'Data cut-off: samples received up to 7 days before the transfer date.', 'Pipe-delimited text, header row, one row per test.']
-export const SI_UNITS: Record<string, string> = { GLUC: 'mmol/L', SODIUM: 'mmol/L', HBA1C: '%', ALT: 'U/L', AST: 'U/L', NEUT: '10^9/L', LYMPH: '10^9/L', HBVDNA: 'IU/mL' }
+const OST_CL_RULES = ['Results in conventional units as agreed: ALT and AST U/L, total bilirubin umol/L, neutrophils and lymphocytes 10^9/L, HBV DNA IU/mL.', 'HBV DNA is tested every 4 weeks (Weeks 4, 8, 12 and 16) only for participants anti-HBc positive at screening; below the lower limit of quantification (10 IU/mL) it is reported as UNDETECTABLE.', 'Reference ranges from the central laboratory, sent with each result.', 'Data cut-off: samples received up to 7 days before the transfer date.', 'Pipe-delimited text, header row, one row per test.']
+export const SI_UNITS: Record<string, string> = { GLUC: 'mmol/L', SODIUM: 'mmol/L', HBA1C: '%', ALT: 'U/L', AST: 'U/L', BILI: 'umol/L', NEUT: '10^9/L', LYMPH: '10^9/L', HBVDNA: 'IU/mL' }
 export function applyVendors(study: string) {
   const ost = study === OST_ID
   VENDOR_IDS.splice(0, VENDOR_IDS.length, ...(ost ? ['CL', 'IRT'] as VendorId[] : ['CL', 'ECG', 'IRT'] as VendorId[]))
@@ -62,6 +62,19 @@ export function transferLog(clock: string): Transfer[] {
   return out.filter((t) => t.date <= clock).sort((a, b) => a.date.localeCompare(b.date) || a.vendor.localeCompare(b.vendor))
 }
 
+/** Total bilirubin (umol/L), drawn after the other results of the sample so they are unchanged.
+ *  The participant whose ALT rose to 5 × ULN has a mild rise too, below 2 × ULN: not Hy's law. */
+export function ostBilirubin(r: { normal: (m: number, s: number) => number }, altHigh: boolean): number {
+  const v = Math.max(4, r.normal(9, 3))
+  return altHigh ? 25 : v
+}
+/** The bilirubin of one central laboratory sample, as the transfer reports it. */
+export function ostBilirubinFor(lbrefid: string, altHigh: boolean): string {
+  const r = rng(parseInt(hash(lbrefid).slice(-8), 16))
+  if (!altHigh) { r.normal(22, 7); r.normal(23, 6) }
+  r.normal(3.9, 1); r.normal(2.0, 0.5)
+  return ostBilirubin(r, altHigh).toFixed(0)
+}
 const fixed = (p: Project, id: string, date: string) => { const f = p.ext.vendorFixes[id]; return !!f && f < date }
 
 // Build a transfer file from the source truth, with the vendor's own planted problems.
@@ -87,6 +100,7 @@ export function transferFile(p: Project, t: Transfer): { text: string; declared:
         row('AST', (hi ? hi.alt * 0.7 : Math.max(10, r.normal(23, 6))).toFixed(0), 'U/L', '10', '40')
         row('NEUT', Math.max(1.6, r.normal(3.9, 1)).toFixed(1), '10^9/L', '1.8', '7.5')
         row('LYMPH', Math.max(0.8, r.normal(2.0, 0.5)).toFixed(1), '10^9/L', '1.0', '4.0')
+        row('BILI', ostBilirubin(r, !!hi).toFixed(0), 'umol/L', '3', '21')
         if (ost?.hbcPositive.includes(e.subj) && ['W4', 'W8', 'W12', 'W16'].includes(e.visit)) row('HBVDNA', 'UNDETECTABLE', 'IU/mL', '', '')
         continue
       }
