@@ -32,6 +32,9 @@ Brain and nerves
     Abnormal skin sensation
       Tingling | Pins and needles; Paraesthesia; Tingling in fingers
       Numbness | Numbness in hands; Loss of sensation
+  Nerve damage
+    Peripheral nerve disorders
+      Peripheral neuropathy | Peripheral sensory neuropathy; Neuropathy peripheral; Numb and tingling feet
 Heart and rhythm
   Heart rhythm disorders
     Atrial rhythm disorders
@@ -58,6 +61,9 @@ Blood vessels and circulation
       Swelling of the legs | Ankle swelling; Swollen ankles; Swelling both ankles; Oedema of legs; Peripheral oedema; Leg swelling
     Flushing
       Flushing episode | Flushing; Hot flush; Facial flushing
+  Blood clots
+    Lung blood clots
+      Pulmonary embolism | PE; Lung clot; Pulmonary thromboembolism
 Lungs and airways
   Cough and airway irritation
     Cough symptoms
@@ -77,6 +83,9 @@ Lungs and airways
   Voice disorders
     Voice changes
       Hoarseness | Dysphonia; Hoarse voice; Loss of voice
+  Lung inflammation
+    Non-infective lung inflammation
+      Pneumonitis | Interstitial lung disease; Lung inflammation; Drug-induced pneumonitis
 Digestive system
   Stomach and gut symptoms
     Nausea and vomiting
@@ -96,6 +105,9 @@ Digestive system
   Appendix conditions
     Appendix inflammation
       Appendix inflammation | Appendicitis; Acute appendicitis
+  Mouth disorders
+    Mouth inflammation
+      Stomatitis | Mouth ulcers; Oral mucositis; Sore mouth
 Kidneys and urinary tract
   Kidney function
     Acute kidney conditions
@@ -147,6 +159,9 @@ Skin
   Hives
     Urticaria conditions
       Urticaria | Hives; Nettle rash; Wheals
+  Hair disorders
+    Hair loss conditions
+      Hair loss | Alopecia; Hair thinning
 Muscles, bones and joints
   Muscle symptoms
     Muscle spasm and cramp
@@ -170,6 +185,9 @@ Metabolism and nutrition
     Potassium disorders
       High potassium | Hyperkalaemia; Potassium increased; Raised potassium
       Low potassium | Hypokalaemia; Potassium decreased
+  Appetite disorders
+    Appetite changes
+      Decreased appetite | Loss of appetite; Appetite lost; Anorexia
 Hormones and glands
   Thyroid conditions
     Underactive thyroid
@@ -242,6 +260,17 @@ Operations and procedures
   Joint operations
     Joint replacement
       Knee replacement | Total knee replacement; Knee arthroplasty
+Blood and lymph
+  White cell disorders
+    Low white cell counts
+      Neutropenia | Neutrophil count decreased; Low neutrophils
+      Febrile neutropenia | Neutropenic fever; Fever with low neutrophils
+  Red cell disorders
+    Anaemias
+      Anaemia | Anemia; Low haemoglobin; Haemoglobin decreased
+  Platelet disorders
+    Low platelet counts
+      Thrombocytopenia | Platelet count decreased; Low platelets
 `
 
 // Version 1.1: the changes a learner meets in an upgrade.

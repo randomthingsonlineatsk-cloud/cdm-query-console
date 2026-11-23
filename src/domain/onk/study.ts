@@ -39,7 +39,7 @@ export const ONK_VISITS: Visit[] = [
   ...WEEKS.map((w) => ({ id: `W${w}`, name: `Week ${w} tumour assessment`, day: w * 7 + 1, lo: w * 7 - 6, hi: w * 7 + 8, forms: ['SV', 'TUI', 'TRM', 'RSP'], optional: ['TUI'] })),
   { id: 'UNS', name: 'Unscheduled', day: 0, lo: -9999, hi: 9999, forms: ['SV'] },
 ]
-export const ONK_LOG_FORMS = ['EX', 'DTH', 'LC', 'DV']
+export const ONK_LOG_FORMS = ['EX', 'AE', 'DTH', 'LC', 'DV']
 export const visitOfRaw = (v: string) => (v === 'Screening' ? 'SCR' : /^Week (\d+)$/.exec(v) ? `W${/^Week (\d+)$/.exec(v)![1]}` : v)
 
 const opt = (v: string, l = v) => ({ value: v, label: l })
@@ -56,6 +56,10 @@ export const ONK_CODELISTS: Record<string, { value: string; label: string }[]> =
   NTRGRESP: [opt('CR', 'CR Complete response'), opt('NON-CR/NON-PD', 'Non-CR/Non-PD'), opt('PD', 'PD Progressive disease'), opt('NE', 'NE Not evaluable')],
   OVRLRESP: [opt('CR', 'CR Complete response'), opt('PR', 'PR Partial response'), opt('SD', 'SD Stable disease'), opt('PD', 'PD Progressive disease'), opt('NE', 'NE Not evaluable')],
   DTHCAUSE: [opt('Disease progression'), opt('Pneumonia'), opt('Pulmonary embolism'), opt('Other')],
+  TOXGR: [opt('1', '1 Mild'), opt('2', '2 Moderate'), opt('3', '3 Severe'), opt('4', '4 Life-threatening'), opt('5', '5 Death')],
+  AEREL: [opt('RELATED', 'Related'), opt('NOT RELATED', 'Not related')],
+  AEACN: [opt('DOSE NOT CHANGED', 'Dose not changed'), opt('DOSE REDUCED', 'Dose reduced'), opt('DRUG INTERRUPTED', 'Drug interrupted (cycle delayed)'), opt('DRUG WITHDRAWN', 'Drug withdrawn'), opt('NOT APPLICABLE', 'Not applicable (after treatment ended)')],
+  AEOUT: [opt('RECOVERED/RESOLVED', 'Recovered/resolved'), opt('RECOVERING/RESOLVING', 'Recovering/resolving'), opt('NOT RECOVERED/NOT RESOLVED', 'Not recovered/not resolved'), opt('RECOVERED/RESOLVED WITH SEQUELAE', 'Recovered with sequelae'), opt('FATAL', 'Fatal'), opt('UNKNOWN', 'Unknown')],
   DVCAT: ['Eligibility', 'Informed consent', 'Visit window', 'Prohibited medication', 'Investigational product', 'Safety reporting', 'Procedure not done', 'Other'].map((v) => opt(v.toUpperCase(), v)),
   IETEST: [
     opt('IN01', 'IN01 Aged 18 or over'),
@@ -126,6 +130,23 @@ export const ONK_FORMS: Record<string, FormDef> = {
     { id: 'EXSTDAT', label: 'Start date (first dose, or the infusion date)', type: 'date', required: true, ctq: true },
     { id: 'EXENDAT', label: 'End date (last daily dose of the cycle, or the infusion date)', type: 'date', required: true, ctq: true },
   ] },
+  AE: { id: 'AE', name: 'Adverse events', domain: 'AE', repeating: true, fields: [
+    { id: 'AETERM', label: 'Adverse event (verbatim)', type: 'text', required: true, ctq: true },
+    { id: 'AESTDAT', label: 'Start date', type: 'date', required: true, ctq: true },
+    { id: 'AEONGO', label: 'Ongoing?', type: 'yn', codelist: 'NY', required: true },
+    { id: 'AEENDAT', label: 'End date', type: 'date', showIf: { field: 'AEONGO', equals: 'N' } },
+    { id: 'AETOXGR', label: 'Grade (CTCAE-style, 1 to 5)', type: 'select', codelist: 'TOXGR', required: true, ctq: true },
+    { id: 'AESER', label: 'Serious?', type: 'yn', codelist: 'NY', required: true, ctq: true },
+    { id: 'AESDTH', label: 'Results in death', type: 'yn', codelist: 'NY', showIf: { field: 'AESER', equals: 'Y' } },
+    { id: 'AESLIFE', label: 'Is life-threatening', type: 'yn', codelist: 'NY', showIf: { field: 'AESER', equals: 'Y' } },
+    { id: 'AESHOSP', label: 'Requires or prolongs hospitalisation', type: 'yn', codelist: 'NY', showIf: { field: 'AESER', equals: 'Y' } },
+    { id: 'AESDISAB', label: 'Persistent or significant disability', type: 'yn', codelist: 'NY', showIf: { field: 'AESER', equals: 'Y' } },
+    { id: 'AESCONG', label: 'Congenital anomaly', type: 'yn', codelist: 'NY', showIf: { field: 'AESER', equals: 'Y' } },
+    { id: 'AESMIE', label: 'Other medically important event', type: 'yn', codelist: 'NY', showIf: { field: 'AESER', equals: 'Y' } },
+    { id: 'AEREL', label: 'Related to study treatment?', type: 'select', codelist: 'AEREL', required: true },
+    { id: 'AEACN', label: 'Action taken with study treatment', type: 'select', codelist: 'AEACN', required: true },
+    { id: 'AEOUT', label: 'Outcome', type: 'select', codelist: 'AEOUT', required: true },
+  ] },
   DTH: { id: 'DTH', name: 'Death', domain: 'DD', fields: [
     { id: 'DTHDAT', label: 'Date of death (YYYY-MM-DD, or YYYY-MM if the day is not known)', type: 'text', required: true, ctq: true },
     { id: 'DTHCAUSE', label: 'Primary cause of death', type: 'select', codelist: 'DTHCAUSE', required: true, ctq: true },
@@ -151,6 +172,7 @@ export const ONK_CCG_FORM: Record<string, string[]> = {
   TRM: ['One page per lesion per scan. Target lesions: the diameter in mm (short axis for a lymph node). A target lesion present but under 5 mm is too small to measure: tick it and leave the diameter blank. Non-target and new lesions: the state only. If the scan was not done, give the reason on every lesion page.'],
   RSP: ['The sum is the target diameters added up, with 5 mm for each lesion too small to measure. Target response: PR at 30% or more below the baseline sum; PD at 20% and 5 mm or more above the smallest sum so far (the nadir); CR when every target lesion has gone. A new lesion makes the overall response PD.'],
   EX: ['One page per 21-day cycle. ONK-44: the first and last daily dose of the cycle. Docetaxel: the infusion date as both start and end.'],
+  AE: ['Every adverse event from the first dose to 30 days after the last dose, and any serious adverse event at any time. Disease progression is not an adverse event. Grade by the CTCAE-style scale (1 mild to 5 death). A serious event is also reported to drug safety on the SAE form within 24 hours; tick every seriousness criterion that applies. A fatal event is grade 5, outcome Fatal, with the date of death as its end date.'],
   DTH: ['Complete when the participant dies, from the death certificate or the medical record. If only the month is known, enter YYYY-MM and record how the death was reported.'],
   LC: ['The last date the participant was known alive; update it at every contact, including survival follow-up calls.'],
   DV: ['Describe what happened and when. The monitor or data management classifies importance.'],

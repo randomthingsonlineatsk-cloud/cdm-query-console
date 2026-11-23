@@ -37,8 +37,7 @@ const VIEWS: { id: View; label: string }[] = [
 const VAX_HIDDEN: View[] = ['twin', 'startup', 'listings', 'coding', 'recon', 'oversight', 'lock']
 // The Ostrevia trial opens live with start-up done; its protocol is not held as an ICH M11 twin.
 const OST_HIDDEN: View[] = ['twin', 'startup', 'diary']
-// The oncology study has no coded terms on its eCRF (no AE, medication or history pages in this training build).
-const ONK_HIDDEN: View[] = ['twin', 'startup', 'diary', 'coding']
+const ONK_HIDDEN: View[] = ['twin', 'startup', 'diary']
 
 function Shell() {
   const { p, act, error, setError, saved } = useStore()

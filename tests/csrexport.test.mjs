@@ -1,7 +1,7 @@
-// The export for the CSR, from a locked HRP-301; written into the CSR & Narrative Studio as its
+// The export for the CSR, from a locked HRP-301 and a locked ONK-44-302; written into the CSR & Narrative Studio as its
 // bundled data-management file when that repo is beside this one.
 import { describe, expect, test } from 'vitest'
-import { createProject, createOstProject } from '../src/domain/project'
+import { createProject, createOstProject, createOnkProject } from '../src/domain/project'
 import { applyStudy } from '../src/domain/build'
 import { prepareLocked } from '../src/domain/lock'
 import { csrExport } from '../src/domain/csrExport'
@@ -18,6 +18,17 @@ describe('export for the CSR', () => {
     const fs = await import('node:fs')
     const out = '../csr-narrative-studio/src/data/cdm-hrp-301.json'
     if (fs.existsSync('../csr-narrative-studio/src/data')) fs.writeFileSync(out, JSON.stringify(x, null, 1) + '\n')
+    applyStudy(createProject())
+  }, 900000)
+  test('a locked ONK-44-302: its SAEs reconciled, the unreported one created by drug safety', async () => {
+    const p = createOnkProject(); applyStudy(p)
+    prepareLocked(p)
+    const x = csrExport(p, new Date('2026-12-01T00:00:00Z'))
+    expect(x.lock.status).toBe('hard'); expect(x.study.id).toBe('ONK-44-302')
+    expect(x.sae.reconciliation.length).toBeGreaterThanOrEqual(9)
+    expect(x.sae.reconciliation.every((r) => r.status !== 'open')).toBe(true)
+    const fs = await import('node:fs')
+    if (fs.existsSync('../csr-narrative-studio/src/data')) fs.writeFileSync('../csr-narrative-studio/src/data/cdm-onk-44-302.json', JSON.stringify(x, null, 1) + '\n')
     applyStudy(createProject())
   }, 900000)
 })

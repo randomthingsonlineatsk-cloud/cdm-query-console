@@ -40,7 +40,7 @@ describe('Oncology trial ONK-44-302 (MERIDIAN-2)', () => {
     expect(s.subjects).toHaveLength(48)
     expect(s.subjects.filter((x) => x.d1)).toHaveLength(42)
     expect(s.issues.filter((i) => i.kind === 'true-value')).toHaveLength(4)
-    expect(s.issues.filter((i) => i.kind === 'error')).toHaveLength(10)
+    expect(s.issues.filter((i) => i.kind === 'error')).toHaveLength(13)
   })
   test('on the source records only the four true-value findings fire', () => {
     const p = casebook('truth')
@@ -94,7 +94,7 @@ describe('missions M22 to M24 on ONK-44-302', () => {
     for (const q of p.queries.filter((x) => x.status === 'answered')) closeQuery(p, q.id)
     const run = latestRun(p, 'M22')!
     SCORERS.M22(p, run)
-    expect(run.detail![0]).toBe('14 of 14 issues resolved')
+    expect(run.detail![0]).toBe('17 of 17 issues resolved')
     expect(run.score).toBeGreaterThanOrEqual(70)
     applyStudy(createProject())
   }, 300000)
@@ -131,6 +131,21 @@ describe('missions M22 to M24 on ONK-44-302', () => {
     const run = latestRun(p, 'M24')!
     SCORERS.M24(p, run)
     expect(run.score).toBe(15)
+    applyStudy(createProject())
+  }, 300000)
+})
+
+describe('ONK-44-302 adverse events and SAE reconciliation', () => {
+  test('M25 prepares the SAEs at 9 November with the planted safety database differences', async () => {
+    const { prepareMission, latestRun } = await import('../src/domain/missions')
+    const p = prepareMission(createProject(), 'M25', createProject, { lock: () => {}, locked: () => {} })
+    expect(p.clock).toBe('2026-11-09')
+    const key: { id: string; expected: string }[] = JSON.parse(latestRun(p, 'M25')!.answers!.key)
+    const kinds = key.map((k) => `${k.id.split('|')[0]} ${k.id.split('#')[1]} ${k.expected}`)
+    expect(kinds).toContain('402-036 missing-safety not-reported')
+    expect(kinds).toContain('401-010 onset safety')
+    expect(kinds).toContain('401-032 outcome safety')
+    expect(Object.values(p.coding).filter((r) => r.key.includes('|AE|')).every((r) => r.status !== 'uncoded')).toBe(true)
     applyStudy(createProject())
   }, 300000)
 })

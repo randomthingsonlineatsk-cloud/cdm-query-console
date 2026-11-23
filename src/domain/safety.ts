@@ -5,7 +5,7 @@
 
 import type { Project, SaeClass, ReconDecision, Signature } from './types'
 import { seedStudy, SAE_SUBJECTS, type Entry } from './seed'
-import { ACTIVE, OST_ID } from './study'
+import { ACTIVE, OST_ID, ONK_ID } from './study'
 import { OST_SAE_SUBJECTS } from './ost/seed'
 import { formsOfSubject } from './engine'
 import { audit, me, nowUtc, raiseManual, value, SYSTEM, seedEntry } from './project'
@@ -25,8 +25,8 @@ export const FIELDS = ['subject', 'term', 'onset', 'end', 'criteria', 'outcome',
 export type Field = (typeof FIELDS)[number]
 export const FIELD_LABEL: Record<Field, string> = { subject: 'Subject', term: 'Event term', onset: 'Onset date', end: 'Resolution date', criteria: 'Seriousness criteria', outcome: 'Outcome', causality: 'Causality (investigator)', action: 'Action with study drug' }
 
-const casePrefix = () => (ACTIVE.id === OST_ID ? 'HRP' : 'HAL')
-const LATE_REPORT = ['103-005', '106-007', '303-006']
+const casePrefix = () => (ACTIVE.id === OST_ID ? 'HRP' : ACTIVE.id === ONK_ID ? 'MRD' : 'HAL')
+const LATE_REPORT = ['103-005', '106-007', '303-006', '401-041']
 const fromEntry = (e: Entry, n: number): SafetyCase => ({
   caseId: `${casePrefix()}-2026-${String(n).padStart(5, '0')}`, subj: e.subj, term: e.truth.AETERM, onset: e.truth.AESTDAT, end: e.truth.AEENDAT,
   criteria: CRITERIA.filter((c) => e.truth[c] === 'Y'), outcome: e.truth.AEOUT, causality: e.truth.AEREL,
@@ -38,9 +38,9 @@ const caches: Record<string, { cases: SafetyCase[]; truth: Map<string, Entry>; n
 export function safetyBase() {
   if (caches[ACTIVE.id]) return caches[ACTIVE.id]
   const s = seedStudy()
-  const ost = ACTIVE.id === OST_ID
+  const ost = ACTIVE.id === OST_ID, onk = ACTIVE.id === ONK_ID
   const listed = ost ? OST_SAE_SUBJECTS : [...SAE_SUBJECTS, '103-007']
-  const saes = [...s.entries, ...s.hidden].filter((e) => e.form === 'AE' && e.truth.AESER === 'Y' && listed.includes(e.subj)).sort((a, b) => a.truth.AESTDAT.localeCompare(b.truth.AESTDAT))
+  const saes = [...s.entries, ...s.hidden].filter((e) => e.form === 'AE' && e.truth.AESER === 'Y' && (onk || listed.includes(e.subj))).sort((a, b) => a.truth.AESTDAT.localeCompare(b.truth.AESTDAT))
   const truth = new Map<string, Entry>()
   const cases: SafetyCase[] = []
   const notReported: string[] = []
@@ -48,6 +48,14 @@ export function safetyBase() {
   for (const e of saes) {
     const c = fromEntry(e, ++n)
     truth.set(c.caseId, e)
+    // ONK-44-302: one SAE never reported to drug safety, an onset entered three days late in the
+    // safety database, and an outcome the safety database did not update.
+    if (onk) {
+      if (e.subj === '402-036' && /chest infection|pneumonia/i.test(e.truth.AETERM)) { notReported.push(c.edcForm!); continue }
+      if (e.subj === '401-010') c.onset = addDays(c.onset, 3)
+      if (e.subj === '401-032') { c.outcome = 'RECOVERING/RESOLVING'; c.end = '' }
+      cases.push(c); continue
+    }
     if (ost) {
       if (e.subj === '304-003') { notReported.push(c.edcForm!); continue } // never reported to safety
       if (e.subj === '302-002') { c.outcome = 'RECOVERING/RESOLVING'; c.end = '' }

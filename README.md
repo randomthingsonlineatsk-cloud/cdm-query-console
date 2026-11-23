@@ -26,16 +26,21 @@ A fourth study, ONK-44-302 (MERIDIAN-2), is a phase 3 oncology trial: ONK-44 aga
 advanced non-small cell lung cancer, with RECIST 1.1 tumour assessments every 6 weeks and
 progression-free survival by blinded independent central review as the primary endpoint (data
 cut-off 31 October 2026). Its eCRF has the RECIST lesion identification, lesion measurement and
-investigator response pages, prior cancer procedures, treatment cycles, death and last contact,
+investigator response pages, prior cancer procedures, treatment cycles, adverse events (graded on
+a CTCAE-style scale, coded with the Study Medical Dictionary, which gained oncology terms), death and
+last contact,
 with edit checks that recompute the sum of diameters, the nadir and the RECIST overall response
 table. The independent review arrives as a monthly vendor file, with its own data transfer
-agreement: reads that differ from the investigator are documented, not reconciled to agree. The
+agreement: reads that differ from the investigator are documented, not reconciled to agree. Ten
+serious adverse events (four fatal) are reconciled with the drug safety database, which has its
+own planted differences (an SAE never reported, an onset entered late, an outcome not updated). The
 sites' true values are the study's source records, the same records the SDTM Mapping Trainer maps;
 four oddities in them are true (the investigator's sum at one visit, a partial response called at a
-28% decrease, a death known only to the month, a scan not done) and ten transcription errors are
+28% decrease, a death known only to the month, a scan not done) and thirteen transcription errors are
 corrected through queries, so the cleaned, hard-locked database gives back those records exactly
-(checked by tests/onk.test.ts and, in the trainer, tests/onkcdm.test.mjs). Missions M22 to M24:
-clean the study for the cut-off, reconcile the independent review, and lock at the cut-off; the
+(checked by tests/onk.test.ts and, in the trainer, tests/onkcdm.test.mjs). Missions M22 to M25:
+clean the study for the cut-off, reconcile the independent review, lock at the cut-off, and
+reconcile the SAEs with drug safety; the
 exported project file imports into the SDTM Mapping Trainer as your own ONK-44-302 database.
 
 Everything is fictional: the studies HLV-204-201, ALV-3-301, HRP-301 and ONK-44-302, ONK-44, Meridale Oncology, Lumen Imaging Core, Ostrevia (lumiravostat), Halcyon Ridge Pharmaceuticals, Vasclarin (VSC-9), Aurelivax

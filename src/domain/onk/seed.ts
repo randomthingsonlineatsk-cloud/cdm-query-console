@@ -25,10 +25,12 @@ export const ONK_ARM_NAME: Record<OnkArm, string> = { ONK44: 'ONK-44 400 mg', DO
 export interface OnkSeed extends SeedStudy { onk: { arms: Record<string, OnkArm>; cutoff: string } }
 
 const pad = (n: number, w = 3) => String(n).padStart(w, '0')
+export const AE_FIELDS = ['AETERM', 'AESTDAT', 'AEONGO', 'AEENDAT', 'AETOXGR', 'AESER', 'AESDTH', 'AESLIFE', 'AESHOSP', 'AESDISAB', 'AESCONG', 'AESMIE', 'AEREL', 'AEACN', 'AEOUT']
 const NOT_DONE = 'Scanner unavailable; scan not done in window'
 
 export function generateOnkStudy(seed = 44303): OnkSeed {
   const r = rng(seed)
+  const ra = rng(seed + 1) // adverse event entry lags: a stream of their own, so the other records' timing is unchanged
   const F = ONK_SOURCE.forms
   const by = (form: string, subj: string) => (F[form] ?? []).filter((x) => x.SUBJID === subj)
   const subjects: SeedSubject[] = []
@@ -85,6 +87,12 @@ export function generateOnkStudy(seed = 44303): OnkSeed {
     add('D1', 'SV', 1, rand, { VISOCCUR: 'Y', VISDAT: rand, UNSREAS: '' })
     // Treatment cycles, death and last contact are subject logs.
     for (const x of by('EX', id)) add('LOG', 'EX', Number(x.CYCLE), x.EXSTDAT, { CYCLE: x.CYCLE, EXSTDAT: x.EXSTDAT, EXENDAT: x.EXENDAT }, addDays(x.EXENDAT, lag()))
+    // Adverse events: entered a few days after onset (a serious one within a day or two, after the SAE form).
+    for (const a of by('AE', id)) {
+      const t: Row = {}
+      for (const f of AE_FIELDS) t[f] = a[f] ?? ''
+      add('LOG', 'AE', Number(a.AESPID), a.AESTDAT, t, addDays(a.AEOUT === 'FATAL' ? a.AEENDAT : a.AESER === 'Y' ? a.AESTDAT : a.AEENDAT || a.AESTDAT, a.AESER === 'Y' ? ra.int(1, 2) : ra.int(...LAG[site.profile])))
+    }
     const dth = by('DTH', id)[0]
     if (dth) { const d = dth.DTHDAT.length === 7 ? `${dth.DTHDAT}-28` : dth.DTHDAT; add('LOG', 'DTH', 1, d, { DTHDAT: dth.DTHDAT, DTHCAUSE: dth.DTHCAUSE }, addDays(d, lag() + 2)) }
     add('LOG', 'LC', 1, lc.LCDAT, { LCDAT: lc.LCDAT }, addDays(lc.LCDAT, lag()))
@@ -117,6 +125,13 @@ export function generateOnkStudy(seed = 44303): OnkSeed {
   const e7 = find('401-035', 'LOG', 'EX', 3); plant(e7, 'EXENDAT', 'error', { check: 'EX-96' }, 'End date of cycle 3 typed a month late.', addDays(e7.truth.EXENDAT, 30))
   plant(find('401-031', 'SCR', 'TUI', 1), 'NODAL', 'error', { check: 'TUI-93' }, '“Lymph node?” left blank on the first lesion page.', '')
   plant(find('402-030', 'LOG', 'LC'), 'LCDAT', 'error', { check: 'LC-91' }, 'Date of last contact left blank.', '')
+  // Adverse event pages.
+  const fn = entries.find((e) => e.form === 'AE' && e.site === '401' && e.truth.AESER === 'Y' && /neutropeni/i.test(e.truth.AETERM))!
+  plant(fn, 'AESHOSP', 'error', { check: 'AE-96' }, 'Serious febrile neutropenia entered with no seriousness criterion: the participant was admitted, but “hospitalisation” was left No.', 'N')
+  const short = entries.find((e) => e.form === 'AE' && e.site === '401' && e.truth.AESER === 'N' && e.truth.AEENDAT && (Date.parse(e.truth.AEENDAT) - Date.parse(e.truth.AESTDAT)) / 86400000 < 25 && !['401-007', '401-010', '401-014', '401-031'].includes(e.subj))!
+  plant(short, 'AEENDAT', 'error', { check: 'AE-95' }, 'End date typed with the previous month, so the event ends before it began.', addDays(short.truth.AEENDAT, -30))
+  const fatal = entries.find((e) => e.form === 'AE' && e.site === '402' && e.truth.AEOUT === 'FATAL')!
+  plant(fatal, 'AEOUT', 'error', { check: 'AE-97' }, 'Fatal event entered with the outcome “Not recovered/not resolved”; the death form and the SAE report say the participant died of it.', 'NOT RECOVERED/NOT RESOLVED')
   const e10 = find(P.tooSmall, 'W18', 'TRM', (e) => e.truth.TSTM === 'Y'); plant(e10, 'DIAM', 'error', { check: 'TRM-93' }, 'A 3 mm diameter entered for a lesion ticked as too small to measure; the radiologist’s report says “too small to measure”.', '3')
 
   entries.sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.subj.localeCompare(b.subj) || a.visit.localeCompare(b.visit) || a.form.localeCompare(b.form) || a.inst - b.inst)
