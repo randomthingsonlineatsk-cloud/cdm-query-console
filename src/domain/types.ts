@@ -104,7 +104,7 @@ export interface Project {
   noAutoAe?: boolean // mission M5: adverse events are not auto-coded
   build?: import('./build').StudyBuild // an imported study build, if any
   // Phase 5: which study this project runs (absent = HLV-204-201) and the e-diary state.
-  study?: 'HLV-204-201' | 'ALV-3-301' | 'HRP-301'
+  study?: 'HLV-204-201' | 'ALV-3-301' | 'HRP-301' | 'ONK-44-302'
   vax?: VaxState
   consentVersions?: import('./consentVersions').ConsentVersionsFile // imported from the Plain Language Lab
   consentSiteMap?: Record<string, string> // console site → ethics committee in that file

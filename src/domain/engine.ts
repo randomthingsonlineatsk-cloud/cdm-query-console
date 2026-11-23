@@ -60,6 +60,58 @@ function subjectFns(forms: FormData[], visit: string, today: string): Record<str
     eosdat: () => eosForm()?.values.EOSDAT ?? '',
     aecount: (field, value) => aes().filter((a) => String(a.values[String(field)] ?? '').toUpperCase() === String(value).toUpperCase()).length,
     aematch: (text) => aes().filter((a) => String(a.values.AETERM ?? '').toUpperCase().includes(String(text).toUpperCase())).length,
+    ...tumourFns(forms, visit),
+  }
+}
+
+// RECIST 1.1 overall response at one time point from the target, non-target and new-lesion
+// results (RECIST 1.1 table 1). '' when the target response is blank.
+export function recistOverall(t: string, nt: string, newl: string): string {
+  const T = String(t ?? '').toUpperCase(), N = String(nt ?? '').toUpperCase()
+  if (!T) return ''
+  if (String(newl ?? '').toUpperCase() === 'Y' || T === 'PD' || N === 'PD') return 'PD'
+  if (T === 'NE') return 'NE'
+  if (T === 'CR') return N === 'CR' || N === '' ? 'CR' : 'PR'
+  return T === 'PR' ? 'PR' : 'SD'
+}
+
+// Tumour assessment functions (RECIST 1.1 studies): lesions are identified on TUI and measured
+// on TRM, one form instance per lesion. A lesion too small to measure counts as 5 mm.
+function tumourFns(forms: FormData[], visit: string): Record<string, (...a: Val[]) => Val> {
+  const tui = () => forms.filter((x) => x.form === 'TUI')
+  const lesion = (id: string) => tui().find((x) => x.values.LESID === id)
+  const order = (v: string) => VISITS.findIndex((x) => x.id === v)
+  const sumAt = (v: string): number | '' => {
+    const rows = forms.filter((x) => x.form === 'TRM' && x.visit === v && lesion(String(x.values.LESID))?.values.LESTYPE === 'Target')
+    if (!rows.length) return ''
+    let s = 0
+    for (const r of rows) {
+      if (r.values.TSTM === 'Y') { s += 5; continue }
+      const n = Number(r.values.DIAM)
+      if (r.values.DIAM === '' || r.values.DIAM === undefined || Number.isNaN(n)) return ''
+      s += n
+    }
+    return s
+  }
+  const sv = (v: string) => forms.find((x) => x.form === 'SV' && x.visit === v)?.values
+  const before = () => VISITS.filter((v) => order(v.id) < order(visit) && v.id !== 'UNS').map((v) => v.id)
+  return {
+    tsum: () => sumAt(visit),
+    basesum: () => sumAt('SCR'),
+    nadir: () => { const xs = before().map(sumAt).filter((x): x is number => x !== ''); return xs.length ? Math.min(...xs) : '' },
+    lestype: (id) => lesion(String(id))?.values.LESTYPE ?? '',
+    lesnodal: (id) => lesion(String(id))?.values.NODAL ?? '',
+    lesknown: (id) => (lesion(String(id)) ? 1 : 0),
+    prevdiam: (id) => {
+      for (const v of before().reverse()) { const r = forms.find((x) => x.form === 'TRM' && x.visit === v && x.values.LESID === String(id)); if (r && r.values.DIAM) return Number(r.values.DIAM) }
+      return ''
+    },
+    newles: () => tui().filter((x) => x.visit === visit && x.values.LESTYPE === 'New').length,
+    ntcount: () => tui().filter((x) => x.visit === 'SCR' && x.values.LESTYPE === 'Non-target').length,
+    scandat: () => (visit === 'SCR' ? tui().find((x) => x.visit === 'SCR')?.values.ASSDAT ?? '' : sv(visit)?.VISOCCUR === 'Y' ? sv(visit)?.VISDAT ?? '' : ''),
+    ovr: (t, nt, nl) => recistOverall(String(t), String(nt), String(nl)),
+    lastdose: () => forms.filter((x) => x.form === 'EX').map((x) => x.values.EXENDAT).filter(Boolean).sort().pop() ?? '',
+    dthdat: () => forms.find((x) => x.form === 'DTH')?.values.DTHDAT ?? '',
   }
 }
 
@@ -75,6 +127,9 @@ export function testCtx(t: CheckTest): Ctx {
       winlo: () => g('winlo'), winhi: () => g('winhi'), prevvisdat: () => g('prevvisdat'), lastvisdat: () => g('lastvisdat'), prevdisp: (f) => g(`prevdisp:${f}`), prevdispdat: () => g('prevdispdat'),
       eos: () => g('eos'), eosdat: () => g('eosdat'),
       aecount: (f, v) => Number(g(`aecount:${f}|${v}`) || 0), aematch: (x) => Number(g(`aematch:${x}`) || 0),
+      tsum: () => g('tsum'), basesum: () => g('basesum'), nadir: () => g('nadir'), lestype: (x) => g(`lestype:${x}`), lesnodal: (x) => g(`lesnodal:${x}`),
+      lesknown: (x) => Number(g(`lesknown:${x}`) || 0), prevdiam: (x) => g(`prevdiam:${x}`), newles: () => Number(g('newles') || 0), ntcount: () => Number(g('ntcount') || 0),
+      scandat: () => g('scandat'), ovr: (t, nt, nl) => recistOverall(String(t), String(nt), String(nl)), lastdose: () => g('lastdose'), dthdat: () => g('dthdat'),
     },
   }
 }

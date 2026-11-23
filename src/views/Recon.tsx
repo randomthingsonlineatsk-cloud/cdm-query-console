@@ -7,13 +7,16 @@ import { me } from '../domain/project'
 import type { SaeClass } from '../domain/types'
 import { Panel, Pill, Btn, Table, Tabs, Select, SignBox, SigLine, Stat, inputCls, ic, fmtUtc } from './ui'
 import { AppLinks } from './Links'
+import { FORMS } from '../domain/study'
 
 type T = 'sae' | 'transfers' | 'vendor' | 'dta'
 export default function Recon() {
-  const [t, setT] = useState<T>('sae')
+  // A study build with no adverse event pages has no SAE reconciliation.
+  const sae = !!FORMS.AE
+  const [t, setT] = useState<T>(sae ? 'sae' : 'transfers')
   return (
     <div className="space-y-4">
-      <Tabs value={t} onChange={setT} tabs={[{ id: 'sae', label: 'SAE reconciliation' }, { id: 'transfers', label: 'Vendor transfers' }, { id: 'vendor', label: 'Vendor reconciliation' }, { id: 'dta', label: 'Data transfer agreements' }]} />
+      <Tabs value={t} onChange={setT} tabs={[...(sae ? [{ id: 'sae' as const, label: 'SAE reconciliation' }] : []), { id: 'transfers', label: 'Vendor transfers' }, { id: 'vendor', label: 'Vendor reconciliation' }, { id: 'dta', label: 'Data transfer agreements' }]} />
       {t === 'sae' && <Sae />}
       {t === 'transfers' && <Transfers />}
       {t === 'vendor' && <Vendor />}
@@ -170,7 +173,7 @@ const EXT_CLS: { value: ExtClass; label: string }[] = [
 function Vendor() {
   const { p, tick, act } = useStore()
   const { go } = useNav()
-  const [v, setV] = useState<VendorId>('CL')
+  const [v, setV] = useState<VendorId>(VENDOR_IDS[0])
   const ds = useMemo(() => extDiscrepancies(p, v), [tick, v])
   const dm = ['dm', 'dmlead'].includes(me(p).role)
   const t = latestLoaded(p, v)

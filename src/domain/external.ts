@@ -7,10 +7,12 @@ import { seedStudy, accession } from './seed'
 import { formsOfSubject } from './engine'
 import { audit, me, nowUtc, raiseManual } from './project'
 import { addDays, hash, rng, daysBetween } from './util'
-import { STUDY, ACTIVE, OST_ID } from './study'
+import { STUDY, ACTIVE, OST_ID, ONK_ID } from './study'
+import { visitOfRaw } from './onk/study'
+import { ONK_SOURCE } from './onk/seed'
 import { isActive } from './queries'
 
-export type VendorId = 'CL' | 'ECG' | 'IRT'
+export type VendorId = 'CL' | 'ECG' | 'IRT' | 'IRC'
 export interface Dta {
   vendor: VendorId; name: string; system: string; file: string; delimiter: string
   columns: string[]; required: string[]; prohibited: string[]; keys: string; frequency: string; cutoff: number
@@ -30,9 +32,18 @@ export const DTAS: Record<VendorId, Dta> = {
     columns: ['STUDYID', 'SUBJID', 'RANDDT', 'RANDNO', 'VISIT', 'KITNO', 'DISPDT'], required: ['STUDYID', 'SUBJID', 'RANDDT', 'RANDNO', 'VISIT', 'KITNO'], prohibited: ['TRTARM', 'ARMCD', 'ARM'],
     keys: 'Subject and visit', frequency: 'Monthly, cumulative, first Monday', cutoff: 7,
     rules: ['The treatment arm is never transferred to the blinded data management team.', 'Kit numbers as assigned by IRT, K followed by four digits.', 'Pipe-delimited text, header row.'] },
+  IRC: { vendor: 'IRC', name: 'Lumen Imaging Core (fictional)', system: 'blinded independent central review of tumour scans', file: 'ONK44302_LMIRC_YYYYMMDD.txt', delimiter: '|',
+    columns: ['STUDYID', 'SUBJID', 'TIMEPOINT', 'SCANDT', 'TARGET', 'NONTARGET', 'NEWLESION', 'OVERALL', 'READER'], required: ['STUDYID', 'SUBJID', 'TIMEPOINT', 'TARGET', 'OVERALL', 'READER'], prohibited: ['TRTARM', 'ARMCD', 'RANDARM', 'ARM'],
+    keys: 'Subject and time point', frequency: 'Monthly, cumulative, first Monday', cutoff: 7,
+    rules: ['Blinded independent central review (BICR) by RECIST 1.1: two readers, with an adjudicator when they disagree; the file holds the final read.', 'The readers are blinded to treatment and to the investigator’s assessment: no treatment or randomisation field may be in the file.', 'Responses in the reviewer’s wording: CR, PR, SD, PD, Not evaluable, Non-CR/Non-PD.', 'SCANDT is the date of the scan read (ISO 8601), blank when the scan was not done.', 'The independent and investigator responses are not reconciled to agree: a different read is expected and is documented, not queried. Subjects, time points and scan dates are reconciled.', 'Data cut-off: scans read up to 7 days before the transfer date. Cumulative, pipe-delimited, header row.'] },
 }
 export const VENDOR_IDS: VendorId[] = ['CL', 'ECG', 'IRT']
-const MONTHLY = ['2026-04-06', '2026-05-04', '2026-06-01', '2026-07-06', '2026-08-03', '2026-09-07', '2026-10-05', '2026-11-02', '2026-12-07']
+const HLV_MONTHLY = ['2026-04-06', '2026-05-04', '2026-06-01', '2026-07-06', '2026-08-03', '2026-09-07', '2026-10-05', '2026-11-02', '2026-12-07']
+// ONK-44-302 started in December 2025: the first reads are in February, the first file in March.
+const ONK_MONTHLY = ['2026-03-02', '2026-04-06', '2026-05-04', '2026-06-01', '2026-07-06', '2026-08-03', '2026-09-07', '2026-10-05', '2026-11-02', '2026-12-07']
+const MONTHLY = [...HLV_MONTHLY]
+// Transfers that fail the DTA checks; the vendor resends each two days later.
+const BAD = ['CL-2026-08-03', 'IRT-2026-07-06', 'ECG-2026-06-01', 'IRC-2026-05-04', 'IRC-2026-08-03']
 
 // The vendors and transfer agreements of the open study. HRP-301 has a central laboratory
 // (safety laboratory and HBV DNA monitoring) and an IRT, and no central ECG reading.
@@ -40,9 +51,10 @@ const HLV_DTAS = structuredClone(DTAS)
 const OST_CL_RULES = ['Results in conventional units as agreed: ALT and AST U/L, total bilirubin umol/L, neutrophils and lymphocytes 10^9/L, HBV DNA IU/mL.', 'HBV DNA is tested every 4 weeks (Weeks 4, 8, 12 and 16) only for participants anti-HBc positive at screening; below the lower limit of quantification (10 IU/mL) it is reported as UNDETECTABLE.', 'Reference ranges from the central laboratory, sent with each result.', 'Data cut-off: samples received up to 7 days before the transfer date.', 'Pipe-delimited text, header row, one row per test.']
 export const SI_UNITS: Record<string, string> = { GLUC: 'mmol/L', SODIUM: 'mmol/L', HBA1C: '%', ALT: 'U/L', AST: 'U/L', BILI: 'umol/L', NEUT: '10^9/L', LYMPH: '10^9/L', HBVDNA: 'IU/mL' }
 export function applyVendors(study: string) {
-  const ost = study === OST_ID
-  VENDOR_IDS.splice(0, VENDOR_IDS.length, ...(ost ? ['CL', 'IRT'] as VendorId[] : ['CL', 'ECG', 'IRT'] as VendorId[]))
-  for (const v of ['CL', 'ECG', 'IRT'] as VendorId[]) Object.assign(DTAS[v], structuredClone(HLV_DTAS[v]))
+  const ost = study === OST_ID, onk = study === ONK_ID
+  VENDOR_IDS.splice(0, VENDOR_IDS.length, ...(onk ? ['IRC'] as VendorId[] : ost ? ['CL', 'IRT'] as VendorId[] : ['CL', 'ECG', 'IRT'] as VendorId[]))
+  MONTHLY.splice(0, MONTHLY.length, ...(onk ? ONK_MONTHLY : HLV_MONTHLY))
+  for (const v of ['CL', 'ECG', 'IRT', 'IRC'] as VendorId[]) Object.assign(DTAS[v], structuredClone(HLV_DTAS[v]))
   if (ost) {
     DTAS.CL.file = 'HRP301_NGCL_YYYYMMDD.txt'; DTAS.CL.rules = OST_CL_RULES
     DTAS.IRT.file = 'HRP301_RQIRT_YYYYMMDD.txt'
@@ -56,8 +68,7 @@ export function transferLog(clock: string): Transfer[] {
   for (const v of VENDOR_IDS) for (const d of MONTHLY) {
     const t: Transfer = { id: `${v}-${d}`, vendor: v, date: d, file: DTAS[v].file.replace('YYYYMMDD', d.replaceAll('-', '')), declared: 0 }
     out.push(t)
-    const bad = (v === 'CL' && d === '2026-08-03') || (v === 'IRT' && d === '2026-07-06') || (v === 'ECG' && d === '2026-06-01')
-    if (bad) { const d2 = addDays(d, 2); out.push({ id: `${v}-${d2}`, vendor: v, date: d2, file: DTAS[v].file.replace('YYYYMMDD', d2.replaceAll('-', '')), declared: 0, resendOf: t.id }) }
+    if (BAD.includes(t.id)) { const d2 = addDays(d, 2); out.push({ id: `${v}-${d2}`, vendor: v, date: d2, file: DTAS[v].file.replace('YYYYMMDD', d2.replaceAll('-', '')), declared: 0, resendOf: t.id }) }
   }
   return out.filter((t) => t.date <= clock).sort((a, b) => a.date.localeCompare(b.date) || a.vendor.localeCompare(b.vendor))
 }
@@ -75,6 +86,8 @@ export function ostBilirubinFor(lbrefid: string, altHigh: boolean): string {
   r.normal(3.9, 1); r.normal(2.0, 0.5)
   return ostBilirubin(r, altHigh).toFixed(0)
 }
+// The independent review's own problems: one read missing from the file, one scan date a day early.
+export const IRC_PLANTED = { missing: '401-011|W12', date: '402-018|W18' }
 const fixed = (p: Project, id: string, date: string) => { const f = p.ext.vendorFixes[id]; return !!f && f < date }
 
 // Build a transfer file from the source truth, with the vendor's own planted problems.
@@ -131,8 +144,27 @@ export function transferFile(p: Project, t: Transfer): { text: string; declared:
       rows.push(row)
     }
   }
+  if (t.vendor === 'IRC') {
+    // The reads, from the independent review's own records (the source the SDTM Trainer maps).
+    const arms = Object.fromEntries(ONK_SOURCE.subjects.map((s) => [s.subj, s.arm ?? '']))
+    const rand = Object.fromEntries((ONK_SOURCE.forms.IRT ?? []).map((x) => [x.SUBJID, x.RANDDT]))
+    const iso = (d: string) => (d ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : '')
+    for (const x of ONK_SOURCE.forms.IRC ?? []) {
+      const visit = visitOfRaw(x.TIMEPOINT), key = `${x.SUBJID}|${visit}`
+      const when = iso(x.SCANDATE) || addDays(rand[x.SUBJID], Number(visit.slice(1)) * 7)
+      if (when > cut) continue
+      if (key === IRC_PLANTED.missing && !fixed(p, `IRC:${key}:missing-vendor`, t.date)) continue
+      let date = iso(x.SCANDATE)
+      if (key === IRC_PLANTED.date && !fixed(p, `IRC:${key}:date`, t.date)) date = addDays(date, -1)
+      if (t.id === 'IRC-2026-05-04') date = x.SCANDATE // the vendor's export lost the date format
+      const row = [st, x.SUBJID, x.TIMEPOINT, date, x.TARGET, x.NONTARGET, x.NEWLESION, x.OVERALL, x.READER]
+      if (t.id === 'IRC-2026-08-03') row.push(arms[x.SUBJID])
+      rows.push(row)
+    }
+  }
   let cols = dta.columns
   if (t.id === 'IRT-2026-07-06') cols = [...cols, 'TRTARM']
+  if (t.id === 'IRC-2026-08-03') cols = [...cols, 'RANDARM']
   const delim = t.id === 'ECG-2026-06-01' ? ',' : '|'
   const text = [cols.join(delim), ...rows.map((r) => r.join(delim))].join('\n')
   const declared = rows.length + (t.id === 'CL-2026-08-03' ? 42 : 0)
@@ -150,7 +182,7 @@ export function conformance(p: Project, t: Transfer): { checks: CheckResult[]; r
   const missingCols = dta.columns.filter((c) => !header.includes(c)), extra = header.filter((c) => !dta.columns.includes(c))
   const blinded = header.filter((c) => dta.prohibited.includes(c))
   const blanks = rows.filter((r) => dta.required.some((c) => !r[c])).length
-  const badDates = rows.filter((r) => ['COLLDT', 'EGDTC', 'RANDDT', 'DISPDT'].some((c) => r[c] && !/^\d{4}-\d{2}-\d{2}$/.test(r[c]))).length
+  const badDates = rows.filter((r) => ['COLLDT', 'EGDTC', 'RANDDT', 'DISPDT', 'SCANDT'].some((c) => r[c] && !/^\d{4}-\d{2}-\d{2}$/.test(r[c]))).length
   const prev = transferLog(p.clock).filter((x) => x.vendor === t.vendor && x.date < t.date && p.ext.transfers[x.id]?.status === 'accepted').pop()
   const prevRows = prev ? transferFile(p, prev).text.split('\n').length - 1 : 0
   const namePattern = new RegExp('^' + dta.file.replace('YYYYMMDD', '\\d{8}').replace('.', '\\.') + '$')
@@ -250,6 +282,24 @@ export function extDiscrepancies(p: Project, v: VendorId): ExtDisc[] {
     }
     for (const [k, r] of byKey) { const [s, vis] = k.split('|'); out.push({ id: `IRT:${k}:missing-edc`, vendor: v, subj: s, visit: vis, field: 'dispensing', edc: '', vendorValue: r.KITNO, expected: enteredSeed(s, vis, 'EX') ? 'edc' : 'no-action', note: 'IRT dispensing with no EDC page yet.' }) }
   }
+  if (v === 'IRC') {
+    const norm = (x: string) => ({ 'Not evaluable': 'NE', 'Non-CR/Non-PD': 'NON-CR/NON-PD' } as Record<string, string>)[x] ?? x
+    const byKey = new Map(rows.map((r) => [`${r.SUBJID}|${visitOfRaw(r.TIMEPOINT)}`, r]))
+    for (const f of edc.filter((x) => x.form === 'RSP')) {
+      const k = `${f.subj}|${f.visit}`, r = byKey.get(k)
+      const sv = edc.find((x) => x.subj === f.subj && x.visit === f.visit && x.form === 'SV')?.values
+      const when = f.values.ASSDAT || (sv?.VISOCCUR === 'N' ? '' : sv?.VISDAT ?? '')
+      if (when && when > cut) continue
+      if (!when && !r) continue
+      const truth = seed.entries.find((e) => e.subj === f.subj && e.visit === f.visit && e.form === 'RSP')?.truth ?? {}
+      const key = (fld: string) => `${k}|RSP|1|${fld}`
+      if (!r) { out.push({ id: `IRC:${k}:missing-vendor`, vendor: v, subj: f.subj, visit: f.visit, field: 'read', edc: f.values.ASSDAT, vendorValue: '', expected: 'vendor', edcKey: key('ASSDAT'), note: 'A scan assessed at the site with no independent read in the file.' }); continue }
+      byKey.delete(k)
+      if ((r.SCANDT ?? '') !== (f.values.ASSDAT ?? '')) out.push({ id: `IRC:${k}:date`, vendor: v, subj: f.subj, visit: f.visit, field: 'scan date', edc: f.values.ASSDAT, vendorValue: r.SCANDT, expected: f.values.ASSDAT !== truth.ASSDAT ? 'edc' : 'vendor', edcKey: key('ASSDAT') })
+      if (norm(r.OVERALL) !== f.values.OVRLRESP) out.push({ id: `IRC:${k}:overall`, vendor: v, subj: f.subj, visit: f.visit, field: 'overall response', edc: f.values.OVRLRESP, vendorValue: r.OVERALL, expected: f.values.OVRLRESP !== truth.OVRLRESP ? 'edc' : 'acceptable', edcKey: key('OVRLRESP'), note: f.values.OVRLRESP !== truth.OVRLRESP ? undefined : 'Investigator and independent reads differ. The DTA: documented, not reconciled to agree.' })
+    }
+    for (const [k, r] of byKey) { const [s, vis] = k.split('|'); out.push({ id: `IRC:${k}:missing-edc`, vendor: v, subj: s, visit: vis, field: 'read', edc: '', vendorValue: r.SCANDT || r.OVERALL, expected: enteredSeed(s, vis, 'RSP') ? 'edc' : 'no-action', note: 'An independent read with no response page in the EDC yet.' }) }
+  }
   return out
 }
 
@@ -271,7 +321,7 @@ export function processVendors(p: Project) {
   for (const [id, dec] of Object.entries(p.ext.decisions)) {
     if (dec.cls !== 'vendor' || dec.done || !dec.noteDue || dec.noteDue > p.clock) continue
     dec.done = true
-    const genuine = ['CL:304-007|W8:missing-vendor', 'CL:101-008|W4:visit', 'CL:106-004|W4:missing-vendor', 'CL:units:105:GLUC', 'ECG:105-007|SCR:missing-vendor', 'ECG:101-002|W12:date', 'IRT:106-002|W2:kit'].includes(id)
+    const genuine = ['CL:304-007|W8:missing-vendor', 'CL:101-008|W4:visit', 'CL:106-004|W4:missing-vendor', 'CL:units:105:GLUC', 'ECG:105-007|SCR:missing-vendor', 'ECG:101-002|W12:date', 'IRT:106-002|W2:kit', `IRC:${IRC_PLANTED.missing}:missing-vendor`, `IRC:${IRC_PLANTED.date}:date`].includes(id)
     if (genuine) { p.ext.vendorFixes[id] = p.clock; audit(p, { id: 'vendor', name: 'Vendor', role: 'system', pin: '', trained: true }, 'vendor.fix', id, undefined, 'corrected', 'Vendor confirmed and will correct in the next transfer', `${p.clock}T12:00:00Z`) }
     else dec.reply = 'Vendor: our record matches the requisition received. Please check the EDC.'
   }

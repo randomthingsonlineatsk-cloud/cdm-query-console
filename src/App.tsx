@@ -3,7 +3,7 @@ import { StoreProvider, useStore } from './state'
 import { ROLE_LABEL } from './domain/types'
 import { advance, me, audit } from './domain/project'
 import { isActive } from './domain/queries'
-import { STUDY, VAX_ID, OST_ID } from './domain/study'
+import { STUDY, VAX_ID, OST_ID, ONK_ID } from './domain/study'
 import { Btn, Pill, Select } from './views/ui'
 import Overview from './views/Overview'
 import Startup from './views/Startup'
@@ -37,6 +37,8 @@ const VIEWS: { id: View; label: string }[] = [
 const VAX_HIDDEN: View[] = ['twin', 'startup', 'listings', 'coding', 'recon', 'oversight', 'lock']
 // The Ostrevia trial opens live with start-up done; its protocol is not held as an ICH M11 twin.
 const OST_HIDDEN: View[] = ['twin', 'startup', 'diary']
+// The oncology study has no coded terms on its eCRF (no AE, medication or history pages in this training build).
+const ONK_HIDDEN: View[] = ['twin', 'startup', 'diary', 'coding']
 
 function Shell() {
   const { p, act, error, setError, saved } = useStore()
@@ -48,7 +50,8 @@ function Shell() {
   const vax = p.study === VAX_ID
   // The vaccine study practises the e-diary; start-up, coding, lock and the other areas are practised on HLV-204-201.
   const ost = p.study === OST_ID
-  const shown = VIEWS.filter((v) => (vax ? !VAX_HIDDEN.includes(v.id) : ost ? !OST_HIDDEN.includes(v.id) : v.id !== 'diary'))
+  const onk = p.study === ONK_ID
+  const shown = VIEWS.filter((v) => (vax ? !VAX_HIDDEN.includes(v.id) : ost ? !OST_HIDDEN.includes(v.id) : onk ? !ONK_HIDDEN.includes(v.id) : v.id !== 'diary'))
   const view = shown.some((v) => v.id === nav.view) ? nav.view : 'overview'
   const V = { overview: vax ? VaxOverview : Overview, startup: Startup, casebook: Casebook, checks: Checks, listings: Listings, queries: Queries, coding: Coding, recon: Recon, oversight: Oversight, lock: Lock, missions: Missions, audit: AuditView, project: ProjectView, classroom: Classroom, diary: Diary, twin: Twin }[view]
   return (

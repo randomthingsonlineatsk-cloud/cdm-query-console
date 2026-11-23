@@ -19,7 +19,8 @@ import { addDays } from './util'
 import { formKeyOf, type Level } from './types'
 import { VAX_MISSIONS, VAX_MISSION_IDS, startVaxMission, vaxMissionClock, scoreM14 as vM14, scoreM15 as vM15, scoreM16 as vM16, scoreTrail } from './vax/missions'
 import { applyStudy } from './build'
-import { createVaxProject, createOstProject } from './project'
+import { createVaxProject, createOstProject, createOnkProject } from './project'
+import { signExt } from './external'
 import { expectedImportant } from './oversight'
 import { readConsentVersions, applyConsent, reconcile } from './consentVersions'
 import M21_FILE from './ost/consent-m21.json'
@@ -43,6 +44,9 @@ export const MISSIONS: MissionDef[] = [
   { id: 'M18', phase: 6, title: 'Review decentralised data', brief: 'Protocol amendment 2 added decentralised elements under ICH E6(R3) Annex 2: remote consent, home nursing visits, direct-to-participant shipment, a connected home blood-pressure monitor and an electronic health record extract. Review thirty records from the five new data streams. For each, decide whether it is fine or needs one action: a site query, a clarification to the service provider, escalation to the investigator, a protocol deviation, escalation to the sponsor, or recording that the data are not fit for use.', pass: '70% or more' },
   { id: 'M19', phase: 6, title: 'Twin the protocol', brief: 'HLV-204-201’s protocol is held in the ICH M11 structure and traced to the database build. The Protocol-to-Database Twin has twelve findings: procedures the build does not collect, data the build collects that no procedure needs, a visit window and an eligibility criterion that disagree, and sections of the protocol that contradict each other. For each, decide: change the build, stop collecting, raise it with the protocol author, or keep it as it is.', pass: '70% or more' },
   { id: 'M20', phase: 7, title: 'Lock the Ostrevia trial', brief: 'HRP-301 (VERDANT-1) is the phase 3 trial of Ostrevia in chronic hand eczema, the pivotal study of its NDA. The project is prepared to after the last participant’s Week 20 follow-up, with most of the cleaning done. In 30 study days, finish what is left (the last queries, three medications to code, two deviations to classify, SDV for two participants, the investigator’s casebook signatures and the audit trail review), soft-lock, hard-lock with the lead data manager’s and the sponsor’s signatures, then export the project file for the SDTM Mapping Trainer.', pass: '70% or more' },
+  { id: 'M22', phase: 8, title: 'Clean an oncology study for the data cut-off', brief: 'ONK-44-302 (MERIDIAN-2) compares ONK-44 with docetaxel in lung cancer; the primary endpoint is progression-free survival by independent review, with a data cut-off on 31 October 2026. Starting the mission moves the clock to 21 September 2026. In six simulated weeks, get every data issue at both sites resolved: the RECIST lesion pages, the investigator’s response pages, the treatment cycles, deaths and last contact. Close good answers, re-query poor ones, and confirm what is true but unusual. False queries and closing a query on wrong data cost points.', pass: '70% or more' },
+  { id: 'M23', phase: 8, title: 'Reconcile the independent review', brief: 'Starting the mission moves the clock to 9 November 2026. The blinded independent central review sends its reads every month. Check every transfer against the data transfer agreement and load or reject it (one broke the date format, one would unblind the readers), then reconcile the latest load against the investigator’s response pages: query the site where the EDC is wrong, ask the vendor where its file is wrong, and document the reads that differ, which are not reconciled to agree. Sign off the vendor reconciliation.', pass: '70% or more' },
+  { id: 'M24', phase: 8, title: 'Lock at the data cut-off', brief: 'The ONK-44-302 project is prepared to after the data cut-off, with most of the cleaning done. In 30 study days, finish what is left (the last queries, the deviations to classify, SDV for two participants, the investigator’s casebook signatures and the audit trail review), soft-lock, hard-lock with the lead data manager’s and the sponsor’s signatures, then export the project file: its forms are the source records the SDTM Mapping Trainer maps for the oncology study.', pass: '70% or more' },
   { id: 'M21', phase: 7, title: 'Reconcile consent versions by site', brief: 'The four VERDANT-1 ethics committees approved the consent form versions on different dates, and the Pune committee has already approved version 3.0 after amendment 1. The consent versions from the Plain Language Lab are imported on the Edit checks page. Compare every participant’s signed version and date with the approvals of their site’s committee, and raise a clear manual query on each consent page that is wrong. Querying a correct consent costs marks.', pass: '70%: every finding queried, no false queries, clear query text' },
 ]
 
@@ -85,7 +89,9 @@ export function startMission(p: Project, id: string): MissionRun {
   if (id === 'M9') { jump('2026-08-31'); run.answers = { start: p.clock, flags: JSON.stringify(signals(p).filter((x) => x.flagged).map((x) => x.id)) } }
   if (id === 'M10') { jump('2026-10-05'); run.answers = { start: p.clock, startUtc: nowUtc(p) } }
   if (id === 'M21') { run.answers = { start: p.clock, startUtc: nowUtc(p), q0: String(p.nextQuery), key: JSON.stringify(p.consentVersions ? reconcile(p, p.consentVersions, p.consentSiteMap ?? {}).filter((r) => r.status !== 'ok').map((r) => r.subj) : []) } }
-  if (id === 'M11' || id === 'M20') { run.answers = { start: p.clock, deadline: addDays(p.clock, days(p, 30)), startUtc: nowUtc(p) } }
+  if (id === 'M22') { jump('2026-09-21'); run.answers = { start: p.clock, deadline: addDays(p.clock, days(p, 42)) } }
+  if (id === 'M23') { jump('2026-11-09'); run.answers = { start: p.clock } }
+  if (id === 'M11' || id === 'M20' || id === 'M24') { run.answers = { start: p.clock, deadline: addDays(p.clock, days(p, 30)), startUtc: nowUtc(p) } }
   if (id === 'M12') { if (p.lock.status !== 'hard') throw new Error('M12 needs a hard-locked study.'); run.answers = { start: p.clock, startUtc: nowUtc(p), report: CLOSE_OUT_REPORT } }
   if (id === 'M3') {
     if (!p.live) throw new Error('The study must be live. Finish start-up, or use the prepared start-up.')
@@ -149,6 +155,37 @@ export function scoreM3(p: Project, run: MissionRun) {
   const score = 80 * (st.length ? resolved / st.length : 0) + 0.1 * quality + (open === 0 ? 10 : 0) - 3 * k(run) * falseQ - 5 * k(run) * closedWrong - (late ? 10 : 0)
   finish(p, run, score, [`${resolved} of ${st.length} issues at site 103 resolved`, `${open} queries still open or answered at site 103`, `${falseQ} false queries on correct data`, `${closedWrong} queries closed while the data were still wrong`, `Manual query quality ${Math.round(quality)}%`, late ? 'Finished after the deadline (−10)' : 'Finished by the deadline'])
 }
+
+// M22: every planted issue in ONK-44-302, at both sites.
+export function scoreM22(p: Project, run: MissionRun) {
+  const st = [...siteIssueStatus(p, '401'), ...siteIssueStatus(p, '402')].filter((x) => x.entered)
+  const resolved = st.filter((x) => x.resolved).length
+  const closedWrong = st.filter((x) => x.closedWrong).length
+  const mine = p.queries.filter((q) => q.raisedUtc.slice(0, 10) >= (run.answers?.start ?? ''))
+  const manual = mine.filter((q) => q.source === 'manual')
+  const falseQ = manual.filter((q) => { const fk = formKeyOf(q.key); const issue = seedStudy().issues.some((i) => `${i.subj}|${i.visit}|${i.form}|${i.inst}` === fk); const t = seedEntry(fk)?.truth[q.key.split('|')[4]]; return !issue && t !== undefined && (q.valueAtClose ?? value(p, q.key)) === t }).length
+  const open = p.queries.filter(isActive).length
+  const quality = manual.length ? manual.reduce((s, q) => s + scoreQuery(q.msgs[0].text).score, 0) / manual.length : 100
+  const late = p.clock > (run.answers?.deadline ?? '9999')
+  const score = 80 * (st.length ? resolved / st.length : 0) + 0.1 * quality + (open === 0 ? 10 : 0) - 3 * k(run) * falseQ - 5 * k(run) * closedWrong - (late ? 10 : 0)
+  finish(p, run, score, [`${resolved} of ${st.length} issues resolved`, `${open} queries still open or answered`, `${falseQ} false queries on correct data`, `${closedWrong} queries closed while the data were still wrong`, `Manual query quality ${Math.round(quality)}%`, late ? 'Finished after the deadline (−10)' : 'Finished by the deadline'])
+}
+// M23: the independent review transfers and their reconciliation.
+export function scoreM23(p: Project, run: MissionRun) {
+  void run
+  const ts = transferLog(p.clock).filter((t) => t.vendor === 'IRC')
+  const tRight = ts.filter((t) => p.ext.transfers[t.id]?.status === (shouldAccept(p, t) ? 'accepted' : 'rejected')).length
+  const ds = extDiscrepancies(p, 'IRC')
+  const decided = Object.entries(p.ext.decisions).filter(([id]) => id.startsWith('IRC:'))
+  const current = new Map(ds.map((d) => [d.id, d]))
+  const dRight = decided.filter(([id, dec]) => !current.has(id) || current.get(id)!.expected === dec.cls).length
+  const undecided = ds.filter((d) => !p.ext.decisions[d.id]).length
+  const signed = !!p.ext.signoff
+  const score = 30 * (ts.length ? tRight / ts.length : 0) + 50 * (decided.length + undecided ? dRight / (decided.length + undecided) : 0) + (undecided === 0 ? 10 : 0) + (signed ? 10 : 0)
+  const wrong = decided.filter(([id, dec]) => current.has(id) && current.get(id)!.expected !== dec.cls).map(([id, dec]) => `${id.slice(4)}: classed ${dec.cls}, expected ${current.get(id)!.expected}`)
+  finish(p, run, score, [`${tRight} of ${ts.length} transfers correctly loaded or rejected`, `${dRight} of ${decided.length + undecided} discrepancies classed correctly`, ...wrong, `${undecided} discrepancies in the latest load not yet classed`, signed ? 'Vendor reconciliation signed' : 'Vendor reconciliation not signed'])
+}
+void signExt
 
 export const M4_SCENARIOS = [
   { id: 'a', data: 'Subject 103-005, Week 4, Local laboratory: Potassium = 45 mmol/L (screening 4.4 mmol/L).', poor: 'Potassium is wrong, please change to 4.5.', mention: ['potassium'] },
@@ -291,7 +328,7 @@ export function scoreM20(p: Project, run: MissionRun) {
   const onTime = !!hard && hard.utc.slice(0, 10) <= (run.answers?.deadline ?? '')
   const mine = (id: string) => !id.startsWith('scenario') && id !== 'system'
   const dv = p.deviations.filter((d) => d.status === 'classified' && d.classifiedBy && mine(d.classifiedBy))
-  const dvOk = dv.length >= 2 && dv.every((d) => expectedImportant(d) === undefined || expectedImportant(d) === d.important)
+  const dvOk = dv.length >= Math.min(2, p.deviations.length) && p.deviations.every((d) => d.status === 'classified') && dv.every((d) => expectedImportant(d) === undefined || expectedImportant(d) === d.important)
   const review = p.lock.auditReview && mine(p.lock.auditReview.userId)
   const pi = Object.values(p.lock.piSign).some((x) => x.userId === 'emarsh')
   const score = (onTime ? 60 : hard ? 30 : 0) + (dvOk ? 15 : 0) + (review ? 10 : 0) + (pi ? 15 : 0)
@@ -367,14 +404,14 @@ export function scoreM21(p: Project, run: MissionRun) {
   const score = (key.length ? (70 * found.length) / key.length : 70) - 10 * k(run) * wrong.length + (found.length ? 0.3 * quality : 0)
   finish(p, run, score, [`${found.length} of ${key.length} consent findings queried${key.length - found.length ? ` (missed: ${key.filter((s) => !subj.includes(s)).join(', ')})` : ''}`, `${wrong.length} correct consents queried${wrong.length ? `: ${wrong.join(', ')}` : ''}`, `Query text quality ${Math.round(quality)} of 100`])
 }
-Object.assign(SCORERS, { M21: scoreM21, M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6: scoreM6, M7: scoreM7, M8: scoreM8, M9: scoreM9, M10: scoreM10, M11: scoreM11, M12: scoreM12, M20: scoreM20, M14: scoreM14, M15: scoreM15, M16: scoreM16 })
+Object.assign(SCORERS, { M21: scoreM21, M1: scoreM1, M2: scoreM2, M3: scoreM3, M5: scoreM5, M6: scoreM6, M7: scoreM7, M8: scoreM8, M9: scoreM9, M10: scoreM10, M11: scoreM11, M12: scoreM12, M20: scoreM20, M24: scoreM20, M22: scoreM22, M23: scoreM23, M14: scoreM14, M15: scoreM15, M16: scoreM16 })
 
 // Every mission starts from its own prepared project (a snapshot of the study at the right
 // moment); the learner's other projects are left untouched.
-export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax' | 'ostlock' | 'ost'> = { M21: 'ost', M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none', M18: 'none', M19: 'none', M20: 'ostlock' }
+export const MISSION_PROJECT: Record<string, 'fresh' | 'live' | 'lock' | 'locked' | 'none' | 'vax' | 'ostlock' | 'ost' | 'onk' | 'onklock'> = { M22: 'onk', M23: 'onk', M24: 'onklock', M21: 'ost', M1: 'fresh', M2: 'fresh', M3: 'live', M4: 'none', M5: 'live', M6: 'live', M7: 'live', M8: 'live', M9: 'live', M10: 'live', M11: 'lock', M12: 'locked', M13: 'none', M14: 'vax', M15: 'vax', M16: 'vax', M17: 'none', M18: 'none', M19: 'none', M20: 'ostlock' }
 export function prepareMission(base: Project, id: string, create: (userId: string, classId: string) => Project, prep: { lock: (p: Project) => void; locked: (p: Project) => void }): Project {
   const kind = MISSION_PROJECT[id]
-  const np = kind === 'vax' ? createVaxProject(base.userId, base.classId) : kind === 'ostlock' || kind === 'ost' ? createOstProject(base.userId, base.classId) : create(base.userId, base.classId)
+  const np = kind === 'vax' ? createVaxProject(base.userId, base.classId) : kind === 'ostlock' || kind === 'ost' ? createOstProject(base.userId, base.classId) : kind === 'onk' || kind === 'onklock' ? createOnkProject(base.userId, base.classId) : create(base.userId, base.classId)
   applyStudy(np) // the prepared project's study is put in force before any preparation
   np.name = `${id} ${MISSIONS.find((m) => m.id === id)!.title}`
   np.missionLevel = base.missionLevel
@@ -404,7 +441,7 @@ export function prepareMission(base: Project, id: string, create: (userId: strin
     if (np.clock < '2026-07-01') advance(np, Math.round((Date.parse('2026-07-01') - Date.parse(np.clock)) / 86400000))
     applyConsent(np, readConsentVersions(JSON.stringify(M21_FILE)), 'HRP-301')
   }
-  if (kind === 'lock' || kind === 'ostlock') prep.lock(np)
+  if (kind === 'lock' || kind === 'ostlock' || kind === 'onklock') prep.lock(np)
   if (kind === 'locked') prep.locked(np)
   startMission(np, id)
   return np

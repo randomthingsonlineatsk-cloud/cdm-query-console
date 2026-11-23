@@ -6,9 +6,11 @@ import { formKeyOf, parseKey } from './types'
 import { freshChecks, SHIPPED_CHECKS } from './checks'
 import { runChecksOnSubject, formsOfSubject } from './engine'
 import { seedStudy, RESPONSE_DAYS, SEED_VERSION, type Entry, type Issue } from './seed'
-import { FORMS, SITES, VISITS, ACTIVE, VAX_ID, OST_ID } from './study'
+import { FORMS, SITES, VISITS, ACTIVE, VAX_ID, OST_ID, ONK_ID } from './study'
 import { freshOstChecks } from './ost/checks'
 import { OST_START } from './ost/seed'
+import { freshOnkChecks } from './onk/checks'
+import { ONK_START } from './onk/seed'
 import { freshVaxChecks } from './vax/checks'
 import { processDiary, emptyVax } from './vax/diary'
 import { VAX_START } from './vax/seed'
@@ -63,7 +65,7 @@ export function migrate(p: Project): Project {
   p.lock ??= { status: 'open', events: [], piSign: {}, hardSigs: [], unlocks: [] }
   for (const u of DEFAULT_USERS) if (!p.users.some((x) => x.id === u.id)) p.users.push({ ...u })
   if (p.study === VAX_ID) { p.vax ??= emptyVax(); return p }
-  if (p.study === OST_ID) return p
+  if (p.study === OST_ID || p.study === ONK_ID) return p
   for (const c of SHIPPED_CHECKS) if (!p.checks.some((x) => x.id === c.id)) p.checks.push({ ...c, tests: c.tests.map((t) => ({ ...t })) })
   return p
 }
@@ -370,7 +372,7 @@ export function sign(p: Project, userId: string, pin: string, meaning: string, w
 export const VISIT_NAME: Record<string, string> = {}
 export function refreshVisitNames() {
   for (const k of Object.keys(VISIT_NAME)) delete VISIT_NAME[k]
-  Object.assign(VISIT_NAME, Object.fromEntries([...VISITS.map((v) => [v.id, v.name]), ['LOG', ACTIVE.id === VAX_ID || ACTIVE.id === OST_ID ? 'Participant logs' : 'Subject logs']]))
+  Object.assign(VISIT_NAME, Object.fromEntries([...VISITS.map((v) => [v.id, v.name]), ['LOG', ACTIVE.id === VAX_ID || ACTIVE.id === OST_ID || ACTIVE.id === ONK_ID ? 'Participant logs' : 'Subject logs']]))
 }
 refreshVisitNames()
 
@@ -405,5 +407,21 @@ export function createOstProject(userId = 'local-user', classId = 'none'): Proje
   p.startup.uatSigned = sig('Approved', 'UAT summary HRP-301 release 1.0'); p.startup.riskApproved = sig('Approved', 'Risk assessment HRP-301'); p.startup.goLive = sig('Approved', 'Go-live HRP-301')
   for (const u of p.users) u.trained = true
   audit(p, SYSTEM, 'study.go-live', OST_ID, 'build', 'live', 'Ostrevia study opened live: start-up was completed by the training scenario', simUtc(p.clock, 8 * 60))
+  return p
+}
+
+// A project of the oncology trial ONK-44-302 (MERIDIAN-2). Start-up is practised on HLV-204-201,
+// so this study opens live on the day before the first screening visit, with its build validated
+// and signed off by the training scenario. The independent central review arrives by transfer.
+export function createOnkProject(userId = 'local-user', classId = 'none'): Project {
+  const p = createProject(userId, classId)
+  p.study = ONK_ID; p.name = 'ONK-44-302 MERIDIAN-2 data management (oncology)'
+  p.checks = freshOnkChecks()
+  p.clock = addDays(ONK_START, -1); p.live = true
+  const sig = (meaning: string, what: string): Signature => ({ meaning, userId: 'system', role: 'system', utc: simUtc(p.clock, 8 * 60), what })
+  p.startup.dmpApproved = sig('Approved', 'Data management plan ONK-44-302 v1.0'); p.startup.ccgApproved = sig('Approved', 'CRF completion guidelines ONK-44-302 v1.0')
+  p.startup.uatSigned = sig('Approved', 'UAT summary ONK-44-302 release 1.0'); p.startup.riskApproved = sig('Approved', 'Risk assessment ONK-44-302'); p.startup.goLive = sig('Approved', 'Go-live ONK-44-302')
+  for (const u of p.users) u.trained = true
+  audit(p, SYSTEM, 'study.go-live', ONK_ID, 'build', 'live', 'Oncology study opened live: start-up was completed by the training scenario', simUtc(p.clock, 8 * 60))
   return p
 }

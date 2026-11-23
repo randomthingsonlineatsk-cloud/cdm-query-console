@@ -73,7 +73,7 @@ function SubjectGrid({ subj, fk, setFk }: { subj: string; fk: string | null; set
         return (
           <div key={form} className="flex flex-wrap items-center gap-1">
             <span className="font-mono text-[11px] text-lab-text-muted w-40">{FORMS[form].name}</span>
-            {keys.length ? keys.map((k) => chip(k, `#${k.split('|')[3]} ${value(p, `${k}|${({ AE: 'AETERM', CM: 'CMTRT', REACT: 'CETERM', DV: 'DVTERM' } as Record<string, string>)[form] ?? 'AETERM'}`) || '(blank)'}`)) : <span className="text-[11px] text-lab-text-muted">None recorded</span>}
+            {keys.length ? keys.map((k) => chip(k, `#${k.split('|')[3]} ${value(p, `${k}|${({ AE: 'AETERM', CM: 'CMTRT', REACT: 'CETERM', DV: 'DVTERM', EX: 'EXSTDAT', DTH: 'DTHDAT', LC: 'LCDAT' } as Record<string, string>)[form] ?? 'AETERM'}`) || '(blank)'}`)) : <span className="text-[11px] text-lab-text-muted">None recorded</span>}
             {u.role === 'site' && <Btn tone="grey" className="py-0.5" onClick={() => addLog(form)}>+ Add</Btn>}
           </div>
         )

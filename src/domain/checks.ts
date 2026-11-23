@@ -145,5 +145,5 @@ export const CHECK_BUGS: Record<string, { correct: string; note: string }> = {
 }
 
 export const freshChecks = (): Check[] => SHIPPED_CHECKS.map((x) => ({ ...x, tests: x.tests.map((t) => ({ ...t })) }))
-export const CTX_FNS = ['prevdisp', 'prevdispdat', 'consent', 'rand', 'visdat', 'val', 'vis', 'today', 'winlo', 'winhi', 'prevvisdat', 'lastvisdat', 'eos', 'eosdat', 'aecount', 'aematch']
+export const CTX_FNS = ['prevdisp', 'prevdispdat', 'consent', 'rand', 'visdat', 'val', 'vis', 'today', 'winlo', 'winhi', 'prevvisdat', 'lastvisdat', 'eos', 'eosdat', 'aecount', 'aematch', 'tsum', 'basesum', 'nadir', 'lestype', 'lesnodal', 'lesknown', 'prevdiam', 'newles', 'ntcount', 'scandat', 'ovr', 'lastdose', 'dthdat']
 export const CATEGORY_LABEL: Record<CheckCategory, string> = { missing: 'Missing or required', range: 'Range and format', date: 'Date logic', 'cross-form': 'Cross-form consistency', protocol: 'Protocol logic', derived: 'Derived value', coding: 'Coding' }
