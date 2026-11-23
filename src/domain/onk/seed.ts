@@ -86,7 +86,8 @@ export function generateOnkStudy(seed = 44303): OnkSeed {
     // Day 1 is the randomisation visit; the date comes from the IRT confirmation.
     add('D1', 'SV', 1, rand, { VISOCCUR: 'Y', VISDAT: rand, UNSREAS: '' })
     // Treatment cycles, death and last contact are subject logs.
-    for (const x of by('EX', id)) add('LOG', 'EX', Number(x.CYCLE), x.EXSTDAT, { CYCLE: x.CYCLE, EXSTDAT: x.EXSTDAT, EXENDAT: x.EXENDAT }, addDays(x.EXENDAT, lag()))
+    // One page per dosing record (a cycle split by a hold has two, with the same cycle number).
+    for (const [i, x] of by('EX', id).entries()) add('LOG', 'EX', i + 1, x.EXSTDAT, { CYCLE: x.CYCLE, EXSTDAT: x.EXSTDAT, EXENDAT: x.EXENDAT }, addDays(x.EXENDAT, lag()))
     // Adverse events: entered a few days after onset (a serious one within a day or two, after the SAE form).
     for (const a of by('AE', id)) {
       const t: Row = {}
